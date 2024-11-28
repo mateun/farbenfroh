@@ -1433,9 +1433,9 @@ void TopDownGame::renderWaveGraphicalEditorWindow() {
 
                 for (int y = 0; y < currentEditorStage->dimension.y * editorCellSize; y++) {
                     int leftX = 400 - ((currentEditorStage->dimension.x / 2 ) * editorCellSize);
-                    int rightX = 401 + ((currentEditorStage->dimension.x / 2 ) * editorCellSize);
-                    int corrY = 300 / 2 + ((currentEditorStage->dimension.y / 2) * editorCellSize) + y;
-                    corrY = (600 - 3* editorCellSize - (currentEditorStage->dimension.y * editorCellSize)) + y;
+                    int rightX = 400 + ((currentEditorStage->dimension.x / 2 ) * editorCellSize);
+                    int corrY = 600 / 2 + ((currentEditorStage->dimension.y / 2) * editorCellSize) - y;
+                    //corrY = (600 - editorCellSize - (currentEditorStage->dimension.y * editorCellSize)) + y;
                     drawPixelIntoEditorCanvas(leftX, corrY, glm::vec4(250, 240, 250, 255), texture->bitmap);
                     drawPixelIntoEditorCanvas(rightX, corrY, glm::vec4(250, 240, 250, 255), texture->bitmap);
                 }

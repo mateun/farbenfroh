@@ -91,7 +91,7 @@ class Stage {
     ArenaType arenaType;
 
     // The width and height of the arena for this stage.
-    glm::ivec2 dimension = glm::vec2(25, 25);
+    glm::ivec2 dimension = glm::vec2(24, 24);
 
 private:
     std::vector<Wave*> waves;
