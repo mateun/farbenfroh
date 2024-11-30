@@ -8,6 +8,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "../src/engine/io/nljson.h"
 
+extern ImFont* boldFont;
+
 void TopDownGame::enemyLogicShooters() {
 
     for (auto e : shooterEnemies) {
@@ -1252,23 +1254,23 @@ void TopDownGame::updateInEditor() {
     if (firstTime) {
         firstTime = false;
         currentEditorstageSequence = new StageSequence();
+        auto s0 = new Stage("s0");
         auto s1 = new Stage("s1");
-        auto s2 = new Stage("s2");
 
+        currentEditorstageSequence->addStage(s0);
         currentEditorstageSequence->addStage(s1);
-        currentEditorstageSequence->addStage(s2);
 
+        auto s0w0 = new Wave("s0w0");
+        auto s0w1 = new Wave("s0w1");
+        auto s1w0 = new Wave("s1w0");
         auto s1w1 = new Wave("s1w1");
-        auto s1w2 = new Wave("s1w2");
-        auto s2w1 = new Wave("s2w1");
-        auto s2w2 = new Wave("s2w2");
+        s0->addWave(s0w0);
+        s0->addWave(s0w1);
+        s1->addWave(s1w0);
         s1->addWave(s1w1);
-        s1->addWave(s1w2);
-        s2->addWave(s2w1);
-        s2->addWave(s2w2);
 
-        currentEditorStage = s1;
-        currentEditorWave = s1w1;
+        currentEditorStage = s0;
+        currentEditorWave = s0w0;
 
     }
 
@@ -1354,7 +1356,7 @@ void TopDownGame::renderInEditor() {
         ImGui::EndMainMenuBar();  // Close the main menu bar
     }
     renderWaveGraphicalEditorWindow();
-    renderStageSequenceEditorWindow(&showStageSequenceEditor);
+    renderStageSequenceEditorWindow2(&showStageSequenceEditor);
 }
 
 void TopDownGame::renderInDisplayStageWave() {
@@ -1381,7 +1383,8 @@ void TopDownGame::drawPixelIntoEditorCanvas(int x, int y, glm::vec4 color, Bitma
 void TopDownGame::renderWaveGraphicalEditorWindow() {
 
     if (waveGraphicalEditorOpen) {
-        if (!ImGui::Begin("Wave Graphical Editor", &waveGraphicalEditorOpen, ImGuiWindowFlags_MenuBar)) {
+        std::string windowTitle = "Wave " + currentEditorWave->id;
+        if (!ImGui::Begin((windowTitle + "###Wave_Graphical_Editor").c_str(), &waveGraphicalEditorOpen, ImGuiWindowFlags_MenuBar)) {
             ImGui::End();
         } else {
             // Menu bar
@@ -1441,6 +1444,23 @@ void TopDownGame::renderWaveGraphicalEditorWindow() {
                 }
             }
 
+            // Draw each enemy
+            {
+                for (auto ed : currentEditorWave->enemyDefinitions) {
+                    for (int x = 0; x < 8; x++) {
+                        for (int y = 0; y < 8; y++) {
+                            drawPixelIntoEditorCanvas(
+                                800/2 + (ed->initialLocation.x * editorCellSize) - 4 + x,
+                                600/2 - (ed->initialLocation.y * editorCellSize) - 4 + y,
+                                glm::vec4(250, 24, 10, 255),
+                                texture->bitmap);
+                        }
+
+
+                    }
+                }
+            }
+
             updateTextTexture(texture->bitmap->width, texture->bitmap->height, texture);
 
             auto screenPos = ImGui::GetCursorScreenPos();
@@ -1458,13 +1478,254 @@ void TopDownGame::renderWaveGraphicalEditorWindow() {
     }
 }
 
+void TopDownGame::renderStageSequenceEditorWindow2(bool * p_open) {
+
+    // Handle closing of the window, store the close state back into p_open pointer:
+    if (!ImGui::Begin("StageSequence Editor", p_open, ImGuiWindowFlags_MenuBar)) {
+        ImGui::End();
+
+    } else {
+
+        // We shall open the window, so we set the size and position for the first time:
+        ImGui::SetWindowSize("StageSequence Editor", {800, 600}, ImGuiCond_FirstUseEver);
+        ImGui::SetWindowPos("StageSequence Editor", {10, 10}, ImGuiCond_FirstUseEver);
+
+        // Small menu bar
+        if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("New Stage")) {
+
+                }
+
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+
+        // Return if we have no stage sequence.
+        if (!currentEditorstageSequence) {
+            ImGui::End();
+            return;
+        }
+
+        // Display the stage/wave tree:
+
+        // ImGui::PushFont(boldFont); // Use bold font
+        // ImGui::Text("Stages");
+        // ImGui::PopFont(); // Revert to the previous font
+
+        ImGui::BeginChild("StageTableContainer", ImVec2(0, 200), true);
+        if (ImGui::BeginTable("stagetable", 3, ImGuiTableFlags_BordersOuter |ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY)) {
+
+            ImGui::TableSetupColumn("Stage");
+            ImGui::TableSetupColumn("Size");
+            ImGui::TableSetupColumn("Actions");
+            ImGui::TableHeadersRow();
+
+
+            for (auto stage : currentEditorstageSequence->getStages()) {
+                ImGui::TableNextRow();
+
+                if (stage == lastSelectedStageNode) {
+                    ImU32 highlightColor = ImGui::GetColorU32(ImVec4(0.26f, 0.59f, 0.98f, 0.3f)); // Light blue
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlightColor);
+                }
+
+                ImGui::TableNextColumn();
+                if (ImGui::Selectable(stage->id.c_str(), stage == lastSelectedStageNode)) {
+                    lastSelectedStageNode = stage; // Update selected row on click
+                    lastSelectedWaveNode= nullptr;
+                    lastSelectedEnemyDefinition = nullptr;
+                }
+
+
+                char bufferx[3]; // Buffer to hold the input text
+                char buffery[3]; // Buffer to hold the input text
+
+                // Convert the integer to a string for display
+                std::snprintf(bufferx, sizeof(bufferx), "%d", stage->dimension.x);
+                std::snprintf(buffery, sizeof(buffery), "%d", stage->dimension.y);
+
+                ImGui::TableNextColumn();
+                if (ImGui::InputText(std::string("##width" + stage->id).c_str(), bufferx, sizeof(bufferx), ImGuiInputTextFlags_CharsDecimal)) {
+                    stage->dimension.x = atoi(bufferx);
+                }
+                ImGui::SameLine();
+                if (ImGui::InputText(std::string("##height" + stage->id).c_str(),buffery, sizeof(buffery), ImGuiInputTextFlags_CharsDecimal)) {
+                    stage->dimension.y = atoi(buffery);
+                }
+
+
+                ImGui::TableNextColumn();
+                if (ImGui::Button(std::string("Add Wave###add_wave_button" + stage->id).c_str())) {
+                    stage->addWave(new Wave("foo"));
+                }
+
+            }
+
+
+            ImGui::EndTable();
+        }
+
+        ImGui::EndChild();
+
+
+
+        // Display the waves for the currently selected stage ("master/detail"):
+        // ImGui::PushFont(boldFont); // Use bold font
+        // ImGui::Text("Waves");
+        // ImGui::PopFont(); // Revert to the previous font
+
+
+        // Only show waves if we have a stage selected:
+        if (!lastSelectedStageNode) {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::BeginChild("waveTableContainer", ImVec2(0, 200), true);
+        if (ImGui::BeginTable("wavetable", 2, ImGuiTableFlags_BordersOuter |ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY)) {
+            ImGui::TableSetupColumn("Wave");
+            ImGui::TableSetupColumn("Actions");
+            ImGui::TableHeadersRow();
+
+            for (auto wave : lastSelectedStageNode->getWaves()) {
+
+                ImGui::TableNextRow();
+
+
+                ImGui::Text(wave->id.c_str());
+
+                if (wave == lastSelectedWaveNode) {
+                    ImU32 highlightColor = ImGui::GetColorU32(ImVec4(0.26f, 0.59f, 0.98f, 0.3f)); // Light blue
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlightColor);
+                }
+
+                ImGui::TableNextColumn();
+                if (ImGui::Selectable(wave->id.c_str(), wave == lastSelectedWaveNode)) {
+                    lastSelectedWaveNode = wave; // Update selected row on click
+                }
+                ImGui::TableNextColumn();
+                if (ImGui::Button(std::string("Add Enemy###add_enemy_button" + wave->id).c_str())) {
+                    auto ed = new EnemyDefinition();
+                    ed->initialLocation = {0, 0, 0};
+                    wave->enemyDefinitions.push_back(ed);
+                }
+                ImGui::SameLine();
+                if (ImGui::Button(std::string("Edit###edit_wave_button" + wave->id).c_str())) {
+                    currentEditorWave = wave;
+                    currentEditorStage = lastSelectedStageNode;
+                    waveGraphicalEditorOpen = true;
+                }
+
+
+            }
+
+
+            ImGui::EndTable();
+        }
+        ImGui::EndChild();
+
+        if (!lastSelectedWaveNode) {
+            ImGui::End();
+            return;
+        }
+
+        // Enemies per wave:
+        ImGui::BeginChild("EnemyTableContainer", ImVec2(0, 200), true);
+        if (ImGui::BeginTable("enemytable", 5, ImGuiTableFlags_BordersOuter |ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY)) {
+            ImGui::TableSetupColumn("Enemy Id");
+            ImGui::TableSetupColumn("Type");
+            ImGui::TableSetupColumn("Loc");
+            ImGui::TableSetupColumn("Vel");
+            ImGui::TableSetupColumn("Actions");
+            ImGui::TableHeadersRow();
+
+            int enemyCount = 0;
+            for (auto enemy_definition : lastSelectedWaveNode->enemyDefinitions) {
+
+                ImGui::TableNextRow();
+
+                if (enemy_definition == currentEnemyDefinition) {
+                    ImU32 highlightColor = ImGui::GetColorU32(ImVec4(0.26f, 0.59f, 0.98f, 0.3f)); // Light blue
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highlightColor);
+                }
+
+                ImGui::TableNextColumn();
+                if (ImGui::Selectable(std::string("###" + enemy_definition->id).c_str(), enemy_definition == lastSelectedEnemyDefinition)) {
+                    lastSelectedEnemyDefinition = enemy_definition;
+                }
+
+                // Enemy id:
+                {
+                    char buffer[30]; // Buffer to hold the input text
+                    std::snprintf(buffer, sizeof(buffer), "%s", enemy_definition->id.c_str());
+                    if (ImGui::InputText(std::string("###enemy_id" + lastSelectedStageNode->id + "_" + lastSelectedWaveNode->id + std::to_string(enemyCount)).c_str(), buffer, sizeof(buffer))) {
+                        enemy_definition->id = buffer;
+                    }
+                }
+
+
+                // Type
+                ImGui::TableNextColumn();
+                ImGui::Text("type");
+
+                // Location
+                {
+                    char bufferx[5]; // Buffer to hold the input text
+                    char buffery[5]; // Buffer to hold the input text
+
+                    // Convert the integer to a string for display
+                    std::snprintf(bufferx, sizeof(bufferx), "%d", enemy_definition->initialLocation.x);
+                    std::snprintf(buffery, sizeof(buffery), "%d", enemy_definition->initialLocation.y);
+
+                    ImGui::TableNextColumn();
+                    if (ImGui::InputText(std::string("###width" + enemy_definition->id).c_str(), bufferx, sizeof(bufferx), ImGuiInputTextFlags_CharsDecimal)) {
+                        enemy_definition->initialLocation.x = atoi(bufferx);
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::InputText(std::string("###height" + enemy_definition->id).c_str(),buffery, sizeof(buffery), ImGuiInputTextFlags_CharsDecimal)) {
+                        enemy_definition->initialLocation.y = atoi(buffery);
+                    }
+                }
+
+                // Velocity
+                {
+                    ImGui::TableNextColumn();
+                    ImGui::Text("vel.");
+                }
+
+
+
+
+                ImGui::TableNextColumn();
+                if (ImGui::Button(std::string("Edit###edit_enemy_button" + enemy_definition->id).c_str())) {
+
+
+                }
+
+
+                enemyCount++;
+            }
+
+
+            ImGui::EndTable();
+        }
+        ImGui::EndChild();
+
+
+
+        ImGui::End();
+    }
+
+}
+
 void TopDownGame::renderStageSequenceEditorWindow(bool * p_open) {
 
     if (!ImGui::Begin("StageSequence Editor", p_open, ImGuiWindowFlags_MenuBar)) {
         ImGui::End();
 
     } else {
-
         ImGui::SetWindowSize("StageSequence Editor", {800, 600}, ImGuiCond_FirstUseEver);
         ImGui::SetWindowPos("StageSequence Editor", {10, 10}, ImGuiCond_FirstUseEver);
 
@@ -1504,17 +1765,17 @@ void TopDownGame::renderStageSequenceEditorWindow(bool * p_open) {
 
         // Render a tree of stages and waves
         if (ImGui::TreeNode("stage sequence")) {
-            int count=0;
+            int stageCount=0;
             for (auto stage : currentEditorstageSequence->getStages()) {
 
                 int waveCount = 0;
-                bool open = ImGui::TreeNode(std::string("stage " + std::to_string(count)).c_str());
+                bool open = ImGui::TreeNode(std::string("stage " + std::to_string(stageCount)).c_str());
 
                 if (ImGui::BeginPopupContextItem())
                 {
                     // Context menu for each stage
                     if (ImGui::MenuItem("Add wave..")) {
-                        stage->addWave(new Wave(std::string("s") + std::to_string(count+1) + "w" + std::to_string(waveCount+1)));
+                        stage->addWave(new Wave(std::string("s") + std::to_string(stageCount) + "w" + std::to_string(waveCount)));
 
                     }
 
@@ -1580,7 +1841,7 @@ void TopDownGame::renderStageSequenceEditorWindow(bool * p_open) {
 
                 }
 
-                count++;
+                stageCount++;
             }
             ImGui::TreePop();
         }

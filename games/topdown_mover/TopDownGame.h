@@ -64,6 +64,7 @@ enum class ArenaType {
 
 class EnemyDefinition {
 public:
+    std::string id;
     EnemyType type;
     glm::ivec3 initialLocation = glm::vec3(0, 0, 0);
     glm::ivec3 initialVelocity = glm::vec3(0, 0, 0);
@@ -200,10 +201,12 @@ private:
     void renderStageSequenceEditorWindow(bool * p_open);
     void drawPixelIntoEditorCanvas(int x, int y, glm::vec4 color, Bitmap* bitmap);
     void renderWaveGraphicalEditorWindow();
+    void renderStageSequenceEditorWindow2(bool *p_open);
 
 
     Stage* currentEditorStage = nullptr;
     Wave* currentEditorWave = nullptr;
+    EnemyDefinition* currentEnemyDefinition = nullptr;
     int editorCellSize= 20;
     int editorZoomFactor = 1;
     bool waveGraphicalEditorOpen = false;

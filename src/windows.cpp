@@ -74,6 +74,8 @@ bool useMouse = true;
 WPARAM lastKeyPress = 0;
 static HWND window;
 
+ImFont* boldFont = nullptr;
+
 // Controller (GamePad) states.
 // We need the previous state to enable single button press detection.
 std::vector<XINPUT_STATE> controllerStates;
@@ -429,6 +431,9 @@ void initGLContext(HWND hwnd, HDC hdc) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     ImGui_ImplWin32_InitForOpenGL(hwnd);
     ImGui_ImplOpenGL3_Init();
+
+    io.Fonts->AddFontDefault(); // Default font
+    boldFont = io.Fonts->AddFontFromFileTTF("../assets/BowlbyOneSC-Regular.ttf", 16.0f);
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
