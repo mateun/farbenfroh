@@ -1493,7 +1493,15 @@ void TopDownGame::renderStageSequenceEditorWindow2(bool * p_open) {
         // Small menu bar
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("New Stage")) {
+                if (ImGui::MenuItem("New Stage Sequence")) {
+
+                }
+
+                if (ImGui::MenuItem("Open Stage Sequence")) {
+
+                }
+
+                if (ImGui::MenuItem("Save Stage Sequence")) {
 
                 }
 
