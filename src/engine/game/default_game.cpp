@@ -53,6 +53,8 @@ DefaultGame::DefaultGame()  {
 }
 
 void DefaultGame::init() {
+    performanceFrequency = performance_frequency;
+
     // Doing the base class initialiations and then calling the derived class:
     _spriteBatch = new gru::SpriteBatch(1000);
     _uiSpriteBatch = new gru::SpriteBatch(100);

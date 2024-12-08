@@ -58,6 +58,7 @@ public:
 
 protected:
     HWND hwnd;
+    int64_t performanceFrequency = 0;
 
 private:
     Camera *_gameplayCamera = nullptr;
@@ -69,6 +70,7 @@ private:
     gru::SpriteBatch *_uiSpriteBatch = nullptr;
     FolderAssetLoader *folderAssetLoader = nullptr;
     Sound* currentMusic = nullptr;
+
 
 
 };

@@ -73,6 +73,8 @@ bool windowClosed = false;
 bool useMouse = true;
 WPARAM lastKeyPress = 0;
 static HWND window;
+int64_t performance_frequency = 0;
+static LARGE_INTEGER freq = {};
 
 ImFont* boldFont = nullptr;
 
@@ -610,8 +612,7 @@ bool processOSMessages() {
 
 void mainLoop(HWND hwnd, DefaultGame* game) {
 
-	LARGE_INTEGER freq;
-	QueryPerformanceFrequency(&freq);
+
 	LARGE_INTEGER startticks;
 	LARGE_INTEGER endticks;
 
@@ -943,6 +944,10 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 			HINSTANCE hPrevInstance,
 			LPSTR lpCmdLine,
 			int nShowCmd) {
+
+
+    QueryPerformanceFrequency(&freq);
+    performance_frequency = freq.QuadPart;
 
     // Allocate our game
     auto game = getGame();

@@ -2383,7 +2383,8 @@ Texture* createEmptyTexture(int w, int h) {
 }
 
 Texture* createTextTexture(int w, int h) {
-    auto pixels = (uint8_t *) malloc(w*h*4);
+
+    auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 64);
     auto bm = new Bitmap();
     bm->width = w;
     bm->height = h;

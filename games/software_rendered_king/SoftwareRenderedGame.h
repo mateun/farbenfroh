@@ -16,6 +16,9 @@ class SoftwareRenderedGame : public DefaultGame {
     bool shouldStillRun() override;
     std::vector<std::string> getAssetFolder() override;
     bool shouldAutoImportAssets() override;
+    void clearBackBuffer();
+    void drawPixel(int x, int y, glm::vec4 color);
+    void drawLine(glm::vec2 from, glm::vec2 to, glm::vec4 color);
 
     Texture * backbufferTexture = nullptr;
 };
