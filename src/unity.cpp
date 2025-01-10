@@ -49,10 +49,10 @@
 //#include "../games/dungeon_shoot/dungeon_shoot_main.cpp"
 
 // TopDownMovement
-//#include "../games/topdown_mover/TopDownGame.cpp"
+#include "../games/topdown_mover/TopDownGame.cpp"
 
 // Software rendered king
-#include "../games/software_rendered_king/SoftwareRenderedGame.cpp"
+//#include "../games/software_rendered_king/SoftwareRenderedGame.cpp"
 
 // King 1024
 //#include "../games/king1024/king_game.cpp"

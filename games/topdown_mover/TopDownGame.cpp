@@ -828,6 +828,66 @@ void TopDownGame::init() {
     assert(inTri == true);
 
     // end math testing here.
+
+    // Compute shader testing
+    Shader* computeShader = new Shader();
+    auto source = readFile("../games/king1024/assets/simplest.csh");
+    createComputeShader(source, computeShader);
+
+    auto err = glGetError();
+    if (err != GL_NO_ERROR) {
+        exit(99999);
+    }
+
+
+    // Create our output texture, where the compute shader writes to
+    const int texWidth = 512;
+    const int texHeight = 512;
+    GLuint outputTex;
+    glGenTextures(1, &outputTex);
+    glBindTexture(GL_TEXTURE_2D, outputTex);
+
+    glTextureStorage2D(outputTex, 1, GL_RGBA32F, texWidth, texHeight);
+
+    // glTexImage2D(GL_TEXTURE_2D,
+    //          0,
+    //          GL_RGBA32F,
+    //          texWidth, texHeight,
+    //          0,
+    //          GL_RGBA,
+    //          GL_UNSIGNED_BYTE, nullptr);
+
+
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // 6. Bind the texture to image unit 0 (so it matches the compute shader's binding = 0).
+    //    We use GL_WRITE_ONLY because the compute shader is writing to the image.
+    glBindImageTexture(0, outputTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+    computedTexture = new Texture();
+    computedTexture->handle = outputTex;
+
+    glUseProgram(computeShader->handle);
+
+    // glDispatchCompute uses the number of work groups. Our local group size is 1x1,
+    // so we need the same dimension as our texture to cover every pixel once.
+    glDispatchCompute(texWidth, texHeight, 1);
+
+    // Wait for the image to be ready for usage later of the underlying texture.
+    LARGE_INTEGER start;
+    QueryPerformanceCounter(&start);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    LARGE_INTEGER end;
+    QueryPerformanceCounter(&end);
+    LARGE_INTEGER frequency;
+    QueryPerformanceFrequency(&frequency);
+    auto diff = (float)(end.QuadPart - start.QuadPart) / (float) frequency.QuadPart;
+    printf("compute shader duration elapsed: %f micros\n", diff * 1000 * 1000);
+
+    // End compute shader testing
+
+
     DefaultGame::init();
 
     player = new GameObject();
@@ -1148,6 +1208,15 @@ void TopDownGame::renderInMainMenu() {
     bindCamera(getUICamera());
     foregroundColor({.99, .09, 0.09, 1});
     lightingOff();
+
+    // Render compute shader quad
+    location({400, 300, -2});
+    scale({512, 512,1 });
+    bindTexture(computedTexture);
+    drawPlane();
+    // end cs
+
+
     glDefaultObjects->currentRenderState->textScale = {4, 4};
     hudFont->renderText("KING ARENA", {100, scaled_height - 450, -10});
     err = glGetError();
@@ -1157,6 +1226,8 @@ void TopDownGame::renderInMainMenu() {
     hudFont->renderText("Play", {100, scaled_height - 480, -9});
     hudFont->renderText("Settings", {100, scaled_height - 510, -8});
     hudFont->renderText("Exit", {100, scaled_height - 540, -7});
+
+
 
     // Cursor
     int cursorY = scaled_height - (480 + (mainMenuIndex * 30));

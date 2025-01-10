@@ -129,6 +129,7 @@ private:
     std::vector<Enemy*> shooterEnemies;
     std::vector<Enemy*> sectorPatrolerEnemies;
     FBFont* hudFont = nullptr;
+    Texture* computedTexture = nullptr;
 
     int mapTilesHorizontal = 25;
     int mapTilesVertical = 25;

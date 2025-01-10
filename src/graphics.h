@@ -641,6 +641,7 @@ Texture* createEmptyTexture(int w, int h);
 Texture* createTextTexture(int w, int h);
 Mesh* loadMeshFromFile(const std::string& fileName);
 Result createShader(const std::string& vsrc, const std::string& fsrc, Shader* target);
+Result createComputeShader(const std::string& source, Shader* target);
 Mesh* parseGLTF(JsonElement* gltfJson);
 void prepareTransformationMatrices(glm::mat4 matworld, Camera* camera, Camera* shadowMapCamera, bool shadows);
 void updateAndDrawText(const char *text, Texture *pTexture, int screenPosX, int screenPosY, int screenPosZ = -0.7);

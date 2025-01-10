@@ -409,6 +409,57 @@ void beginBatch() {
 
 }
 
+Result createComputeShader(const std::string& source, Shader* target) {
+    GLuint cshader = glCreateShader(GL_COMPUTE_SHADER);
+    const GLchar* vssource_char = source.c_str();
+    glShaderSource(cshader, 1, &vssource_char, NULL);
+    glCompileShader(cshader);
+    GLint compileStatus;
+    glGetShaderiv(cshader, GL_COMPILE_STATUS, &compileStatus);
+    if (GL_FALSE == compileStatus) {
+        OutputDebugString("Error while compiling the compute shader\n");
+
+        GLint logSize = 0;
+        glGetShaderiv(cshader, GL_INFO_LOG_LENGTH, &logSize);
+        std::vector<GLchar> errorLog(logSize);
+        glGetShaderInfoLog(cshader, logSize, &logSize, &errorLog[0]);
+        //    result.errorMessage = errorLog.data();
+        char buf[512];
+        sprintf(buf, "vshader error: %s", errorLog.data());
+        printf(buf);
+        OutputDebugStringA(buf);
+        glDeleteShader(cshader);
+        //  return result;
+        return {false, {buf}};
+
+    }
+
+    GLuint p = glCreateProgram();
+    glAttachShader(p, cshader);
+    glLinkProgram(p);
+
+    glGetProgramiv(p, GL_LINK_STATUS, &compileStatus);
+
+    if (GL_FALSE == compileStatus) {
+        OutputDebugStringA("Error during shader linking\n");
+        GLint maxLength = 0;
+        glGetProgramiv(p, GL_INFO_LOG_LENGTH, &maxLength);
+        std::vector<GLchar> infoLog(maxLength);
+        glGetProgramInfoLog(p, maxLength, &maxLength, &infoLog[0]);
+        OutputDebugStringA(infoLog.data());
+        glDeleteProgram(p);
+        glDeleteShader(cshader);
+        return {false, {{infoLog.data()}}};
+
+    }
+
+    glDeleteShader(cshader);
+
+    target->handle = p;
+
+    return {true ,{}};
+}
+
 Result createShader(const std::string &vsrc, const std::string &fsrc, Shader* target) {
     GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
     const GLchar* vssource_char = vsrc.c_str();
