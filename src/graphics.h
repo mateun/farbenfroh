@@ -86,7 +86,7 @@ struct Animation {
     float duration;
     int frames;
     std::map<std::string,std::vector<AnimationSample*>*> samplesPerJoint;
-
+    double ticksPerSecond;
 };
 
 struct Joint {
@@ -657,6 +657,11 @@ void activateFrameBuffer(uint32_t fbHandle);
 
 class MeshImporter {
 public:
+
+    /** For .fbx files out of Blender, first rotate the object by -90 degress around the x-axis.
+     * Then apply all transforms.
+     * Then export fbx.
+    **/
     Mesh* importMesh(const std::string& filePath, bool debugPrintSM = false);
     std::vector<Animation*> importAnimations(const std::string& filePath);
 

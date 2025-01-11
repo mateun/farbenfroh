@@ -2937,6 +2937,7 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
     auto animation = new Animation();
     animation->name = aiAnim->mName.C_Str();
     animation->duration = aiAnim->mDuration;
+    animation->ticksPerSecond = aiAnim->mTicksPerSecond;
 
     for (int c = 0; c < aiAnim->mNumChannels; c++) {
         auto channel = aiAnim->mChannels[c];
@@ -2966,6 +2967,7 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
         for (int pk = 0; pk < aiAnim->mChannels[c]->mNumPositionKeys; pk++) {
             auto sample = (*sampleList)[pk];
             auto posKey = aiAnim->mChannels[c]->mPositionKeys[pk];
+            sample->time = posKey.mTime;
 
             glm::vec3 pos =  {posKey.mValue.x, posKey.mValue.y, posKey.mValue.z};
             sample->translation= pos;

@@ -26,12 +26,17 @@ void AnimationPlayer::update() {
         frameTime += (ftSeconds * 1000.0f);
 
         // TODO: Interpolate the key frames according to the current time
+
+         currentFrame += animation->ticksPerSecond * ftSeconds;
+         currentFrame = fmod(currentFrame, animation->duration);
+
         // in between the two frames we are.
         // Currently we just update at 30fps
-        if (frameTime > 33.3333) {
-            currentFrame++;
-            frameTime = 0;
-        }
+        // Deprecated
+        // if (frameTime > 33.3333) {
+        //     currentFrame++;
+        //     frameTime = 0;
+        // }
 
         if (currentFrame > (animation->frames - 1)) {
             currentFrame = 0;
@@ -60,4 +65,13 @@ void AnimationPlayer::update() {
         }
         setBoneMatrices(boneMatrices);
     }
+}
+
+Animation* findAnimationByName(std::string name, Mesh* mesh) {
+    for (auto a: mesh->animations) {
+        if (a->name == name) {
+            return a;
+        }
+    }
+    return nullptr;
 }

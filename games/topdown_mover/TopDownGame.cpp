@@ -4,6 +4,7 @@
 
 #include "TopDownGame.h"
 #include <fstream>
+#include <engine/animation/AnimationPlayer.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "../src/engine/io/nljson.h"
@@ -891,9 +892,10 @@ void TopDownGame::init() {
     DefaultGame::init();
 
     player = new GameObject();
-    player->mesh = getMeshByName("king_cartoon");
+    player->mesh = getMeshByName("player_char1");
     player->name = "player";
-    playerAnimPlayer = new AnimationPlayer(player->mesh->animations[0], player->mesh);
+    auto readyIdleAnimation = findAnimationByName("Armature|ready_idle", player->mesh);
+    playerAnimPlayer = new AnimationPlayer(readyIdleAnimation, player->mesh);
     playerAnimPlayer->play(true);
     player->location = playerStartPosition;
     player->aabb = {-0.5, 0, 0.5, 0.5, 2, -0.5 };
@@ -1205,16 +1207,29 @@ void TopDownGame::renderInGameWon() {
 
 void TopDownGame::renderInMainMenu() {
     auto err = glGetError();
+
+    bindCamera(getGameplayCamera());
+    location({2, 0, -2});
+    scale({1, 1, 1});
+    foregroundColor({.69, .69, 0.09, 1});
+    bindMesh(player->mesh);
+    setSkinnedDraw(true);
+    drawMesh();
+    setSkinnedDraw(false);
+
+
     bindCamera(getUICamera());
     foregroundColor({.99, .09, 0.09, 1});
     lightingOff();
 
+#ifdef COMPUTE_SHADER_TEST
     // Render compute shader quad
     location({400, 300, -2});
     scale({512, 512,1 });
     bindTexture(computedTexture);
     drawPlane();
     // end cs
+#endif
 
 
     glDefaultObjects->currentRenderState->textScale = {4, 4};
@@ -1280,6 +1295,8 @@ void TopDownGame::updateInMainMenu() {
     if (selectedItem) {
         playSound(getSoundByName("menu1"), false);
     }
+
+    playerAnimPlayer->update();
 }
 
 void TopDownGame::updateInSettings() {

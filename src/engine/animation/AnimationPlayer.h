@@ -7,6 +7,8 @@
 
 #include "../../graphics.h"
 
+Animation* findAnimationByName(std::string name, Mesh* mesh);
+
 class AnimationPlayer {
 public:
     AnimationPlayer(Animation* animation, Mesh* mesh);
@@ -20,7 +22,7 @@ private:
 
     bool playing = false;
     bool looped = false;
-    int currentFrame = 0;
+    double currentFrame = 0;
 
 
 };

@@ -556,7 +556,8 @@ namespace editor {
                 ImGui::SameLine();
                 //ImGui::Text("time: %f", (*anim->samplesPerJoint[joints[0]])[currentAnimationFrame]->time);
                 ImGui::SameLine();
-                if (ImGui::Button("Activate")) {
+                std::string label = "Activate##" + anim->name;
+                if (ImGui::Button(label.c_str())) {
                     currentAnimation = anim;
                     currentAnimationFrame = 0;
                 }
