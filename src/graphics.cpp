@@ -3435,15 +3435,23 @@ void setBoneMatrices(std::vector<glm::mat4> boneMatrices) {
 }
 
 void wireframeOn() {
+    glLineWidth(3.0f);
     glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+
+
 }
 
 void wireframeOff() {
+    glLineWidth(1.0f);
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    glPolygonOffset(0, 0);
+    glDisable(GL_POLYGON_OFFSET_FILL);
 }
 
 CameraMover::CameraMover(Camera *cam, CameraCollider* cameraCollider) : cameraCollider(cameraCollider), _cam(cam) {
-
+    originalLocation = cam->location;
+    originalTarget = cam->lookAtTarget;
 }
 
 // We move the camera with the WASD keys
@@ -3514,13 +3522,15 @@ void CameraMover::update() {
 
     auto angle = pitch * rotspeed * 0.1f;
     auto steepness = glm::dot({0, 1, 0}, fwd);
-    //printf("steepness: %f\n", steepness);
-    if (steepness < -0.7 && angle < 0) {
-        angle = 0;
-    }
 
-    if (steepness > -0.2 && angle > 0) {
-        angle = 0;
+    if (clampPitch) {
+        if (steepness < -0.7 && angle < 0) {
+            angle = 0;
+        }
+
+        if (steepness > -0.2 && angle > 0) {
+            angle = 0;
+        }
     }
 
     glm::vec4 fwdAfterPitch = glm::rotate(glm::mat4(1), angle, right) * fwdAfterYaw;
@@ -3597,6 +3607,11 @@ void CameraMover::setMovementSpeed(float val) {
 
 void CameraMover::setFixedPlaneForwardMovement(bool b) {
     fixedPlaneFwdMovment = b;
+}
+
+void CameraMover::reset() {
+    _cam->updateLocation(originalLocation);
+    _cam->updateLookupTarget(originalTarget);
 }
 
 void bindShader(Shader* shader) {

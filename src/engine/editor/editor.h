@@ -1,4 +1,5 @@
 #pragma once
+#include <engine/animation/AnimationPlayer.h>
 
 class Level;
 class GameObject;
@@ -36,6 +37,7 @@ namespace editor {
         std::string lastImportedMeshFileName = "";
         std::string lastImporteTextureFileName = "";
         std::string lastImportedAnimationFileName = "";
+        AnimationPlayer* animationPlayer = nullptr;
 
     private:
         void drawAnimationTimeline();
@@ -51,6 +53,7 @@ namespace editor {
         void saveLevel();
         Camera *getMeshViewerCamera();
 
+        void renderMeshViewerExt();
     };
 
 /**

@@ -11,6 +11,7 @@ AnimationPlayer::AnimationPlayer(Animation *animation, Mesh* mesh) : animation(a
 
 void AnimationPlayer::play(bool looped) {
     playing = true;
+    animTime = 0;
     this->looped = looped;
 }
 
@@ -18,48 +19,82 @@ void AnimationPlayer::stop() {
     playing = false;
 }
 
+void AnimationPlayer::switchAnimation(Animation *animation) {
+    stop();
+    this->animation = animation;
+}
+
+void AnimationPlayer::setMesh(Mesh* mesh) {
+    stop();
+    this->mesh = mesh;
+}
+
+int AnimationPlayer::getRotationIndex(const std::string& jointName) {
+    auto allSamples = *animation->samplesPerJoint[jointName];
+    for (int i = 0; i< allSamples.size()-1; ++i) {
+        if (animTime < allSamples[i + 1]->time) {
+            return i;
+        }
+
+    }
+    return -1;
+}
+
 void AnimationPlayer::update() {
-    static float animTime = 0;
+
     static float frameTime = 0;
     if (animation && playing) {
-        animTime += (ftSeconds * 1000.0f);
-        frameTime += (ftSeconds * 1000.0f);
+        // animTime += (ftSeconds * 1000.0f);
+        // frameTime += (ftSeconds * 1000.0f);
 
-        // TODO: Interpolate the key frames according to the current time
-
-         currentFrame += animation->ticksPerSecond * ftSeconds;
-         currentFrame = fmod(currentFrame, animation->duration);
-
-        // in between the two frames we are.
-        // Currently we just update at 30fps
-        // Deprecated
-        // if (frameTime > 33.3333) {
-        //     currentFrame++;
-        //     frameTime = 0;
-        // }
-
-        if (currentFrame > (animation->frames - 1)) {
-            currentFrame = 0;
-            animTime = 0;
-            if (!looped) {
+        animTime += animation->ticksPerSecond * ftSeconds;
+        if (looped) {
+            animTime = fmod(animTime, animation->duration);
+        } else {
+            if (currentFrame > (animation->frames - 1)) {
+                currentFrame = 0;
                 playing = false;
             }
         }
 
+
+
         std::vector<glm::mat4> boneMatrices;
         for (auto j: mesh->skeleton->joints) {
             if (animation) {
-                if (animation->samplesPerJoint[j->name] != nullptr &&
-                    (animation->samplesPerJoint[j->name]->size() > currentFrame)) {
-                    auto sample = (*animation->samplesPerJoint[j->name])[currentFrame];
-                    if (sample) {
-                        j->localTransform = glm::translate(glm::mat4(1), sample->translation) *
-                                            glm::toMat4(sample->rotation);
+                auto jointSamples = animation->samplesPerJoint[j->name];
+                if (jointSamples &&
+                    jointSamples->size() > currentFrame) {
+
+                    auto fromSampleIndex = getRotationIndex(j->name);
+                    if (fromSampleIndex == -1) {
+                        exit(8567);
+                    }
+                    auto toSampleIndex = fromSampleIndex + 1;
+                    if (toSampleIndex >= jointSamples->size()) {
+                        toSampleIndex = 0;
+                    }
+
+                    if (toSampleIndex > fromSampleIndex) {
+                        auto fromSample = (*jointSamples)[fromSampleIndex];
+                        auto toSample = (*jointSamples)[toSampleIndex];
+                        float scaleFactor = ((float) fromSampleIndex - currentFrame) / (float) (toSampleIndex - fromSampleIndex);
+                        auto interpTranslation = glm::mix(fromSample->translation, toSample->translation, scaleFactor);
+                        auto interpRotation = glm::slerp(fromSample->rotation, toSample->rotation, scaleFactor);
+
+                        j->localTransform = glm::translate(glm::mat4(1), interpTranslation) *
+                                            glm::toMat4(interpRotation);
                         j->globalTransform = calculateWorldTransform(j, j->localTransform);
                         j->finalTransform = j->globalTransform * j->inverseBindMatrix;
+                    } else {
+
+                            auto fromSample = (*jointSamples)[fromSampleIndex];
+                            j->localTransform = glm::translate(glm::mat4(1), fromSample->translation) *
+                                                glm::toMat4(fromSample->rotation) ;
+                            j->globalTransform = calculateWorldTransform(j, j->localTransform);
+                            j->finalTransform = j->globalTransform * j->inverseBindMatrix;
                     }
                 }
-
             }
             boneMatrices.push_back(j->finalTransform);
         }

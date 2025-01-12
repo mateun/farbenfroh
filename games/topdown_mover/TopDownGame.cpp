@@ -509,6 +509,7 @@ void TopDownGame::update() {
             shootAllowed = false;
             triggerTimer = 0;
             playSound(getSoundByName("laser2"), false);
+            playerAnimPlayer->play(false);
         }
 
         std::vector<GameObject*> outlived;
@@ -1062,8 +1063,7 @@ void TopDownGame::render() {
         scale({1, 1, 1});
         location(player->location);
         rotation(player->rotation);
-        scale({.01, .01, .01});
-        //rotation({0, 180, 0});
+        scale({1, 1, 1});
         flipUvs(true);
         setSkinnedDraw(true);
         drawMesh();
@@ -1380,6 +1380,9 @@ void TopDownGame::updateInDisplayStageWave() {
         stageWaveTimer = 0;
         if (wave == 0 && stage == 0) {
             gameState = TopDownGameState::InGame;
+            auto shootAnim = findAnimationByName("Armature|shoot_short", player->mesh);
+            playerAnimPlayer->switchAnimation(shootAnim);
+
         } else {
             gameState = TopDownGameState::NextStage;
         }

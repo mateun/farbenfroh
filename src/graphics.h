@@ -224,10 +224,11 @@ class CameraMover {
 public:
     CameraMover(Camera* cam, CameraCollider* cameraCollider = nullptr);
     void update();
-
     void setMovementSpeed(float val);
-
     void setFixedPlaneForwardMovement(bool b);
+
+    // E.g. to avoid pitch clipping and being lost
+    void reset();
 
 private:
     Camera* _cam;
@@ -235,6 +236,9 @@ private:
 
     float movementSpeed = 5;
     bool fixedPlaneFwdMovment = false;
+    bool clampPitch = false;
+    glm::vec3 originalLocation;
+    glm::vec3 originalTarget;
 };
 
 struct TileData {

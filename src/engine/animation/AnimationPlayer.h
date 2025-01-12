@@ -15,6 +15,10 @@ public:
     void play(bool looped);
     void update();
     void stop();
+    void switchAnimation(Animation* animation);
+    void setMesh(Mesh* mesh);
+    int getRotationIndex(const std::string& jointName);
+    int getTranslationIndex();
 
 private:
     Animation* animation= nullptr;
@@ -23,6 +27,7 @@ private:
     bool playing = false;
     bool looped = false;
     double currentFrame = 0;
+    float animTime = 0;
 
 
 };

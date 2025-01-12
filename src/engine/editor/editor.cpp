@@ -94,6 +94,104 @@ namespace editor {
         return _meshViewerCamera;
     }
 
+    void Editor::renderMeshViewerExt() {
+        if (!importedMesh) {
+            return;
+        }
+
+        cameraMover->update();
+        ImGui::Begin("Mesh Viewer");
+        ImGui::SetWindowSize("Mesh Viewer", {1000, 600});
+        activateFrameBuffer(skeletalMeshWindowFrameBuffer);
+        bindCamera(getMeshViewerCamera());
+        glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width,
+                 skeletalMeshWindowFrameBuffer->texture->bitmap->height);
+
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        scale({1, 1, 1});
+        location({0, 0, 0});
+        foregroundColor({0.3, 0.6, 0.2, .1});
+        gridLines(100);
+        drawGrid();
+
+        // Draw the imported mesh,
+        // regardless if this is a static or skeleton mesh
+        {
+
+            bindMesh(importedMesh);
+            location({0, 0, 0});
+            rotation({0, 0, 0});
+            scale({1, 1, 1});
+            foregroundColor({0.9, 0.9, 0.9, 1});
+
+            // These 2 lines are good for avoiding z-fighting with the following wireframe mesh
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(1.0f, 1.0f);
+
+            // Draw the filled mesh
+            drawMesh();
+
+            // Now draw the wireframe version
+            wireframeOn();
+            lightingOff();
+            foregroundColor({0.9, 0.1, 0.1, 1});
+            drawMesh();
+            wireframeOff();
+            lightingOn();
+        }
+
+        // Draw the skeleton if the mesh has one
+        {
+            if (importedMesh->skeleton) {
+                lightingOff();
+                bindMesh(assetLoader->getMesh("bone_mesh"));
+                foregroundColor({0.5, 0.5, 1, 1});
+
+                int jointCounter = 0;
+                if (importedMesh->skeleton) {
+                    // To actually see the bones in front of the mesh, we turn depth test off:
+                    depthTestOff();
+
+                    for (auto j: importedMesh->skeleton->joints) {
+                        // We use the worldMatrix as is instead
+                        // of pulling out manually location, scale, rotation from the matrix.
+                        useWorldMatrix(true);
+                        setWorldMatrix(j->globalTransform);
+                        foregroundColor({0.7, 0.7, 0, 1});
+                        jointCounter++;
+                        //scale(glm::vec3(1));
+                        drawMesh();
+                    }
+
+                    // Reset our render state back to normal:
+                    depthTestOn();
+                    useWorldMatrix(false);
+                    lightingOn();
+
+                }
+            }
+        }
+
+
+        // Now we are finished rendering our 3D scene into our framebuffer.
+        // Next we present the texture of the FBO as an image in ImGUI.
+        ImGui::Image(reinterpret_cast<ImTextureID>(skeletalMeshWindowFrameBuffer->texture->handle),
+                         {(float) skeletalMeshWindowFrameBuffer->texture->bitmap->width / 2,
+                          (float) skeletalMeshWindowFrameBuffer->texture->bitmap->height / 2},
+                         {0, 1}, {1, 0});
+
+        // Rest to normal viewport:
+        glViewport(0, 0, window_width, window_height);
+
+        // Activate main framebuffer again:
+        activateFrameBuffer(nullptr);
+
+
+        ImGui::End();
+    }
+
     void Editor::renderMeshViewer() {
         if (!importedMesh) {
             return;
@@ -147,6 +245,7 @@ namespace editor {
                     wireframeOn();
                 }
 
+#ifdef SEFPARATE_ANIM_IMPL
                 std::vector<glm::mat4> boneMatrices;
                 for (auto j: importedMesh->skeleton->joints) {
                     if (currentAnimation) {
@@ -166,6 +265,10 @@ namespace editor {
 
                 }
                 setBoneMatrices(boneMatrices);
+#endif
+
+                animationPlayer->update();
+
             }
 
             scale({meshScale, meshScale, meshScale});
@@ -345,6 +448,7 @@ namespace editor {
                         delete (importedMesh);
                     }
                     importedMesh = MeshImporter().importMesh(lastImportedMeshFileName);
+                    animationPlayer->setMesh(importedMesh);
                 }
             }
 
@@ -454,7 +558,7 @@ namespace editor {
         drawAnimationTimeline();
         ImGui::End();
 
-        renderMeshViewer();
+        renderMeshViewerExt();
 
 
     }
@@ -522,6 +626,7 @@ namespace editor {
         ImGui::Checkbox("Loop", &animationLooped);
         if (ImGui::Button("Play")) {
             animationPlaying = true;
+            animationPlayer->play(animationLooped);
         }
         if (ImGui::Button("Stop")) {
             animationPlaying = false;
@@ -559,10 +664,14 @@ namespace editor {
                 std::string label = "Activate##" + anim->name;
                 if (ImGui::Button(label.c_str())) {
                     currentAnimation = anim;
+                    animationPlayer->switchAnimation(currentAnimation);
                     currentAnimationFrame = 0;
+
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Deactivate")) {
+                    animationPlayer->switchAnimation(nullptr);
+                    animationPlayer->stop();
                     currentAnimation = nullptr;
                     currentAnimationFrame = 0;
                 }
@@ -610,6 +719,7 @@ namespace editor {
         skeletalMeshWindowFrameBuffer = createFrameBuffer(1024, 1024);
         cameraMover = new CameraMover(getMeshViewerCamera());
         cameraMover->setMovementSpeed(30);
+        animationPlayer = new AnimationPlayer(nullptr, nullptr);
     }
 
     void EditorGame::init() {
