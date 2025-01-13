@@ -13,7 +13,13 @@ class AnimationPlayer {
 public:
     AnimationPlayer(Animation* animation, Mesh* mesh);
     void play(bool looped);
+    // This updates the current pose matrices based on frame time interpolation
     void update();
+
+    glm::mat4 calculateFramePoseForJoint(int frame, Joint *joint);
+
+    // This updates the current pose for a specific explicit frame, without interpolation
+    void calculateFramePose(int frame);
     void stop();
     void switchAnimation(Animation* animation);
     void setMesh(Mesh* mesh);

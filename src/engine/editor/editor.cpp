@@ -66,6 +66,12 @@ namespace editor {
 
     }
 
+    void Editor::update() {
+        if (keyPressed(VK_F3)) {
+            doImportMeshAction();
+        }
+    }
+
     void Editor::saveLevel() {
         // TODO implement
     }
@@ -101,7 +107,7 @@ namespace editor {
 
         cameraMover->update();
         ImGui::Begin("Mesh Viewer");
-        ImGui::SetWindowSize("Mesh Viewer", {1000, 600});
+        //ImGui::SetWindowSize("Mesh Viewer", {1000, 600});
         activateFrameBuffer(skeletalMeshWindowFrameBuffer);
         bindCamera(getMeshViewerCamera());
         glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width,
@@ -155,10 +161,13 @@ namespace editor {
                     depthTestOff();
 
                     for (auto j: importedMesh->skeleton->joints) {
-                        // We use the worldMatrix as is instead
-                        // of pulling out manually location, scale, rotation from the matrix.
+                        auto finalTransform = j->globalTransform;
+                        if (currentAnimation) {
+                            finalTransform = animationPlayer->calculateFramePoseForJoint(currentAnimationFrame, j);
+                        }
+
                         useWorldMatrix(true);
-                        setWorldMatrix(j->globalTransform);
+                        setWorldMatrix(finalTransform);
                         foregroundColor({0.7, 0.7, 0, 1});
                         jointCounter++;
                         //scale(glm::vec3(1));
@@ -174,19 +183,106 @@ namespace editor {
             }
         }
 
-
-        // Now we are finished rendering our 3D scene into our framebuffer.
-        // Next we present the texture of the FBO as an image in ImGUI.
-        ImGui::Image(reinterpret_cast<ImTextureID>(skeletalMeshWindowFrameBuffer->texture->handle),
-                         {(float) skeletalMeshWindowFrameBuffer->texture->bitmap->width / 2,
-                          (float) skeletalMeshWindowFrameBuffer->texture->bitmap->height / 2},
-                         {0, 1}, {1, 0});
-
         // Rest to normal viewport:
         glViewport(0, 0, window_width, window_height);
 
         // Activate main framebuffer again:
         activateFrameBuffer(nullptr);
+
+        // We render a 2-column table, with the 3D window on the left, and another table with
+        // detailed skeleton information on the right.
+        if (ImGui::BeginTable("TwoColumnTable", 2)) {
+
+            ImGui::TableNextColumn();
+            // Now we are finished rendering our 3D scene into our framebuffer.
+            // Next we present the texture of the FBO as an image in ImGUI.
+            ImGui::Image(reinterpret_cast<ImTextureID>(skeletalMeshWindowFrameBuffer->texture->handle),
+                             {(float) skeletalMeshWindowFrameBuffer->texture->bitmap->width / 2,
+                              (float) skeletalMeshWindowFrameBuffer->texture->bitmap->height / 2},
+                             {0, 1}, {1, 0});
+
+            ImGui::TableNextColumn();
+            ImGui::Text("Joint infos");
+
+            if (ImGui::BeginTable("bone_detail_table", 4)) {
+                // Set up headers for the table (optional)
+                ImGui::TableSetupColumn("Name");
+                ImGui::TableSetupColumn("localTransform", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("offsetMatrix", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Parent");
+                ImGui::TableHeadersRow();
+
+                for (auto j: importedMesh->skeleton->joints) {
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0); // First column
+                    ImGui::Text("%s", j->name.c_str());
+
+                    ImGui::TableSetColumnIndex(1); // Second column
+                    float x = j->localTransform[3][0]; // Translation x
+                    float y = j->localTransform[3][1]; // Translation y
+                    float z = j->localTransform[3][2]; // Translation z
+                    ImGui::Text("%f/%f/%f", x, y, z);
+
+                    ImGui::TableSetColumnIndex(2); // Second column
+                    float ibx = j->inverseBindMatrix[3][0]; // Translation x
+                    float iby = j->inverseBindMatrix[3][1]; // Translation y
+                    float ibz = j->inverseBindMatrix[3][2]; // Translation z
+                    ImGui::Text("%f/%f/%f", ibx, iby, ibz);
+
+                    ImGui::TableSetColumnIndex(3);
+                    if (j->parent) {
+                        ImGui::Text(j->parent->name.c_str());
+                    } else {
+                        ImGui::Text("-");
+                    }
+
+                }
+
+                // End the table
+                ImGui::EndTable();
+            }
+
+            // Render current animation details:
+            if (currentAnimation) {
+                ImGui::Text("# Frames: %d", currentAnimation->frames);
+                if (ImGui::BeginTable("anim_detail_table", 5)) {
+
+                    ImGui::TableSetupColumn("Time");
+                    ImGui::TableSetupColumn("Joint");
+                    ImGui::TableSetupColumn("Translation", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("Rotation", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableHeadersRow();
+
+
+                    for (auto pose: currentAnimation->samplesPerJoint) {
+
+                        for (auto sample: *pose.second) {
+                            ImGui::TableNextRow();
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%f ", sample->time);
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%s", sample->jointName.c_str());
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%f/%f/%f", sample->translation.x, sample->translation.y, sample->translation.z);
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%f/%f/%f", sample->rotation.x, sample->rotation.y, sample->rotation.z);
+
+                        }
+
+
+                    }
+
+                    ImGui::EndTable();
+                }
+            }
+
+
+            ImGui::EndTable();
+        }
 
 
         ImGui::End();
@@ -442,14 +538,7 @@ namespace editor {
     void Editor::renderMeshMenu() {
         if (ImGui::BeginMenu("Mesh")) {
             if (ImGui::MenuItem("Import Mesh")) {
-                lastImportedMeshFileName = showFileDialog("All\0*.*\0obj\0*.obj\0fbx\0*.fbx\0gltf\0*.gltf");
-                if (lastImportedMeshFileName != "") {
-                    if (importedMesh) {
-                        delete (importedMesh);
-                    }
-                    importedMesh = MeshImporter().importMesh(lastImportedMeshFileName);
-                    animationPlayer->setMesh(importedMesh);
-                }
+                doImportMeshAction();
             }
 
             if (lastImportedMeshFileName != "") {
@@ -510,6 +599,17 @@ namespace editor {
                 ImGui::EndMenu();  // Close the 'New...' menu
             }
             ImGui::EndMenu();  // Close the 'Game Objects' menu
+        }
+    }
+
+    void Editor::doImportMeshAction() {
+        lastImportedMeshFileName = showFileDialog("All\0*.*\0obj\0*.obj\0fbx\0*.fbx\0gltf\0*.gltf");
+        if (lastImportedMeshFileName != "") {
+            if (importedMesh) {
+                delete (importedMesh);
+            }
+            importedMesh = MeshImporter().importMesh(lastImportedMeshFileName);
+            animationPlayer->setMesh(importedMesh);
         }
     }
 
@@ -730,7 +830,7 @@ namespace editor {
 
     void EditorGame::update() {
 
-
+        editor->update();
     }
 
     void EditorGame::render() {

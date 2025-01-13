@@ -989,13 +989,17 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     
     RECT corrRect = {0, 0, window_width, window_height};
     AdjustWindowRect(&corrRect, WS_OVERLAPPEDWINDOW, false);
+
+    auto winWidthHalf = (corrRect.right  - corrRect.left) / 2;
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+
     
     HWND hwnd = CreateWindow(
 			 g_szClassName,
              (game->getName() + " (" + game->getVersion() + ")").c_str(),
 			 //WS_POPUP,
 			 WS_OVERLAPPEDWINDOW,
-			 0, 0, corrRect.right - corrRect.left, corrRect.bottom - corrRect.top,
+			 screenWidth/2 - winWidthHalf, 0, corrRect.right - corrRect.left, corrRect.bottom - corrRect.top,
 			 NULL, NULL, hInstance, NULL);
 
     window = hwnd;

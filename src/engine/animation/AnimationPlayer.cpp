@@ -102,6 +102,53 @@ void AnimationPlayer::update() {
     }
 }
 
+
+/**
+* The joint parameter must have its name and inverseBindMatrix set.
+* The final transform will be returned as the result.
+*/
+glm::mat4 AnimationPlayer::calculateFramePoseForJoint(int frame, Joint* joint) {
+    auto jointSamples = animation->samplesPerJoint[joint->name];
+
+    if (jointSamples && jointSamples->size() > frame ) {
+
+        auto sample = (*jointSamples)[frame];
+        auto localTransform = glm::translate(glm::mat4(1), sample->translation) *
+                            glm::toMat4(sample->rotation) ;
+        auto globalTransform  = calculateWorldTransform(joint, localTransform);
+        auto finalTransform = globalTransform * joint->inverseBindMatrix;
+        return finalTransform;
+    }
+
+    return glm::mat4(1);
+
+
+}
+
+void AnimationPlayer::calculateFramePose(int frame) {
+    std::vector<glm::mat4> boneMatrices;
+    for (auto j: mesh->skeleton->joints) {
+        if (animation) {
+            auto jointSamples = animation->samplesPerJoint[j->name];
+            if (jointSamples &&
+                jointSamples->size() > currentFrame) {
+
+                auto sampleIndex = getRotationIndex(j->name);
+
+                auto sample = (*jointSamples)[sampleIndex];
+                j->localTransform = glm::translate(glm::mat4(1), sample->translation) *
+                                    glm::toMat4(sample->rotation) ;
+                j->globalTransform = calculateWorldTransform(j, j->localTransform);
+                j->finalTransform = j->globalTransform * j->inverseBindMatrix;
+
+            }
+        }
+        boneMatrices.push_back(j->finalTransform);
+    }
+    setBoneMatrices(boneMatrices);
+
+}
+
 Animation* findAnimationByName(std::string name, Mesh* mesh) {
     for (auto a: mesh->animations) {
         if (a->name == name) {

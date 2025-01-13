@@ -18,6 +18,8 @@ namespace editor {
     public:
         void renderImGui();
 
+        void update();
+
     private:
         EditorState* state = nullptr;
         //Texture* playButtonTexture = nullptr;
@@ -46,6 +48,9 @@ namespace editor {
         void recurseRenderGameObjects(GameObject *parent);
         void renderMainMenu();
         void renderGameObjectsMenu();
+
+        void doImportMeshAction();
+
         void renderMeshMenu();
         void renderMeshViewer();
         std::string showFileDialog(const std::string& typeFilter);

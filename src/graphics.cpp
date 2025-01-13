@@ -2909,9 +2909,10 @@ glm::mat4 calculateWorldTransform(Joint* j, glm::mat4 currentTransform) {
     if (j->parent) {
         currentTransform = j->parent->localTransform * currentTransform;
         return calculateWorldTransform(j->parent, currentTransform);
-    } else {
-        return currentTransform;
     }
+
+    return currentTransform;
+
 }
 
 
@@ -2954,10 +2955,14 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
 
         animation->frames = channel->mNumRotationKeys;
 
+
+
         for (int rk = 0; rk < aiAnim->mChannels[c]->mNumRotationKeys; rk++) {
             auto sample = new AnimationSample();
             auto rotKey = aiAnim->mChannels[c]->mRotationKeys[rk];
             sample->time = rotKey.mTime;
+            sample->jointName = channel->mNodeName.C_Str();
+
 
             auto rot = assimpQuatToGLM(rotKey.mValue);
             sample->rotation = rot;
@@ -2981,9 +2986,7 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
 
 Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkeletalMesh) {
     Assimp::Importer importer;
-    auto scene = importer.ReadFile(filePath,
-                                   aiProcess_Triangulate |
-                                   aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights);
+    auto scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights);
     if (!scene) {
         printf("error during assimp scene load. ");
         exit(1);
@@ -3023,7 +3026,6 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
             uvMasterList.push_back({0.0f,
                                     0.0f});
         }
-
     }
 
     struct BoneWeight {
@@ -3048,20 +3050,27 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
             joint->name = bone->mName.C_Str();
 
             auto boneNode = FindNodeByName(scene->mRootNode, bone->mName.C_Str());
+
+            // Does this bone have a parent or is it root?
             if (boneNode->mParent) {
+
                 // Do we know this parent already?
-                auto parentJoint = findJointByName(boneNode->mParent->mName.C_Str(), skeleton->joints);
-                if (parentJoint) {
+                // i.e. we have already processed it and made a joint object for it.
+                // If yes, we just assign this joint as the parent to our newly created joint.
+                // If not, we create a new joint for this parent on the fly here.
+                // In fact, according to the ordering, the parent must always exist.
+                // We try to do nothing at all for now in this case.
+                if (auto parentJoint = findJointByName(boneNode->mParent->mName.C_Str(), skeleton->joints)) {
                     joint->parent = parentJoint;
                 } else {
-                    joint->parent = new Joint();
-                    joint->parent->name = boneNode->mParent->mName.C_Str();
-
-                    // We skip the Armature, it is not a real bone.
-                    // Otherwise all bone indices are one off.
-                    if (!joint->parent->name.starts_with("Armature")) {
-                        skeleton->joints.push_back(joint->parent);
-                    }
+                    // joint->parent = new Joint();
+                    // joint->parent->name = boneNode->mParent->mName.C_Str();
+                    //
+                    // // We skip the Armature, it is not a real bone.
+                    // // Otherwise all bone indices are one off.
+                    // if (!joint->parent->name.starts_with("Armature")) {
+                    //     skeleton->joints.push_back(joint->parent);
+                    // }
 
                 }
             }
@@ -3071,6 +3080,10 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
             joint->globalTransform = calculateWorldTransform(joint, joint->localTransform);
             joint->finalTransform = joint->globalTransform * joint->inverseBindMatrix ;
 
+            // One joint can influence many vertices, but any vertex can only be influenced by
+            // maximum 4 joints.
+            // Here we store every weight in a map which holds a list of weights per vertex.
+            // The sum of all weights per vertex must be 1, not less, not more.
             for (int w = 0; w < bone->mNumWeights; w++) {
                 auto weight = bone->mWeights[w];
                 auto boneWeights = weightMap[weight.mVertexId];
@@ -3122,18 +3135,22 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
                     if (count == 1) {
                         indices.x = boneWeight->boneIndex;
                         weights.x = boneWeight->weight;
+                        continue;
                     }
                     if (count == 2) {
                         indices.y = boneWeight->boneIndex;
                         weights.y = boneWeight->weight;
+                        continue;
                     }
                     if (count == 3) {
                         indices.z = boneWeight->boneIndex;
                         weights.z = boneWeight->weight;
+                        continue;
                     }
                     if (count == 4) {
                         indices.w = boneWeight->boneIndex;
                         weights.w = boneWeight->weight;
+                        continue;
                     }
                 }
             }
@@ -3142,13 +3159,6 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
         }
 
     }
-
-
-
-
-
-
-
 
     auto posFlat = flattenV3(posMasterList);
     auto normFlat = flattenV3(normalMasterList);
@@ -3472,11 +3482,11 @@ void CameraMover::update() {
     // TODO: instead of directly using specific bindings, we could let us inject the actual
     // values for yaw, pitch etc. from the consumer.
     // Alternative: use a keybinding map injected from outside.
-    if (isKeyDown('E') || getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.4) {
+    if (isKeyDown('E') || isKeyDown(VK_RIGHT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.4) {
         yaw = -1;
     }
 
-    if (isKeyDown('Q') || getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.4) {
+    if (isKeyDown('Q') || isKeyDown(VK_LEFT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.4) {
         yaw = 1;
     }
 
@@ -3495,11 +3505,12 @@ void CameraMover::update() {
         dir = -1;
     }
 
-    if (getControllerAxis(ControllerAxis::LSTICK_Y, 0) < -0.3) {
+
+    if (isKeyDown('S') || getControllerAxis(ControllerAxis::LSTICK_Y, 0) < -0.3) {
         panFwd = -1;
     }
 
-    if (getControllerAxis(ControllerAxis::LSTICK_Y, 0) > 0.3) {
+    if (isKeyDown('W') || getControllerAxis(ControllerAxis::LSTICK_Y, 0) > 0.3) {
         panFwd = 1;
     }
 
