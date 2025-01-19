@@ -116,7 +116,9 @@ glm::mat4 AnimationPlayer::calculateFramePoseForJoint(int frame, Joint* joint) {
         auto localTransform = glm::translate(glm::mat4(1), sample->translation) *
                             glm::toMat4(sample->rotation) ;
         auto globalTransform  = calculateWorldTransform(joint, localTransform);
-        auto finalTransform = globalTransform * joint->inverseBindMatrix;
+
+        // We do NOT multiply the inverse bind matrix here. This is only needed for the skinned vertices.
+        auto finalTransform = globalTransform;
         return finalTransform;
     }
 

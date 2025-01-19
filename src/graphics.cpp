@@ -2915,6 +2915,17 @@ glm::mat4 calculateWorldTransform(Joint* j, glm::mat4 currentTransform) {
 
 }
 
+// Recursively multiplies the current transform with the parents transform:
+glm::mat4 calculateWorldTransformForFrame(Joint* j, glm::mat4 currentTransform, int frame) {
+    if (j->parent) {
+        currentTransform = j->parent->localTransform * currentTransform;
+        return calculateWorldTransform(j->parent, currentTransform);
+    }
+
+    return currentTransform;
+
+}
+
 
 
 Joint* findJointByName(const std::string& name, std::vector<Joint*> joints)  {
@@ -2957,9 +2968,9 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
 
 
 
-        for (int rk = 0; rk < aiAnim->mChannels[c]->mNumRotationKeys; rk++) {
+        for (int rk = 0; rk < channel->mNumRotationKeys; rk++) {
             auto sample = new AnimationSample();
-            auto rotKey = aiAnim->mChannels[c]->mRotationKeys[rk];
+            auto rotKey = channel->mRotationKeys[rk];
             sample->time = rotKey.mTime;
             sample->jointName = channel->mNodeName.C_Str();
 
@@ -2971,7 +2982,7 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
 
         for (int pk = 0; pk < aiAnim->mChannels[c]->mNumPositionKeys; pk++) {
             auto sample = (*sampleList)[pk];
-            auto posKey = aiAnim->mChannels[c]->mPositionKeys[pk];
+            auto posKey = channel->mPositionKeys[pk];
             sample->time = posKey.mTime;
 
             glm::vec3 pos =  {posKey.mValue.x, posKey.mValue.y, posKey.mValue.z};

@@ -132,9 +132,14 @@ namespace editor {
             scale({1, 1, 1});
             foregroundColor({0.9, 0.9, 0.9, 1});
 
-            // These 2 lines are good for avoiding z-fighting with the following wireframe mesh
+            // These 2 lines are good (necessary?) for avoiding z-fighting with the following wireframe mesh
             glEnable(GL_POLYGON_OFFSET_FILL);
             glPolygonOffset(1.0f, 1.0f);
+
+            if (currentAnimation && animationPlaying) {
+                setSkinnedDraw(true);
+                animationPlayer->update();
+            }
 
             // Draw the filled mesh
             drawMesh();
@@ -146,6 +151,10 @@ namespace editor {
             drawMesh();
             wireframeOff();
             lightingOn();
+
+            if (currentAnimation && animationPlaying) {
+                setSkinnedDraw(false);
+            }
         }
 
         // Draw the skeleton if the mesh has one

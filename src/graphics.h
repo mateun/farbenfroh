@@ -662,9 +662,16 @@ void activateFrameBuffer(uint32_t fbHandle);
 class MeshImporter {
 public:
 
-    /** For .fbx files out of Blender, first rotate the object by -90 degress around the x-axis.
+    /**
+     * FBX notes:
+     * For .fbx files out of Blender, first rotate the object by -90 degress around the x-axis.
      * Then apply all transforms.
      * Then export fbx.
+     *
+     * GLTF notes:
+     * Disable "Sample optimization" and "Keep channel..." (or similar settings).
+     * This will lead to exact non optimized frame information, making it easier to debug.
+     *
     **/
     Mesh* importMesh(const std::string& filePath, bool debugPrintSM = false);
     std::vector<Animation*> importAnimations(const std::string& filePath);
