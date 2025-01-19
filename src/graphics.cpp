@@ -2948,7 +2948,7 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
     //printf("Animation: %s (%f) ticksPerSecond: %f\n", aiAnim->mName.C_Str(), aiAnim->mDuration, aiAnim->mTicksPerSecond);
     auto animation = new Animation();
     animation->name = aiAnim->mName.C_Str();
-    animation->duration = aiAnim->mDuration;
+    animation->duration = aiAnim->mDuration / aiAnim->mTicksPerSecond;
     animation->ticksPerSecond = aiAnim->mTicksPerSecond;
 
     for (int c = 0; c < aiAnim->mNumChannels; c++) {
@@ -2971,7 +2971,7 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
         for (int rk = 0; rk < channel->mNumRotationKeys; rk++) {
             auto sample = new AnimationSample();
             auto rotKey = channel->mRotationKeys[rk];
-            sample->time = rotKey.mTime;
+            sample->time = rotKey.mTime / aiAnim->mTicksPerSecond;
             sample->jointName = channel->mNodeName.C_Str();
 
 
@@ -2983,7 +2983,7 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
         for (int pk = 0; pk < aiAnim->mChannels[c]->mNumPositionKeys; pk++) {
             auto sample = (*sampleList)[pk];
             auto posKey = channel->mPositionKeys[pk];
-            sample->time = posKey.mTime;
+            sample->time = posKey.mTime / aiAnim->mTicksPerSecond;
 
             glm::vec3 pos =  {posKey.mValue.x, posKey.mValue.y, posKey.mValue.z};
             sample->translation= pos;

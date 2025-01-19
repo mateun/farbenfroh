@@ -47,15 +47,17 @@ void AnimationPlayer::update() {
         // animTime += (ftSeconds * 1000.0f);
         // frameTime += (ftSeconds * 1000.0f);
 
-        animTime += animation->ticksPerSecond * ftSeconds;
+        animTime += ftSeconds;
         if (looped) {
             animTime = fmod(animTime, animation->duration);
         } else {
-            if (currentFrame > (animation->frames - 1)) {
-                currentFrame = 0;
+            if (animTime > (animation->duration)) {
+                animTime = 0;
                 playing = false;
             }
         }
+
+        //printf("animTime %f\n", animTime);
 
 
 
@@ -63,10 +65,10 @@ void AnimationPlayer::update() {
         for (auto j: mesh->skeleton->joints) {
             if (animation) {
                 auto jointSamples = animation->samplesPerJoint[j->name];
-                if (jointSamples &&
-                    jointSamples->size() > currentFrame) {
+                if (jointSamples) {
 
                     auto fromSampleIndex = getRotationIndex(j->name);
+                    //printf("fromSampleIndex: %d\n", fromSampleIndex);
                     if (fromSampleIndex == -1) {
                         exit(8567);
                     }
@@ -78,7 +80,8 @@ void AnimationPlayer::update() {
                     if (toSampleIndex > fromSampleIndex) {
                         auto fromSample = (*jointSamples)[fromSampleIndex];
                         auto toSample = (*jointSamples)[toSampleIndex];
-                        float scaleFactor = ((float) fromSampleIndex - currentFrame) / (float) (toSampleIndex - fromSampleIndex);
+                        float scaleFactor = ((float) animTime - fromSample->time ) / (float) (toSample->time - fromSample->time);
+                        //printf("scalefactor: %f\n", scaleFactor);
                         auto interpTranslation = glm::mix(fromSample->translation, toSample->translation, scaleFactor);
                         auto interpRotation = glm::slerp(fromSample->rotation, toSample->rotation, scaleFactor);
 
@@ -86,13 +89,6 @@ void AnimationPlayer::update() {
                                             glm::toMat4(interpRotation);
                         j->globalTransform = calculateWorldTransform(j, j->localTransform);
                         j->finalTransform = j->globalTransform * j->inverseBindMatrix;
-                    } else {
-
-                            auto fromSample = (*jointSamples)[fromSampleIndex];
-                            j->localTransform = glm::translate(glm::mat4(1), fromSample->translation) *
-                                                glm::toMat4(fromSample->rotation) ;
-                            j->globalTransform = calculateWorldTransform(j, j->localTransform);
-                            j->finalTransform = j->globalTransform * j->inverseBindMatrix;
                     }
                 }
             }

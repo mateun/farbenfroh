@@ -171,7 +171,7 @@ namespace editor {
 
                     for (auto j: importedMesh->skeleton->joints) {
                         auto finalTransform = j->globalTransform;
-                        if (currentAnimation) {
+                        if (currentAnimation  && !animationPlaying) {
                             finalTransform = animationPlayer->calculateFramePoseForJoint(currentAnimationFrame, j);
                         }
 
@@ -253,7 +253,7 @@ namespace editor {
             }
 
             // Render current animation details:
-            if (currentAnimation) {
+            if (currentAnimation ) {
                 ImGui::Text("# Frames: %d", currentAnimation->frames);
                 if (ImGui::BeginTable("anim_detail_table", 5)) {
 
