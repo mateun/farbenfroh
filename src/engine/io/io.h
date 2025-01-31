@@ -8,7 +8,7 @@
 #include <vector>
 
 std::string readFile(const std::string& fileName);
-uint8_t* readFileBinary(const std::string& fileName);
+uint8_t* readFileBinary(const std::string& fileName, uint32_t *size);
 
 bool startSocketServer(int port);
 void receiveFromSocketServer();

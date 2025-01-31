@@ -42,15 +42,19 @@ std::string readFile(const std::string &fileName) {
 }
 
 
-uint8_t *readFileBinary(const std::string &fileName) {
+uint8_t *readFileBinary(const std::string &fileName, uint32_t *len) {
     FILE *f = fopen(fileName.c_str(), "rb");
     if (!f) {
         printf("ERROR: file not found %s\n", fileName.c_str());
         return nullptr;
     }
+
+    // Get length in bytes
     fseek(f, 0, SEEK_END);
     int size = ftell(f);
+    if (len) *len = size;
     rewind(f);
+
 
     uint8_t *buf = new uint8_t[size + 1];
     memset(buf, 0, sizeof(buf));

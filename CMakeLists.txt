@@ -32,5 +32,5 @@ add_executable(game WIN32
 
 )
 
-target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt glew32)
+target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
 #target_link_libraries(game vulkan-1)

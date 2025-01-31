@@ -5,11 +5,12 @@
 #include <GL/glew.h>
 #include <opengl/wglext.h>
 #include <inttypes.h>
-//#include <vulkan/vulkan.h>
-//#include <vulkan/vulkan_win32.h>
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_win32.h>
 #include <stdexcept>
 #include <vector>
 #include <XInput.h>
+#include <engine/io/io.h>
 
 
 #include "../extlibs/imgui/imgui.h"
@@ -681,7 +682,7 @@ void shutdown() {
     ImGui::DestroyContext();
 }
 
-
+#define USE_VULKAN
 #ifdef USE_VULKAN
 VkInstance createVulkanInstance(HINSTANCE hInst, HWND hwnd) {
     VkApplicationInfo appInfo = {};
@@ -747,6 +748,8 @@ VkInstance createVulkanInstance(HINSTANCE hInst, HWND hwnd) {
     {
         printf("device name: %s\n", physicalDeviceProperties.deviceName);
         printf("max clip distances: %u\n", physicalDeviceProperties.limits.maxClipDistances);
+        auto minorVersion = VK_API_VERSION_MINOR(physicalDeviceProperties.apiVersion);
+        printf("minor version: %u\n", minorVersion);
     }
 
 
@@ -843,7 +846,7 @@ VkInstance createVulkanInstance(HINSTANCE hInst, HWND hwnd) {
     // We just assume for now our surface has presentation support:
     VkBool32 presentSupport = false;
     vkGetPhysicalDeviceSurfaceSupportKHR(device, queueFamilyIndex, surface, &presentSupport);
-    if (!presentSupport) {
+    if (presentSupport == VK_FALSE) {
         exit(1);
     }
     VkQueue presentQueue;
@@ -914,6 +917,56 @@ VkInstance createVulkanInstance(HINSTANCE hInst, HWND hwnd) {
     if (vkCreateSwapchainKHR(logicalDevice, &swapChainInfo, nullptr, &swapChain) != VK_SUCCESS) {
         exit(4);
     }
+
+    // We aquire the actual images into which we render. First we find out, how many images have been created
+    // in our swapchain.
+    uint32_t swapChainImageCount = 0;
+    if (vkGetSwapchainImagesKHR(logicalDevice, swapChain, &swapChainImageCount, nullptr) != VK_SUCCESS) {
+        exit(5);
+    }
+    // Now actually retrieve the images.
+    std::vector<VkImage> swapChainImages(swapChainImageCount);
+    swapChainImages.resize(swapChainImageCount);
+    if (vkGetSwapchainImagesKHR(logicalDevice, swapChain, &swapChainImageCount, swapChainImages.data()) != VK_SUCCESS) {
+        exit(6);
+    }
+
+    // In order to render (write) into an image, we must aquire it.
+    uint32_t imageIndex = 0;
+    if (vkAcquireNextImageKHR(logicalDevice, swapChain, 100, {}, {}, &imageIndex) != VK_SUCCESS) {
+        exit(7);
+    }
+
+    // TODO actual rendering pipeline
+    // Create our first shader object
+    uint32_t lengthInBytes = 0;
+    auto shaderCode = readFileBinary("../assets/vulkan_shaders/simple.spv", &lengthInBytes);
+    if (!shaderCode) {
+        exit(8);
+    }
+    auto shaderCreateInfo = VkShaderModuleCreateInfo();
+    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shaderCreateInfo.pNext = nullptr;
+    shaderCreateInfo.flags = 0;
+    shaderCreateInfo.codeSize = lengthInBytes;
+    shaderCreateInfo.pCode = reinterpret_cast<uint32_t *>(shaderCode);
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(logicalDevice, &shaderCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        exit(9);
+    }
+
+    VkComputePipelineCreateInfo computePipelineCreateInfo = {};
+    VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
+    pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    pipelineCacheCreateInfo.pNext = nullptr;
+    pipelineCacheCreateInfo.flags = 0;
+    pipelineCacheCreateInfo.initialDataSize = 1024;
+    pipelineCacheCreateInfo.pInitialData = nullptr;
+
+    VkPipelineCache pipelineCache;
+    vkCreatePipelineCache(logicalDevice, &pipelineCacheCreateInfo, nullptr, &pipelineCache);
+    vkCreateComputePipelines(logicalDevice, computePipelineCreateInfo, )
 
     return instance;
 }
@@ -1038,6 +1091,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
             createDefaultGLObjects();
         }
         else if (renderer == "vulkan") {
+
 #ifdef USE_VULKAN
             createVulkanInstance(hInstance, hwnd);
 #endif
