@@ -30,7 +30,7 @@
 // All API methods will then be called on this game instance.
 extern DefaultGame* getGame();
 
-// This is implemented by the actual game itself. 
+// This is implemented by the actual game itself.
 // Gets called from within the windows messagepump loop.
 extern bool gameLoop();
 
@@ -323,12 +323,12 @@ void initGLContext(HWND hwnd, HDC hdc) {
         0,
         0, 0, 0
     };
-    
+
     HDC ourWindowHandleToDeviceContext = GetDC(hwnd);
-    
+
     int windowsChosenFormat = ChoosePixelFormat(ourWindowHandleToDeviceContext, &pfd);
     SetPixelFormat(ourWindowHandleToDeviceContext, windowsChosenFormat, &pfd);
-    
+
     HGLRC baseContext = wglCreateContext(ourWindowHandleToDeviceContext);
     BOOL ok = wglMakeCurrent (ourWindowHandleToDeviceContext, baseContext);
     if (!ok) {
@@ -363,7 +363,7 @@ void initGLContext(HWND hwnd, HDC hdc) {
         exit(1);
     }
 
-    
+
     const GLubyte *GLVersionString = glGetString(GL_VERSION);
     char buf[200];
     sprintf_s(buf, "gl version: %s\n", GLVersionString);
@@ -384,7 +384,7 @@ void initGLContext(HWND hwnd, HDC hdc) {
     bbInfo.bmiHeader.biYPelsPerMeter = 0;
     bbInfo.bmiHeader.biClrUsed = 0;
     bbInfo.bmiHeader.biClrImportant = 0;
-    
+
     int bytesPerPixel = 4;
     int bitmapMemorySize = bbInfo.bmiHeader.biWidth * bbInfo.bmiHeader.biHeight * bytesPerPixel;
     backbufferBytes = VirtualAlloc(0, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
@@ -397,7 +397,7 @@ void initGLContext(HWND hwnd, HDC hdc) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, window_width, window_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, backbufferBytes);
-    
+
     // Onetime ortho projection setup
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -405,7 +405,7 @@ void initGLContext(HWND hwnd, HDC hdc) {
     glOrtho(0, window_width, 0, window_height, 0, 1);
     glViewport(0, 0, window_width, window_height);
     glEnable(GL_TEXTURE_2D);
-   
+
     auto err = glGetError();
     if (err != 0) {
         printf("gl error: %d\n", err);
@@ -440,7 +440,7 @@ void initGLContext(HWND hwnd, HDC hdc) {
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    
+
     HDC hdc;
     RECT rect;
     TEXTMETRIC tm;
@@ -457,7 +457,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
 
     switch (message) {
-        
+
         case WM_CLOSE:
         DestroyWindow(hwnd);
         windowClosed = true;
@@ -525,7 +525,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
             PostQuitMessage(0);
             ShowCursor(TRUE);
             break;
-        
+
         case WM_PAINT: {
             hdc = BeginPaint(hwnd, &ps);
             EndPaint(hwnd, &ps);
@@ -561,21 +561,21 @@ void present(HDC hdc) {
 
 	auto width = window_width;
 	auto height = window_height;
-	
-    
+
+
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glBegin(GL_TRIANGLES);
     glTexCoord2f(0, 0); glVertex3f(0.f, 0.f, -.10f);
     glTexCoord2f(1, 0); glVertex3f(width, 0.f, -.10f);
     glTexCoord2f(1, 1); glVertex3f(width, height, -.10f);
-    
+
     glTexCoord2f(0, 0); glVertex3f(0.f, 0.f, -.10f);
     glTexCoord2f(1, 1); glVertex3f(width, height, -.10f);
     glTexCoord2f(0, 1); glVertex3f(0.f, height, -.10f);
-    
+
     glEnd();
     glFlush();
-    
+
     SwapBuffers(hdc);
 }
 // We support Windows VK_ macros here.
@@ -956,17 +956,43 @@ VkInstance createVulkanInstance(HINSTANCE hInst, HWND hwnd) {
         exit(9);
     }
 
-    VkComputePipelineCreateInfo computePipelineCreateInfo = {};
+
     VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
     pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     pipelineCacheCreateInfo.pNext = nullptr;
     pipelineCacheCreateInfo.flags = 0;
-    pipelineCacheCreateInfo.initialDataSize = 1024;
+    pipelineCacheCreateInfo.initialDataSize = 0;
     pipelineCacheCreateInfo.pInitialData = nullptr;
+
+    // Layout
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
+    pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo.pNext = nullptr;
+    pipelineLayoutCreateInfo.flags = 0;
+    pipelineLayoutCreateInfo.setLayoutCount = 1;
+
+    std::vector<VkComputePipelineCreateInfo> pipelineCreateInfos;
+    VkComputePipelineCreateInfo computePipelineCreateInfo = {};
+    computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    computePipelineCreateInfo.pNext = nullptr;
+    computePipelineCreateInfo.flags = 0;
+    computePipelineCreateInfo.layout = {};
+    computePipelineCreateInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    computePipelineCreateInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    computePipelineCreateInfo.stage.pNext = nullptr;
+    computePipelineCreateInfo.stage.module = shaderModule;
+    computePipelineCreateInfo.stage.pName = "main";
+    computePipelineCreateInfo.stage.pSpecializationInfo = nullptr;
+    pipelineCreateInfos.push_back(computePipelineCreateInfo);
 
     VkPipelineCache pipelineCache;
     vkCreatePipelineCache(logicalDevice, &pipelineCacheCreateInfo, nullptr, &pipelineCache);
-    vkCreateComputePipelines(logicalDevice, computePipelineCreateInfo, )
+
+    std::vector<VkPipeline> computePipelines;
+    computePipelines.resize(1);
+    if (vkCreateComputePipelines(logicalDevice, pipelineCache, 1, pipelineCreateInfos.data(), nullptr, computePipelines.data()) != VK_SUCCESS) {
+        exit(10);
+    }
 
     return instance;
 }
@@ -1010,8 +1036,8 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         window_width = 1920;
         window_height= 900;
     }
-    
-    // Allocate a console and redirect stdout to 
+
+    // Allocate a console and redirect stdout to
     // this new console:
     AllocConsole();
     FILE* fp;
@@ -1034,19 +1060,19 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
     wc.lpfnWndProc = WndProc;
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
-    
+
     if (!RegisterClassEx(&wc)) {
         MessageBox(NULL, "Window Registration Failed", "Error", MB_ICONEXCLAMATION | MB_OK);
         exit(1);
     }
-    
+
     RECT corrRect = {0, 0, window_width, window_height};
     AdjustWindowRect(&corrRect, WS_OVERLAPPEDWINDOW, false);
 
     auto winWidthHalf = (corrRect.right  - corrRect.left) / 2;
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 
-    
+
     HWND hwnd = CreateWindow(
 			 g_szClassName,
              (game->getName() + " (" + game->getVersion() + ")").c_str(),
@@ -1061,7 +1087,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         MessageBox(NULL, "Window Creation Failed", "Error", MB_ICONEXCLAMATION | MB_OK);
         return 0;
     }
-    
+
     ShowWindow(hwnd, SW_NORMAL);
     UpdateWindow(hwnd);
     HDC hdc = GetDC(hwnd);
@@ -1101,8 +1127,8 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         mainLoop(hwnd, game);
     }
 
-    
+
     return 0;
-    
+
 }
 
