@@ -73,6 +73,7 @@ struct Grid {
     int verticalLines = 0;
 };
 
+
 struct AnimationSample {
     std::string jointName;
     float time;

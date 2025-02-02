@@ -11,6 +11,7 @@
 #include <vector>
 #include <XInput.h>
 #include <engine/io/io.h>
+#include <engine/vulkan/VulkanRenderer.h>
 
 
 #include "../extlibs/imgui/imgui.h"
@@ -105,9 +106,20 @@ UINT GetDpiForWindow(HWND hWnd) {
     return dpi;
 }
 
+void initXInput() {
+    controllerStates.clear();
+    controllerStates.resize(XUSER_MAX_COUNT);
+    prevControllerStates.clear();
+    prevControllerStates.resize(XUSER_MAX_COUNT);
+}
+
 
 static bool pollController(int index) {
-    DWORD result = XInputGetState(index, &controllerStates[index]);
+    XINPUT_STATE state;
+    auto result = XInputGetState(index, &state);
+    if (result == ERROR_SUCCESS) {
+        controllerStates[index] = state;
+    }
     return result == ERROR_SUCCESS;
 }
 
@@ -611,11 +623,11 @@ bool processOSMessages() {
 }
 
 
-void mainLoop(HWND hwnd, DefaultGame* game) {
-
-
+void mainLoop(HWND hwnd, DefaultGame* game, VulkanRenderer* vulkanRenderer) {
 	LARGE_INTEGER startticks;
 	LARGE_INTEGER endticks;
+
+    initXInput();
 
 	auto hdc = GetDC(hwnd);
 	bool running = true;
@@ -631,21 +643,23 @@ void mainLoop(HWND hwnd, DefaultGame* game) {
             DispatchMessage(&msg);
         }
 
-        if (gldirect) {
+	    if (vulkanRenderer) {
+	        vulkanRenderer->clearBuffers();
+	    } else if (gldirect) {
             clearGLBuffers();
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
         } else {
             // Clear the backbuffer to black
             // 64 bytes on each loop so we are quicker/less iterations
-            uint64_t* bb64 = (uint64_t*) backbufferBytes;
+            auto* bb64 = static_cast<uint64_t *>(backbufferBytes);
             for (int i = 0; i < (window_width*window_height)/2; i++) {
                 *bb64 = 0;
                 *bb64++;
             }
         }
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
 
         running = game->shouldStillRun();
         pollController(0);
@@ -656,13 +670,17 @@ void mainLoop(HWND hwnd, DefaultGame* game) {
         lastKeyPress = 0;
         lbuttonUp = false;
 
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 
-        if (gldirect) {
+
+        if (vulkanRenderer) {
+            vulkanRenderer->drawFrame();
+        } else if (gldirect) {
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             present3D(hdc);
-        } else {
+        }
+	    else {
             present(hdc);
         }
 
@@ -1028,6 +1046,8 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     QueryPerformanceFrequency(&freq);
     performance_frequency = freq.QuadPart;
 
+    VulkanRenderer* vulkanRenderer = nullptr;
+
     // Allocate our game
     auto game = getGame();
     auto editorFlag = GetArgumentValue("editor", __argc, __argv);
@@ -1036,6 +1056,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         window_width = 1920;
         window_height= 900;
     }
+
 
     // Allocate a console and redirect stdout to
     // this new console:
@@ -1107,7 +1128,10 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         game->init();
 
     } else {
-        // We are in the more managed branch here. There we provide some default renderer backends.
+        // We are in the managed mode here. Some default renderer backends are supported:
+        // - DX11
+        // - OpenGL 4.5
+        // - Vulkan 1.3
         std::string renderer = GetArgumentValue("renderer", __argc, __argv);
         if (renderer == "dx11") {
             _initDX11(hwnd, hInstance);
@@ -1119,12 +1143,13 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         else if (renderer == "vulkan") {
 
 #ifdef USE_VULKAN
-            createVulkanInstance(hInstance, hwnd);
+            //createVulkanInstance(hInstance, hwnd);
+            vulkanRenderer = new VulkanRenderer(hInstance, hwnd);
 #endif
         }
 
         game->init();
-        mainLoop(hwnd, game);
+        mainLoop(hwnd, game, vulkanRenderer);
     }
 
 

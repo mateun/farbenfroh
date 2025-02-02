@@ -8,6 +8,7 @@
 #include "engine/game/game_model.cpp"
 #include "engine/animation/AnimationPlayer.cpp"
 #include "engine/algo/Bvh.cpp"
+#include "engine/vulkan/VulkanRenderer.cpp"
 #include "graphics.cpp"
 
 
@@ -48,8 +49,13 @@
 // Dungeon Shoot
 //#include "../games/dungeon_shoot/dungeon_shoot_main.cpp"
 
+// Vulkan/Shmup
+#include "../games/vulkan/shmup/Shmup.cpp"
+
 // TopDownMovement
-#include "../games/topdown_mover/TopDownGame.cpp"
+//#include "../games/topdown_mover/TopDownGame.cpp"
+
+
 
 // Software rendered king
 //#include "../games/software_rendered_king/SoftwareRenderedGame.cpp"
