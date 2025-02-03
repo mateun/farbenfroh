@@ -15,6 +15,9 @@ layout(location = 21) uniform float uvScale = 1;
 layout(location = 22) uniform float uvPanX = 0;
 layout(location = 23) uniform float uvPanY = 0;
 
+layout(location = 25) uniform float uvScaleX = 1;
+layout(location = 26) uniform float uvScaleY = 1;
+
 out vec2 fs_uvs;
 out vec3 fs_normals;
 out vec3 fsFogCameraPos;
@@ -41,7 +44,6 @@ void main() {
     } else  {
         fs_normals = normalize(normals);
     }
-
 
 
     fsFogCameraPos = (mat_view * mat_model * vec4(pos,1)).xyz;

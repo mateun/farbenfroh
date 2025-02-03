@@ -339,13 +339,47 @@ void initGLContext(HWND hwnd, HDC hdc) {
         0, 0, 0
     };
 
-    HDC ourWindowHandleToDeviceContext = GetDC(hwnd);
+    // 1. Register a dummy window class
+    WNDCLASSA wc;
+    ZeroMemory(&wc, sizeof(wc));
+    wc.style         = CS_OWNDC;                  // get our own DC for the window
+    wc.lpfnWndProc   = DefWindowProcA;            // a trivial wndproc
+    wc.hInstance     = GetModuleHandle(NULL);
+    wc.lpszClassName = "Dummy_WGL";
 
-    int windowsChosenFormat = ChoosePixelFormat(ourWindowHandleToDeviceContext, &pfd);
-    SetPixelFormat(ourWindowHandleToDeviceContext, windowsChosenFormat, &pfd);
+    if (!RegisterClassA(&wc)) {
+        // handle error
+    }
 
-    HGLRC baseContext = wglCreateContext(ourWindowHandleToDeviceContext);
-    BOOL ok = wglMakeCurrent (ourWindowHandleToDeviceContext, baseContext);
+    // 2. Create the hidden (dummy) window
+    HWND dummyWnd = CreateWindowA(
+        "Dummy_WGL",            // class name
+        "Dummy OpenGL Window",  // window name
+        WS_OVERLAPPEDWINDOW,    // style
+        CW_USEDEFAULT, CW_USEDEFAULT, // position
+        CW_USEDEFAULT, CW_USEDEFAULT, // size
+        NULL,                   // parent
+        NULL,                   // menu
+        wc.hInstance,
+        NULL
+    );
+    if (!dummyWnd) {
+        // handle error
+        throw std::runtime_error("Failed to create window");
+    }
+
+    // 3. Get the DC for the dummy window
+    HDC dummyDC = GetDC(dummyWnd);
+
+
+
+
+
+    int windowsChosenFormat = ChoosePixelFormat(dummyDC, &pfd);
+    SetPixelFormat(dummyDC, windowsChosenFormat, &pfd);
+
+    HGLRC baseContext = wglCreateContext(dummyDC);
+    BOOL ok = wglMakeCurrent (dummyDC, baseContext);
     if (!ok) {
         printf("error");
         exit(1);
@@ -361,7 +395,37 @@ void initGLContext(HWND hwnd, HDC hdc) {
 
 
     //HGLRC wglCreateContextAttribsARB(HDC hDC, HGLRC hShareContext, const int *attribList)
+    PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
     auto createContextAttribsProc = (PFNWGLCREATECONTEXTATTRIBSARBPROC ) wglGetProcAddress("wglCreateContextAttribsARB");
+
+    int pixelAttribs[] =
+{
+        WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+        WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+        WGL_DOUBLE_BUFFER_ARB,  GL_TRUE,
+        WGL_PIXEL_TYPE_ARB,     WGL_TYPE_RGBA_ARB,
+        WGL_COLOR_BITS_ARB,     32,
+        WGL_DEPTH_BITS_ARB,     24,
+        WGL_STENCIL_BITS_ARB,   8,
+        WGL_SAMPLE_BUFFERS_ARB, 1,      // <-- Enable multi-sample buffer
+        WGL_SAMPLES_ARB,        4,      // <-- # of samples
+        0                       // End
+    };
+
+    int pixelFormat;
+    UINT numFormats; // will receive how many formats match
+
+    // Find a pixel format that matches our criteria
+    bool success = wglChoosePixelFormatARB(hdc, pixelAttribs, nullptr, 1,
+                                           &pixelFormat, &numFormats);
+
+    if ( ! success || numFormats ==0 ) {
+        throw std::runtime_error("Failed to create OpenGL context with MSAA 4x");
+    }
+
+    HDC ourWindowHandleToDeviceContext = GetDC(hwnd);
+    SetPixelFormat(ourWindowHandleToDeviceContext, pixelFormat, &pfd);
+
     auto coreRenderContext = createContextAttribsProc(hdc, nullptr, gl46_attribs);
     wglDeleteContext(baseContext);
     ok = wglMakeCurrent(ourWindowHandleToDeviceContext, coreRenderContext);
@@ -442,6 +506,11 @@ void initGLContext(HWND hwnd, HDC hdc) {
     //glEnable(GL_POLYGON_SMOOTH);
     glViewport(0, 0, window_width, window_height);
     enableVsync(false);
+
+    GLint samples = 0, sampleBuffers = 0;
+    glGetIntegerv(GL_SAMPLES, &samples);
+    glGetIntegerv(GL_SAMPLE_BUFFERS, &sampleBuffers);
+    printf("MSAA: %d sample buffers, %d samples\n", sampleBuffers, samples);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -697,7 +766,9 @@ void mainLoop(HWND hwnd, DefaultGame* game, VulkanRenderer* vulkanRenderer) {
         ftSeconds = ticks / (float) freq.QuadPart;
         ftMicros = (float) ftSeconds * 1000.0f * 1000.0f;
 
-        // Calculate
+        // Calculate average frametimes and fps.
+	    // Every 1000 frames we take the average.
+	    // Clear the buffer and collect the next 1000 frames for averaging.
 	    ftbuffer.push_back(ftSeconds);
 	    ftMicrosbuffer.push_back(ftMicros);
 	    if (ftbuffer.size() > 999) {

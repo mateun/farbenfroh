@@ -5,7 +5,7 @@ layout(binding = 1) uniform sampler2D shadowMap;
 
 layout(location = 1) uniform vec4 singleColor = vec4(0, 0.4, 0, 1);
 
-layout (location = 10) uniform vec3 lightDirection = { -0.1, -1, -0.1 };
+layout (location = 10) uniform vec3 lightDirection = { 0, -1, -1  };
 layout (location = 11) uniform vec3 lightColor = { 1, 1, 1 };
 layout (location = 12) uniform vec3 ambientColor = { 0.7, 0.7, 0.4 };
 layout (location = 13) uniform bool lit = true;
@@ -69,8 +69,8 @@ bool isInShadow() {
 
 void diffuseLighting(vec4 baseColor) {
     if (lit) {
-        vec3 lightVector = normalize(lightDirection)*-1;
-        float diffuse = max(dot(normalize(fs_normals), lightVector), 0.3);
+        vec3 lightVector = normalize(-lightDirection);
+        float diffuse = max(dot(normalize(fs_normals), lightVector), 0.1);
         color  = vec4(baseColor.xyz * diffuse, baseColor.w);
         if (isInShadow()) {
             color.rgb *= 0.5;
@@ -83,12 +83,11 @@ void main() {
     diffuseLighting(color);
     color *= tint;
 
-    float maxDistance = 150;
-    float viewDistance = fsFogCameraPos.z * -1;
-    float distanceRatio = viewDistance / maxDistance;
-    color *= vec4(1,1,1, max(0.01, 1-distanceRatio));
-
-
-
+    if (lit) {
+        float maxDistance = 150;
+        float viewDistance = fsFogCameraPos.z * -1;
+        float distanceRatio = viewDistance / maxDistance;
+        color *= vec4(1,1,1, max(0.01, 1-distanceRatio));
+    }
 
 }

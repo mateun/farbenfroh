@@ -3,9 +3,9 @@
 layout(binding = 0) uniform sampler2D diffuseTexture;
 layout(binding = 1) uniform sampler2D shadowMap;
 
-layout (location = 10) uniform vec3 lightDirection = { -5, -4, -2 };
+layout (location = 10) uniform vec3 lightDirection = { -1.0, -0, 0 };
 layout (location = 11) uniform vec3 lightColor = { 1, 1, 1 };
-layout (location = 12) uniform vec3 ambientColor = { 0.6, 0.6, 0.5 };
+layout (location = 12) uniform vec3 ambientColor = { 0.2, 0.2, 0.2 };
 layout (location = 13) uniform bool lit = true;
 layout (location = 14) uniform bool debugShadowMap = false;
 layout (location = 15) uniform float overrideAlpha = 1.0f;
@@ -29,11 +29,11 @@ bool isInShadow() {
 
 void diffuseLighting(vec4 baseColor) {
     if (lit) {
-        vec3 lightVector = normalize(lightDirection)*-1;
-        float diffuse = max(dot(normalize(fs_normals), lightVector), 0.4);
+        vec3 lightVector = normalize(-lightDirection);
+        float diffuse = max(dot(normalize(fs_normals), lightVector), 0.1);
         color  = vec4(baseColor.xyz * diffuse, baseColor.w);
         if (isInShadow()) {
-            color.rgb *= 0.7;
+            color.rgb *= 0.1;
         }
     }
 }
@@ -43,6 +43,7 @@ void main() {
     diffuseLighting(color);
     color.a *= overrideAlpha;
     color *= tint;
+
 
     if (lit) {
         float maxDistance = 70;

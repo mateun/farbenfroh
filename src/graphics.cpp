@@ -954,9 +954,11 @@ void drawPlane() {
     }
 
     prepareTransformationMatrices();
-    err = glGetError();
+
+    glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
+
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-    err = glGetError();
+
 
     if (glDefaultObjects->currentRenderState->tilingOn) {
         glUniform1i(20, 0);
@@ -971,7 +973,7 @@ void drawPlane() {
         glBufferData(GL_ARRAY_BUFFER, 12 * 4, uvs, GL_STATIC_DRAW);
     }
 
-    glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
+
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
@@ -1147,7 +1149,6 @@ void bindSkyboxTexture(Texture* tex) {
 }
 
 
-
 void drawMeshCallExecution(DrawCall drawCall) {
     glBindVertexArray(drawCall.mesh->vao);
     if (drawCall.texture) {
@@ -1319,7 +1320,8 @@ void drawMesh() {
     }
 
     glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
-    if (glDefaultObjects->currentRenderState->texture) {
+
+if (glDefaultObjects->currentRenderState->texture) {
         if (glDefaultObjects->currentRenderState->skinnedDraw) {
             bindShader(glDefaultObjects->texturedSkinnedShader);
         } else {
@@ -1349,7 +1351,7 @@ void drawMesh() {
 
         if (glDefaultObjects->currentRenderState->lightingOn) {
             glUniform1i(13, 1);
-            glm::vec3 lightDirection{0.5, -.8, -0.4};
+            glm::vec3 lightDirection{0, -1, -0};
             glUniform3fv(10, 1, (float *) &lightDirection);
         } else {
             glUniform1i(13, 0);
