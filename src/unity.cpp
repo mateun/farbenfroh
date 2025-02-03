@@ -50,7 +50,11 @@
 //#include "../games/dungeon_shoot/dungeon_shoot_main.cpp"
 
 // Vulkan/Shmup
-#include "../games/vulkan/shmup/Shmup.cpp"
+//#include "../games/vulkan/shmup/Shmup.cpp"
+
+
+// Opengl/ServerViz
+#include "../games/opengl/server_viz/ServerViz.cpp"
 
 // TopDownMovement
 //#include "../games/topdown_mover/TopDownGame.cpp"

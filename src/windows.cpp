@@ -61,7 +61,10 @@ bool fullscreen = false;
 const char window_title[] = "Koenig 0.0.1";
 void* backbufferBytes = nullptr;
 float ftMicros = 0;
+float ftMicrosAvg = 0;
 float ftSeconds = 0;
+float ftSecondsAvg = 0;
+int lastAvgFPS = 0;
 bool gldirect = true;
 int mouse_x = 0;
 int mouse_y = 0;
@@ -632,6 +635,11 @@ void mainLoop(HWND hwnd, DefaultGame* game, VulkanRenderer* vulkanRenderer) {
 	auto hdc = GetDC(hwnd);
 	bool running = true;
 
+    // We store the last 1000 entries in our frametime buffer
+    // and then calculate the average fps in there.
+    static std::vector<float> ftbuffer(1000);
+    static std::vector<float> ftMicrosbuffer(1000);
+
 	MSG msg;
 	while (running && !windowClosed) {
         QueryPerformanceCounter(&startticks);
@@ -687,8 +695,24 @@ void mainLoop(HWND hwnd, DefaultGame* game, VulkanRenderer* vulkanRenderer) {
         QueryPerformanceCounter(&endticks);
         auto ticks = endticks.QuadPart - startticks.QuadPart;
         ftSeconds = ticks / (float) freq.QuadPart;
-        ftMicros = (float) ftSeconds * 1000 * 1000;
-        char buf[100];
+        ftMicros = (float) ftSeconds * 1000.0f * 1000.0f;
+
+        // Calculate
+	    ftbuffer.push_back(ftSeconds);
+	    ftMicrosbuffer.push_back(ftMicros);
+	    if (ftbuffer.size() > 999) {
+	        float sum = 0;
+	        float sumMicros = 0;
+	        for (int i = 0; i < ftbuffer.size(); i++) {
+	            sum += ftbuffer[i];
+	            sumMicros += ftMicrosbuffer[i];
+	        }
+	        ftMicrosAvg = sumMicros / ftbuffer.size();
+	        ftSecondsAvg = sum / ftbuffer.size();
+	        lastAvgFPS = 1/ftSecondsAvg;
+	        ftbuffer.clear();
+	        ftMicrosbuffer.clear();
+	    }
 
 	}
 

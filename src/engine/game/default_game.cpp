@@ -25,13 +25,15 @@ void DefaultGame::renderFPS() {
     }
 
 
-        bindCamera(getUICamera());
-        foregroundColor({.1, .7, .1, 1});
-        char buf[160];
-        sprintf_s(buf, 160, "FT:%6.1fmcs %4d/%4d",
-                  ftMicros, mouse_x, mouse_y);
 
-        fpsFont->renderText(buf, {2, -16, -1});
+
+    bindCamera(getUICamera());
+    foregroundColor({.2, .95, .1, 1});
+    char buf[175];
+    sprintf_s(buf, 160, "FT:%6.1fmcs (%d) %4d/%4d",
+              ftMicrosAvg, lastAvgFPS, mouse_x, mouse_y);
+
+    fpsFont->renderText(buf, {2, -16, -1});
 
 
 }
