@@ -13,8 +13,8 @@ DefaultGame* getGame() {
 void ServerViz::init() {
     DefaultGame::init();
     cameraMover = new CameraMover(getGameplayCamera());
-    _fullscreenFrameBuffer = createFrameBuffer( 1024.0 * (1280.0/720.0) , 768);
-    _postProcessedFrameBuffer = createFrameBuffer( 1024, 768);
+    _fullscreenFrameBuffer = createFrameBuffer( window_width, window_height );
+    _postProcessedFrameBuffer = createFrameBuffer( window_width, window_height);
 
     auto vertSource = readFile("../games/opengl/server_viz/assets/shaders/post_process.vert");
     auto fragSource = readFile("../games/opengl/server_viz/assets/shaders/post_process.frag");
@@ -29,15 +29,75 @@ void ServerViz::init() {
 
 }
 
-void ServerViz::update() {
-    cameraMover->update();
+void ServerViz::updateLoadingScreen() {
 
-    if (keyPressed('F')) {
-        fade = !fade;
-    }
 }
 
-void ServerViz::render() {
+// Render the title of the game
+// The main menu "buttons"
+// All on top of small 3D scene inside the Arcade shop.
+// Wachting the cabinet, being dimly lit, some particles moving in the air.
+// TODO: create particles and light them, move them like dust.
+void ServerViz::renderMainMenu() {
+    static float mainMenuTime = 0;
+    mainMenuTime += ftSeconds;
+
+
+    bindCamera(getGameplayCamera());
+    lightingOn();
+    bindTexture(nullptr);
+    foregroundColor({0.8, 0.1, 0.3, 1});
+    bindMesh(getMeshByName("cabinet"));
+    location({2, 1, -3});
+    rotation({0, 23, 0});
+    scale({1, 1, 1});
+    drawMesh();
+
+    bindCamera(getUICamera());
+    lightingOff();
+    flipUvs(true);
+    bindTexture(getTextureByName("main_menu"));
+    location({window_width/2, window_height/2, -2.1});
+    scale({window_width, window_height, 1});
+    rotation({0, 0, 0});
+    tint({1, 1, 1, 1});
+    drawPlane();
+}
+
+// This just renders a loading screen (duh..) for a few seconds
+void ServerViz::renderLoadingScreen() {
+    static float loadingScreenTime = 0;
+    loadingScreenTime += ftSeconds;
+    static float appearAlpha = 0;
+
+    if ( loadingScreenTime < 4) {
+        appearAlpha += 0.2 * ftSeconds;
+        if (appearAlpha > 1) {
+            appearAlpha = 1;
+        }
+    }
+
+    if (loadingScreenTime >= 8) {
+        appearAlpha -= 0.3 * ftSeconds;
+    }
+
+    if (appearAlpha < 0) {
+       _state = State::MainMenu;
+    }
+
+    bindCamera(getUICamera());
+    lightingOff();
+    flipUvs(true);
+    bindTexture(getTextureByName("loading_screen"));
+    location({window_width/2, window_height/2, -0.1});
+    scale({window_width, window_height, 1});
+
+    tint({1, 1, 1, appearAlpha});
+    drawPlane();
+}
+
+void ServerViz::renderArcade() {
+
 
     bindCamera(getGameplayCamera());
     lightingOn();
@@ -64,7 +124,7 @@ void ServerViz::render() {
     bindTexture(getTextureByName("groundplane"));
     location(glm::vec3{0, 0, 0});
     scale({100, .1, 100});
-    drawMesh();
+    //drawMesh();
 
 
     // // Ship
@@ -91,14 +151,14 @@ void ServerViz::render() {
     lightingOff();
     bindCamera(getUICamera());
     bindTexture(_fullscreenFrameBuffer->texture);
-    location({1024/2, 768/2, -0.1});
+    location({window_width/2, window_height/2, -0.1});
     static float rot = 0;
     if (fade) {
         //rot += 1000 * ftSeconds;
     } else {
         rot = 0;
     }
-    rotation({0, 0, 90});
+    rotation({0, 0, 0});
     static float scaleFactor = 1.0f;
     if (fade) {
         //scaleFactor += 30 * ftSeconds;
@@ -110,11 +170,12 @@ void ServerViz::render() {
         tinto -= 1 * ftSeconds;
         tint({1, 1, 1, tinto});
     }
-    scale({1024/scaleFactor, 768/scaleFactor, 1});
+    scale({window_width/scaleFactor, window_height/scaleFactor, 1});
     forceShader(_postProcessShader);
     setUniformFloat(10, ftSeconds * 4000, _postProcessShader);
-    scaled_width = 1024;
-    scaled_height = 768;
+    // scaled_width = 1024;
+    // scaled_height = 768;
+
     drawPlane();
     rotation({0, 0, 0});
     scale({1, 1, 1});
@@ -127,33 +188,85 @@ void ServerViz::render() {
     activateFrameBuffer(nullptr);
     glViewport(0, 0, window_width, window_height);
 
-    // Draw our arcade cabinet.
-    // For now just the screen itself.
 
+    // We draw our main 3D world through a separate camera,
+    // which is not influenced by a mover.
+    // Of course, if we go into world-mode (instead of arcade-mode),
+    // this must change so the player can actually control inside the 3D world.
+    // (Then we can ignore the rendering of the arcade world).
     bindCamera(_cameraIn3DWorld);
 
+    // The screen is a bent plane mesh, which gets the current main image
+    // as its texture.
+    // It is not lit, everything lighing is already done in the rendering and post-processing.
+    // Here we present the image as is on the "screen".
     bindMesh(getMeshByName("screen_plane"));
-    foregroundColor({.1, 1, .1, .6});
-    bindTexture(nullptr);
     bindTexture(_postProcessedFrameBuffer->texture);
     flipUvs(false);
-    location({0, 1.8, -0.1});
-    rotation({0, 0, 180});
+    location({0, 1.8, -0.05});
+    rotation({0, 0, 0});
     drawMesh();
 
+    // The arcade cabinet itself is lit, it is a normal 3D model in the main world.
     lightingOn();
     bindMesh(getMeshByName("cabinet"));
     bindTexture(nullptr);
     foregroundColor({1, 1, 1, 1});
-    location({0, 1.8, -0.1});
+    location({0, 1.8, -0.05});
     rotation({0, 0, 0});
     drawMesh();
 
-
-
-
     foregroundColor({0.9, 0.2, 0.2, .5});
     renderFPS();
+}
+
+void ServerViz::updateMainMenu() {
+
+}
+
+void ServerViz::updateArcade() {
+    cameraMover->update();
+    if (keyPressed('F')) {
+        fade = !fade;
+    }
+}
+
+void ServerViz::updateOutsideWorld() {
+
+}
+
+void ServerViz::updateSettings() {
+
+}
+
+void ServerViz::update() {
+
+    if (_state == State::LoadingScreen) {
+        updateLoadingScreen();
+    }
+    else if (_state == State::MainMenu) {
+        updateMainMenu();
+    }
+    else if (_state == State::Arcade) {
+        updateArcade();
+    }
+
+
+
+}
+
+void ServerViz::render() {
+
+    if (_state == State::LoadingScreen) {
+        renderLoadingScreen();
+    }
+    else if (_state == State::MainMenu) {
+        renderMainMenu();
+    } else if (_state == State::Arcade) {
+        renderArcade();
+    }
+
+
 
 }
 

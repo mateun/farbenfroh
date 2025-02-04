@@ -2,7 +2,7 @@
 
 layout(binding = 0) uniform sampler2D diffuseTexture;
 
-layout(location = 9) uniform vec2 screen_size = vec2(1024, 768);
+layout(location = 9) uniform vec2 screen_size = vec2(1280, 720);
 layout(location = 10) uniform float time = 0;
 
 in vec2 fs_uvs;
@@ -13,7 +13,7 @@ void applyFx() {
     // ---- 1) Barrel Distortion ----
     vec2 center = vec2(0.5, 0.5);
     vec2 coord = fs_uvs - center;
-    float distFactor = 0.3; // curvature
+    float distFactor = 0.02; // curvature
     float r2 = dot(coord, coord);
     coord *= (1.0 + distFactor * r2);
     vec2 warpedUV = coord + center;
@@ -25,9 +25,7 @@ void applyFx() {
     color = texture(diffuseTexture, warpedUV);
 
 
-    if (int(mod(gl_FragCoord.y, 2)) == 0) {
-        color *= 0.8;
-    }
+
 
     float offset = 1.0 / screen_size.x * 1.0; // shift a fraction of a pixel
     vec3 colR = texture(diffuseTexture, fs_uvs + vec2( offset, 0.0)).rgb;
@@ -38,15 +36,19 @@ void applyFx() {
     // For reproducible noise, use a function of the fragment coords + time
     float n = fract(sin(dot(gl_FragCoord.xy ,vec2(12.9898,78.233))) * 43758.5453 + time);
     // Or any other noise approach
-    float noiseAmount = 0.04;
+    float noiseAmount = 0.09;
     color.rgb += (n - 0.5) * noiseAmount;
 
-    float flicker = 0.98 + 0.02 * sin(time * 0.5); // 120 Hz flicker for example
-    //color.rgb *= flicker;
+    float flicker = 0.98 + 0.02 * sin(time * 1.0); // 120 Hz flicker for example
+    color.rgb *= flicker;
 
     float distFromCenter = length(fs_uvs - vec2(0.5));
     float vignette = smoothstep(0.5, 0.8, distFromCenter);
     color *= (1.0 - 0.3 * vignette);
+
+    if (int(mod(gl_FragCoord.y, 2)) == 0) {
+        color *= 0.9;
+    }
 
 }
 

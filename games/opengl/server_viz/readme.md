@@ -27,11 +27,21 @@ And I can make a top down and FPS in one!! Hybrid, no one likes! :)
 
 ### Naming ideas
 
-Arcade Hell
+Arcade Hell\
+Recursor\
+Fractum\
+Arcade Dungeon\
+Trip Arcade
 
-Recursor
 
-Fractum
+
+### TODOS
+
+-[ ] Rendering of cabinet (with smoothing?!) looks weird
+-[ ] Point lighting
+-[ ] Arcade building
+-[ ] Basic collision 
+
 
 
 
