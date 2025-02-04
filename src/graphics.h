@@ -264,6 +264,7 @@ struct DrawCall {
     bool lightingOn;
     bool flipUvs;
     bool tilingOn;
+    glm::vec3 lightDirection{0.6, -1, -0.5};
 
     bool shadows;
     Camera *camera = nullptr;
@@ -336,7 +337,8 @@ struct RenderState {
     std::vector<glm::mat4> instanceMatrices;
     std::vector<glm::vec4> instanceColors;
     std::vector<glm::vec4> instanceTints;
-    Shader *shader;
+    Shader* shader = nullptr;
+    Shader* forcedShader = nullptr;
     Texture* texture = nullptr;
     Texture* skyboxTexture = nullptr;
     Bitmap *font = nullptr;
@@ -574,6 +576,8 @@ struct MonitorResolution {
 
 };
 
+glm::vec3 lightDirection{0.6, -2, -0.5};
+
 
 void drawText(const char* text, int x, int y, Bitmap* font);
 void drawBitmap(int x, int y, Bitmap* bm);
@@ -627,6 +631,8 @@ void deferredStart();
 void deferredEnd();
 void flipUvs(bool val);
 void uvScale(float val);
+void forceShader(Shader* shader);
+void setUniformFloat(int location, float val, Shader* shader = nullptr);
 void updateParticleEffect(ParticleEffect* pe);
 void resetParticleEffect(ParticleEffect* pe);
 void bitmapBlitModeOn();

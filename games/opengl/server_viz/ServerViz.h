@@ -18,7 +18,12 @@ class ServerViz : public DefaultGame {
 
 
     CameraMover* cameraMover = nullptr;
+    FrameBuffer * _fullscreenFrameBuffer = nullptr;
+    FrameBuffer * _postProcessedFrameBuffer = nullptr;
 
+    bool fade = false;
+    Shader * _postProcessShader = nullptr;
+    Camera* _cameraIn3DWorld = nullptr;
 };
 
 

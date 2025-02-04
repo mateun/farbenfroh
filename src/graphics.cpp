@@ -891,20 +891,33 @@ void drawPlane() {
     } else {
         glBindVertexArray(*glDefaultObjects->quadVAO);
     }
-    if (glDefaultObjects->currentRenderState->texture) {
-        bindShader(glDefaultObjects->texturedShader);
+
+    // Shader selection:
+    // We check if a specific shader has been set (forced), then we use it.
+    // Otherwise there is some logic which shader to choose as a best guess.
+    if (glDefaultObjects->currentRenderState->forcedShader) {
+        bindShader(glDefaultObjects->currentRenderState->forcedShader);
         err = glGetError();
+        // Assuming the forced shader uses a texture?!
         glActiveTexture(GL_TEXTURE0);
-        err = glGetError();
         glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
-        err = glGetError();
     } else {
-        bindShader(glDefaultObjects->singleColorShader);
-        glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
+        if (glDefaultObjects->currentRenderState->texture) {
+            bindShader(glDefaultObjects->texturedShader);
+            err = glGetError();
+            glActiveTexture(GL_TEXTURE0);
+            err = glGetError();
+            glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+            err = glGetError();
+        } else {
+            bindShader(glDefaultObjects->singleColorShader);
+            glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
+        }
     }
 
     if (glDefaultObjects->currentRenderState->lightingOn) {
         glUniform1i(13, 1);
+        glUniform3fv(10, 1, (float *) &lightDirection);
     } else {
         glUniform1i(13, 0);
     }
@@ -958,6 +971,7 @@ void drawPlane() {
     glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    err = glGetError();
 
 
     if (glDefaultObjects->currentRenderState->tilingOn) {
@@ -1351,7 +1365,6 @@ if (glDefaultObjects->currentRenderState->texture) {
 
         if (glDefaultObjects->currentRenderState->lightingOn) {
             glUniform1i(13, 1);
-            glm::vec3 lightDirection{0, -1, -0};
             glUniform3fv(10, 1, (float *) &lightDirection);
         } else {
             glUniform1i(13, 0);
@@ -1597,11 +1610,7 @@ GLuint* createGridVAO() {
 
 void drawGrid() {
 
-    GLenum err = glGetError();
-    if (err != 0) {
-        exit(2001);
-    }
-
+    GLenum err = 0;
 
     if (glDefaultObjects->gridVAO == nullptr) {
         glDefaultObjects->gridVAO = createGridVAO();
@@ -2388,6 +2397,18 @@ Mesh* parseGLTF(JsonElement* gltfJson) {
 
 void uvScale(float val) {
     glDefaultObjects->currentRenderState->uvScale = val;
+}
+
+void forceShader(Shader *shader) {
+    glDefaultObjects->currentRenderState->forcedShader = shader;
+}
+
+void setUniformFloat(int location, float val, Shader *shader) {
+    if (shader) {
+        bindShader(shader);
+    }
+    glUniform1f(location, val);
+
 }
 
 void gridLines(int val) {
@@ -3397,7 +3418,9 @@ FrameBuffer *createFrameBuffer(int width, int height) {
     // Step 3: Create a renderbuffer for depth attachment
     glGenRenderbuffers(1, &depthRenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, depthRenderbuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+    //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, width, height);
+
 
     // Attach the renderbuffer to the framebuffer's depth attachment point
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderbuffer);
