@@ -229,7 +229,15 @@ void ServerViz::updateMainMenu() {
 
     if (keyPressed(VK_SPACE)) {
         _state = State::Arcade;
+        stopSound(getSoundByName("TripArcade"));
     }
+
+    static float bgMusicOn = false;
+    if (!bgMusicOn) {
+        bgMusicOn = true;
+        playSound(getSoundByName("TripArcade"), true);
+    }
+
 }
 
 void ServerViz::updateArcade() {
@@ -287,5 +295,5 @@ bool ServerViz::shouldAutoImportAssets() {
 }
 
 std::vector<std::string> ServerViz::getAssetFolder() {
-    return { "../games/opengl/server_viz/assets", "../assets/sound"};
+    return { "../games/opengl/server_viz/assets", "../games/opengl/server_viz/assets/sounds"};
 }

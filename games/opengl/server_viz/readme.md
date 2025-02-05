@@ -37,10 +37,12 @@ Trip Arcade
 
 ### TODOS
 
--[ ] Rendering of cabinet (with smoothing?!) looks weird
+-[x] Rendering of cabinet (with smoothing?!) looks weird
+-[ ] Bloom
 -[ ] Point lighting
 -[ ] Arcade building
--[ ] Basic collision 
+-[ ] Basic collision
+-[x] Basic sound
 
 
 
