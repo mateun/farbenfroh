@@ -42,15 +42,15 @@ void ServerViz::renderMainMenu() {
     static float mainMenuTime = 0;
     mainMenuTime += ftSeconds;
 
-
     bindCamera(getGameplayCamera());
     lightingOn();
     bindTexture(nullptr);
-    foregroundColor({0.8, 0.1, 0.3, 1});
-    bindMesh(getMeshByName("cabinet"));
-    location({2, 1, -3});
-    rotation({0, 23, 0});
+    foregroundColor({0.8, 0.8, 0.8, 1});
+    bindMesh(getMeshByName("cabinet3"));
+    location({2, 1.5, -1});
+    rotation({0, 15, 0});
     scale({1, 1, 1});
+    tint({1,1, 1,1});
     drawMesh();
 
     bindCamera(getUICamera());
@@ -70,15 +70,20 @@ void ServerViz::renderLoadingScreen() {
     loadingScreenTime += ftSeconds;
     static float appearAlpha = 0;
 
-    if ( loadingScreenTime < 4) {
-        appearAlpha += 0.2 * ftSeconds;
+    if (keyPressed(VK_SPACE)) {
+        _state = State::MainMenu;
+        return;
+    }
+
+    if ( loadingScreenTime < 2) {
+        appearAlpha += 0.4 * ftSeconds;
         if (appearAlpha > 1) {
             appearAlpha = 1;
         }
     }
 
-    if (loadingScreenTime >= 8) {
-        appearAlpha -= 0.3 * ftSeconds;
+    if (loadingScreenTime >= 2.5) {
+        appearAlpha -= 0.5 * ftSeconds;
     }
 
     if (appearAlpha < 0) {
@@ -222,6 +227,9 @@ void ServerViz::renderArcade() {
 
 void ServerViz::updateMainMenu() {
 
+    if (keyPressed(VK_SPACE)) {
+        _state = State::Arcade;
+    }
 }
 
 void ServerViz::updateArcade() {

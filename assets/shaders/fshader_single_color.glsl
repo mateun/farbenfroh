@@ -73,7 +73,7 @@ void diffuseLighting(vec4 baseColor) {
         float diffuse = max(dot(normalize(fs_normals), lightVector), 0.1);
         color  = vec4(baseColor.xyz * diffuse, baseColor.w);
         if (isInShadow()) {
-            color.rgb *= 0.5;
+            //color.rgb *= 0.5;
         }
     }
 }
@@ -87,7 +87,7 @@ void main() {
         float maxDistance = 150;
         float viewDistance = fsFogCameraPos.z * -1;
         float distanceRatio = viewDistance / maxDistance;
-        color *= vec4(1,1,1, max(0.01, 1-distanceRatio));
+        //color *= vec4(1,1,1, max(0.01, 1-distanceRatio));
     }
 
 }
