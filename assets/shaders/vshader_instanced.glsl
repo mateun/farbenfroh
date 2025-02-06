@@ -12,6 +12,7 @@ layout (location = 9) in vec4 instanceMatrix3;
 
 layout(location = 10) in vec4 instancedColors;
 layout(location = 11) in vec4 instancedTints;
+layout(location = 12) in vec3 tangent;
 
 layout(location = 6) uniform mat4 mat_model;
 layout(location = 7) uniform mat4 mat_view;

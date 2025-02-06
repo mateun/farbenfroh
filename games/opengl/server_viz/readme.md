@@ -38,6 +38,7 @@ Trip Arcade
 ### TODOS
 
 -[x] Rendering of cabinet (with smoothing?!) looks weird
+-[ ] Normal mapping
 -[ ] Bloom
 -[ ] Point lighting
 -[ ] Arcade building

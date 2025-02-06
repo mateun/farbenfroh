@@ -15,7 +15,7 @@ bool importModel(const std::string& file, cargame::Model* model) {
 
     Assimp::Importer importer;
 
-    const auto scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_MakeLeftHanded | aiProcess_FlipWindingOrder);
+    const auto scene = importer.ReadFile(file, aiProcess_Triangulate | aiProcess_MakeLeftHanded | aiProcess_FlipWindingOrder | aiProcess_CalcTangentSpace);
     if (!scene) {
         printf("model import failed!\n");
         exit(1);

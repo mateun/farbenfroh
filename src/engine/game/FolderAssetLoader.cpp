@@ -28,8 +28,7 @@ void FolderAssetLoader::load(const std::string &assetFolder) {
                          extension == ".glb") {
                     auto mesh = MeshImporter().importMesh(entry.path().string());
                     _meshMap[entry.path().filename().stem().string()] = mesh;
-                } else if (extension == ".wav") {
-                    auto sound = loadSoundFileExt(entry.path().string(), getWindow());
+                } else if (extension == ".wav") {auto sound = loadSoundFileExt(entry.path().string(), getWindow());
                     _soundMap[entry.path().filename().stem().string()] = sound;
 
                 }

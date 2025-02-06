@@ -143,6 +143,8 @@ struct Mesh {
 
     std::vector<glm::vec3> positions;
     std::vector<uint32_t> indices;
+    std::vector<glm::vec3> tangents;
+    std::vector<glm::vec3> normals;
     std::vector<glm::ivec4> boneIndices;
     std::vector<glm::vec4> boneWeights;
     std::string fileName;
@@ -264,7 +266,7 @@ struct DrawCall {
     bool lightingOn;
     bool flipUvs;
     bool tilingOn;
-    glm::vec3 lightDirection{0.6, -1, -0.5};
+    glm::vec3 lightDirection{-0.6, -10, -0.5};
 
     bool shadows;
     Camera *camera = nullptr;
@@ -340,6 +342,8 @@ struct RenderState {
     Shader* shader = nullptr;
     Shader* forcedShader = nullptr;
     Texture* texture = nullptr;
+    Texture* normalMap = nullptr;
+    int normalMapTextureUnit = 2;
     Texture* skyboxTexture = nullptr;
     Bitmap *font = nullptr;
     Mesh* mesh = nullptr;
@@ -608,6 +612,7 @@ void overrideAlpha(float val);
 void instanceOffsets(std::vector<glm::vec2> offsets);
 void gridLines(int val);
 void bindTexture(Texture* tex);
+void bindNormalMap(Texture* tex, int unit = 2);
 void tilingOn(bool val);
 void tileData(int tileX, int tileY, int tileWidth, int tileHeight, int offsetX =0, int offsetY = 0);
 void bindMesh(Mesh* mesh);

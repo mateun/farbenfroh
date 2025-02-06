@@ -44,14 +44,18 @@ void ServerViz::renderMainMenu() {
 
     bindCamera(getGameplayCamera());
     lightingOn();
-    bindTexture(nullptr);
+    bindTexture(getTextureByName("Sever"));
+    bindNormalMap(getTextureByName("Sever_N"));
     foregroundColor({0.8, 0.8, 0.8, 1});
-    bindMesh(getMeshByName("cabinet3"));
-    location({2, 1.5, -1});
+    auto mesh = getMeshByName("cube");
+    bindMesh(mesh);
+    location({2, 1.5, -0});
     rotation({0, 15, 0});
     scale({1, 1, 1});
     tint({1,1, 1,1});
+    uvScale(2);
     drawMesh();
+    uvScale(1.0);
 
     bindCamera(getUICamera());
     lightingOff();

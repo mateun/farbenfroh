@@ -1157,6 +1157,12 @@ void bindTexture(Texture *tex) {
     glDefaultObjects->currentRenderState->texture = tex;
 }
 
+void bindNormalMap(Texture* tex, int unit) {
+    glDefaultObjects->currentRenderState->normalMap = tex;
+    glDefaultObjects->currentRenderState->normalMapTextureUnit = unit;
+
+}
+
 void bindSkyboxTexture(Texture* tex) {
     glDefaultObjects->currentRenderState->texture = nullptr;
     glDefaultObjects->currentRenderState->skyboxTexture = tex;
@@ -1335,7 +1341,9 @@ void drawMesh() {
 
     glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
 
-if (glDefaultObjects->currentRenderState->texture) {
+
+
+    if (glDefaultObjects->currentRenderState->texture) {
         if (glDefaultObjects->currentRenderState->skinnedDraw) {
             bindShader(glDefaultObjects->texturedSkinnedShader);
         } else {
@@ -1359,6 +1367,12 @@ if (glDefaultObjects->currentRenderState->texture) {
             bindShader(glDefaultObjects->singleColorShader);
         }
         glUniform4fv(1, 1, (float *) &glDefaultObjects->currentRenderState->foregroundColor);
+    }
+
+
+    if (glDefaultObjects->currentRenderState->normalMap) {
+        glActiveTexture(GL_TEXTURE0 + glDefaultObjects->currentRenderState->normalMapTextureUnit);
+        glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->normalMap->handle);
     }
 
     if (!glDefaultObjects->currentRenderState->skyboxTexture) {
@@ -1826,6 +1840,7 @@ Mesh *loadMeshFromFile(const std::string &fileName) {
     auto facesPos = extractFacesData(lines, 0);
     auto facesNormals = extractFacesData(lines, 2);
     auto facesUvs = extractFacesData(lines, 1);
+
 //    //auto correcPos = correctV3Data(positions, facesPos);
 //    auto corrNormals = correctV3Data(normals,  facesPos, facesNormals, positions.size());
 //    auto corrUVs = correctV2Data(uvs, facesPos, facesUvs, positions.size());
@@ -3020,7 +3035,7 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
 
 Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkeletalMesh) {
     Assimp::Importer importer;
-    auto scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights);
+    auto scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights | aiProcess_CalcTangentSpace);
     if (!scene) {
         printf("error during assimp scene load. ");
         exit(1);
@@ -3040,12 +3055,19 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
     auto mesh = scene->mMeshes[0];
     std::vector<glm::vec3> posMasterList;
     std::vector<glm::vec2> uvMasterList;
+    std::vector<glm::vec3> tangentMasterList;
     std::vector<glm::vec3> normalMasterList;
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
 
         posMasterList.push_back({mesh->mVertices[i].x,
                                  mesh->mVertices[i].y,
                                  mesh->mVertices[i].z});
+
+        tangentMasterList.push_back({
+            mesh->mTangents[i].x,
+            mesh->mTangents[i].y,
+            mesh->mTangents[i].z
+        });
 
         if (mesh->HasNormals()) {
             normalMasterList.push_back({mesh->mNormals[i].x,
@@ -3197,6 +3219,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
     auto posFlat = flattenV3(posMasterList);
     auto normFlat = flattenV3(normalMasterList);
     auto uvsFlat = flattenV2(uvMasterList);
+    auto tangentsFlat = flattenV3(tangentMasterList);
     auto boneIndicesFlat = flattenIV4(boneIndexMasterList);
     auto boneWeightsFlat = flattenV4(boneWeightMasterList);
 
@@ -3232,6 +3255,13 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
     glBufferData(GL_ARRAY_BUFFER, normFlat.size() * 4, normFlat.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(2);
+
+    GLuint vboTangents;
+    glGenBuffers(1, &vboTangents);
+    glBindBuffer(GL_ARRAY_BUFFER, vboTangents);
+    glBufferData(GL_ARRAY_BUFFER, tangentsFlat.size() * 4, tangentsFlat.data(), GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(12, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(12);
 
     // Instance attribute for 2d offsets:
     uint32_t instanceVBO;
@@ -3309,6 +3339,8 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
     mymesh->indexDataType = GL_UNSIGNED_INT;
     mymesh->positions = posMasterList;
     mymesh->indices = indicesFlat;
+    mymesh->normals = normalMasterList;
+    mymesh->tangents = tangentMasterList;
     mymesh->boneIndices = boneIndexMasterList;
     mymesh->boneWeights = boneWeightMasterList;
     mymesh->fileName = std::filesystem::path(filePath).filename().string();
