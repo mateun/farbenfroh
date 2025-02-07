@@ -580,6 +580,13 @@ struct MonitorResolution {
 
 };
 
+struct GridData {
+    float scale = 1;
+    glm::vec4 color = {0.6, 0.8, 0.2, .5};
+    glm::vec3 loc = {0, 0, 0};
+    int numLines = 100;
+};
+
 glm::vec3 lightDirection{0.6, -2, -0.5};
 
 
@@ -593,8 +600,9 @@ void drawMesh();
 void drawMeshSimple();
 void drawMeshInstanced(int num);
 void drawParticleEffect(bool instancedRender = false);
-void drawGrid();
+void drawGrid(GridData gridData = {});
 void drawBitmap(int x, int y, uint8_t* bitmapPixels);
+glm::mat4 getWorldMatrixFromGlobalState();
 Texture* createTextureFromFile(const std::string& fileName, ColorFormat colorFormat = ColorFormat::RGBA);
 Texture* createTextureFromBitmap(Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
 void beginBatch();
@@ -665,10 +673,7 @@ void updateAndDrawText(const char *text, Texture *pTexture, int screenPosX, int 
 // createFrameBuffer creates a color framebuffer incl. depthbuffer
 FrameBuffer* createFrameBuffer(int width, int height);
 
-// activateFrameBuffer enables render-to-texture
-// or, if 0 is passed in, resets back to normal backbuffer rendering.
-void activateFrameBuffer(uint32_t fbHandle);
-
+void activateFrameBuffer(FrameBuffer* fb);
 
 
 class MeshImporter {

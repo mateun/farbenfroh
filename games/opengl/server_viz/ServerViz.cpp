@@ -44,10 +44,18 @@ void ServerViz::renderMainMenu() {
 
     bindCamera(getGameplayCamera());
     lightingOn();
-    bindTexture(getTextureByName("Sever"));
-    bindNormalMap(getTextureByName("Sever_N"));
+
+    GridData gd;
+    gd.numLines = 200;
+    gd.color = {0.1,0.9, 0.13, 0.5};
+    drawGrid(gd);
+
+
+
+    bindTexture(getTextureByName("wood_albedo"));
+    bindNormalMap(getTextureByName("wood_normal"));
     foregroundColor({0.8, 0.8, 0.8, 1});
-    auto mesh = getMeshByName("cube");
+    auto mesh = getMeshByName("cabinet3");
     bindMesh(mesh);
     location({2, 1.5, -0});
     rotation({0, 15, 0});
@@ -60,12 +68,14 @@ void ServerViz::renderMainMenu() {
     bindCamera(getUICamera());
     lightingOff();
     flipUvs(true);
-    bindTexture(getTextureByName("main_menu"));
-    location({window_width/2, window_height/2, -2.1});
-    scale({window_width, window_height, 1});
+    bindTexture(getTextureByName("title_space_patrol"));
+    location({window_width/2, window_height - 156, -2.1});
+    scale({1280, 256, 1});
     rotation({0, 0, 0});
     tint({1, 1, 1, 1});
     drawPlane();
+
+    renderFPS();
 }
 
 // This just renders a loading screen (duh..) for a few seconds
@@ -125,7 +135,7 @@ void ServerViz::renderArcade() {
     foregroundColor({0.6, 0.5, 0.6, .2});
     location(glm::vec3{0, 0, 0});
     gridLines(100);
-    drawGrid();
+    //drawGrid();
 
     // Our ground plane
     uvScale(15);
@@ -210,6 +220,7 @@ void ServerViz::renderArcade() {
     // It is not lit, everything lighing is already done in the rendering and post-processing.
     // Here we present the image as is on the "screen".
     bindMesh(getMeshByName("screen_plane"));
+    bindNormalMap(getTextureByName("wood_normal"));
     bindTexture(_postProcessedFrameBuffer->texture);
     flipUvs(false);
     location({0, 1.8, -0.05});
@@ -219,7 +230,8 @@ void ServerViz::renderArcade() {
     // The arcade cabinet itself is lit, it is a normal 3D model in the main world.
     lightingOn();
     bindMesh(getMeshByName("cabinet"));
-    bindTexture(nullptr);
+    bindNormalMap(getTextureByName("wood_normal"));
+    bindTexture(getTextureByName("wood_albedo"));
     foregroundColor({1, 1, 1, 1});
     location({0, 1.8, -0.05});
     rotation({0, 0, 0});

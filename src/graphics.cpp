@@ -44,6 +44,8 @@ struct GLDefaultObjects {
     Shader* instancedShader = nullptr;
     Shader* texturedShader = nullptr;
     Shader* skyboxShader = nullptr;
+    Shader* gridShader = nullptr;
+    Shader* gridPostProcessShader = nullptr;
     Shader* spriteShader = nullptr;
     GLuint* quadVAO = nullptr;
     GLuint* textQuadVAO = nullptr;
@@ -54,6 +56,8 @@ struct GLDefaultObjects {
     GLuint quadUVBuffer = 0;
     Texture *shadowMap = nullptr;
     RenderState* currentRenderState = nullptr;
+    FrameBuffer* gridFBO = nullptr;
+    Camera* defaultUICamera = nullptr;
     bool inBatchMode = false;
     std::vector<glm::mat4> boneMatrices;
 
@@ -86,6 +90,10 @@ void createDefaultGLObjects() {
     auto tfsrc_instanced = readFile("../assets/shaders/fshader_diffuse_texture_instanced.glsl");
     auto skyboxvs = readFile("../assets/shaders/vshader_sky.glsl");
     auto skyboxfs = readFile("../assets/shaders/fshader_sky.glsl");
+    auto gridVertSource = readFile("../assets/shaders/grid.vert");
+    auto gridFragSource = readFile("../assets/shaders/grid.frag");
+    auto gridVertPostProcessSource = readFile("../assets/shaders/grid_postprocess.vert");
+    auto gridFragPostProcessSource = readFile("../assets/shaders/grid_postprocess.frag");
     glDefaultObjects = new GLDefaultObjects();
     glDefaultObjects->singleColorShader = new Shader();
     glDefaultObjects->singleColorShaderInstanced = new Shader();
@@ -94,6 +102,8 @@ void createDefaultGLObjects() {
     glDefaultObjects->texturedShader = new Shader();
     glDefaultObjects->spriteShader = new Shader();
     glDefaultObjects->skyboxShader = new Shader();
+    glDefaultObjects->gridShader = new Shader();
+    glDefaultObjects->gridPostProcessShader = new Shader();
     glDefaultObjects->instancedShader = new Shader();
     glDefaultObjects->quadVAO = createQuadVAO();
     glDefaultObjects->textQuadVAO = createQuadVAO(PlanePivot::topleft);
@@ -108,7 +118,12 @@ void createDefaultGLObjects() {
     createShader(spriteShaderVertexSource, spriteFragmentSource, glDefaultObjects->spriteShader);
     createShader(vsrc_instanced, tfsrc_instanced, glDefaultObjects->instancedShader);
     createShader(vsrc_instanced, fsrc_instanced, glDefaultObjects->singleColorShaderInstanced);
-
+    createShader(gridVertSource, gridFragSource, glDefaultObjects->gridShader);
+    createShader(gridVertPostProcessSource, gridFragPostProcessSource, glDefaultObjects->gridPostProcessShader);
+    glDefaultObjects->gridFBO = createFrameBuffer(scaled_width/2, scaled_height/2);
+    glDefaultObjects->defaultUICamera = new Camera();
+    glDefaultObjects->defaultUICamera->type = CameraType::Ortho;
+    glDefaultObjects->defaultUICamera->updateLocation({0, 0, 2});
 
     srand(time(NULL));
 }
@@ -1121,6 +1136,30 @@ Texture* createCubeMapTextureFromFile(const std::string &dirName, ColorFormat co
     return target;
 }
 
+glm::mat4 getWorldMatrixFromGlobalState() {
+
+    using namespace glm;
+
+    // Object to world transformation
+    mat4 mattrans = translate(mat4(1), glDefaultObjects->currentRenderState->location);
+    mat4 matscale = glm::scale(mat4(1),glDefaultObjects->currentRenderState->scale);
+    mat4 matworld = glm::mat4(1);
+
+    // For rotation we check if we have a rotation matrix set.
+    if (glDefaultObjects->currentRenderState->rotMatrix) {
+        matworld = mattrans * (*glDefaultObjects->currentRenderState->rotMatrix) * matscale;
+
+    } else {
+        mat4 matrotX = glm::rotate(mat4(1), glm::radians(glDefaultObjects->currentRenderState->rot.x), {1, 0, 0} );
+        mat4 matrotY = glm::rotate(mat4(1), glm::radians(glDefaultObjects->currentRenderState->rot.y), {0, 1, 0} );
+        mat4 matrotZ = glm::rotate(mat4(1), glm::radians(glDefaultObjects->currentRenderState->rot.z), {0, 0, 1} );
+        matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
+    }
+
+    return matworld;
+
+}
+
 Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFormat) {
     Bitmap* bm;
     loadBitmap(fileName.c_str(), &bm);
@@ -1622,28 +1661,45 @@ GLuint* createGridVAO() {
     return vao;
 }
 
-void drawGrid() {
+void drawGrid(GridData gridData) {
+
+    // Some default assumptions here:
+    scale({gridData.scale, gridData.scale,  gridData.scale});
+    foregroundColor(gridData.color);
+    location(gridData.loc);
+    gridLines(gridData.numLines);
 
     GLenum err = 0;
 
+    // Lazy init of grid VAO
     if (glDefaultObjects->gridVAO == nullptr) {
         glDefaultObjects->gridVAO = createGridVAO();
-        err = glGetError();
     }
 
     glBindVertexArray(*glDefaultObjects->gridVAO);
-    bindShader(glDefaultObjects->singleColorShader);
-    err = glGetError();
-    prepareTransformationMatrices();
-    err = glGetError();
+    bindShader(glDefaultObjects->gridShader);
+
+    glm::mat4 matWorld = getWorldMatrixFromGlobalState();
+    glUniformMatrix4fv(	6,1,GL_FALSE,value_ptr(matWorld));
+    glUniformMatrix4fv( 7, 1, GL_FALSE, value_ptr(viewMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
+    glUniformMatrix4fv(8, 1, GL_FALSE, value_ptr(projectionMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
     glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
-    glUniform1i(13, 0);
+
+    activateFrameBuffer(glDefaultObjects->gridFBO);
+    glViewport(0, 0, scaled_width/2, scaled_height/2);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawArrays(GL_LINES, 0, (glDefaultObjects->grid.horizontalLines * 2) + (glDefaultObjects->grid.verticalLines * 2));
-    err = glGetError();
+    activateFrameBuffer(nullptr);
+    bindTexture(glDefaultObjects->gridFBO->texture);
+    bindCamera(glDefaultObjects->defaultUICamera);
+    scale({scaled_width, scaled_height, 1});
+    location({scaled_width/2, scaled_height/2, -3});
+    forceShader(glDefaultObjects->gridPostProcessShader);
+    setUniformFloat(10, ftSeconds, glDefaultObjects->gridPostProcessShader);
+    glViewport(0, 0, scaled_width, scaled_height);
+    drawPlane();
+    forceShader(nullptr);
     glBindVertexArray(0);
-
-
-
 
 }
 
