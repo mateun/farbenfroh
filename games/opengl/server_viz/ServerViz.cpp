@@ -13,8 +13,8 @@ DefaultGame* getGame() {
 void ServerViz::init() {
     DefaultGame::init();
     cameraMover = new CameraMover(getGameplayCamera());
-    _fullscreenFrameBuffer = createFrameBuffer( window_width, window_height );
-    _postProcessedFrameBuffer = createFrameBuffer( window_width, window_height);
+    _fullscreenFrameBuffer = createFrameBuffer( scaled_width, scaled_height);
+    _postProcessedFrameBuffer = createFrameBuffer( scaled_width, scaled_height);
 
     auto vertSource = readFile("../games/opengl/server_viz/assets/shaders/post_process.vert");
     auto fragSource = readFile("../games/opengl/server_viz/assets/shaders/post_process.frag");
@@ -23,7 +23,7 @@ void ServerViz::init() {
 
     _cameraIn3DWorld = new Camera();
     _cameraIn3DWorld = new Camera();
-    _cameraIn3DWorld->location = {0, 1.8, 1};
+    _cameraIn3DWorld->location = {0, 1.5, 1};
     _cameraIn3DWorld->lookAtTarget = {0, 1.5, -5};
     _cameraIn3DWorld->type = CameraType::Perspective;
 
@@ -45,12 +45,10 @@ void ServerViz::renderMainMenu() {
     bindCamera(getGameplayCamera());
     lightingOn();
 
-    GridData gd;
-    gd.numLines = 200;
-    gd.color = {0.1,0.9, 0.13, 0.5};
-    drawGrid(gd);
-
-
+    // rotation({0,0, 0});
+    // scale({1,1,1});
+    // static auto gd = createGrid(25);
+    // drawGrid(gd);
 
     bindTexture(getTextureByName("wood_albedo"));
     bindNormalMap(getTextureByName("wood_normal"));
@@ -108,16 +106,14 @@ void ServerViz::renderLoadingScreen() {
     lightingOff();
     flipUvs(true);
     bindTexture(getTextureByName("loading_screen"));
-    location({window_width/2, window_height/2, -0.1});
-    scale({window_width, window_height, 1});
+    location({scaled_width/2, scaled_height/2, -0.1});
+    scale({scaled_width, scaled_height, 1});
 
     tint({1, 1, 1, appearAlpha});
     drawPlane();
 }
 
 void ServerViz::renderArcade() {
-
-
     bindCamera(getGameplayCamera());
     lightingOn();
 
@@ -131,20 +127,17 @@ void ServerViz::renderArcade() {
     }
 
 
-    scale({1, 1,1});
-    foregroundColor({0.6, 0.5, 0.6, .2});
-    location(glm::vec3{0, 0, 0});
-    gridLines(100);
-    //drawGrid();
+    static auto gd = createGrid(70);
+    drawGrid(gd);
 
     // Our ground plane
-    uvScale(15);
     bindMesh(getMeshByName("cube"));
-    bindTexture(getTextureByName("groundplane"));
+    bindTexture(getTextureByName("wood_albedo"));
+    bindNormalMap(getTextureByName("wood_normal"));
+    uvScale(55);
     location(glm::vec3{0, 0, 0});
     scale({100, .1, 100});
     //drawMesh();
-
 
     // // Ship
     uvScale(1);
@@ -152,6 +145,7 @@ void ServerViz::renderArcade() {
     flipUvs(true);
     bindMesh(getMeshByName("cube"));
     bindTexture(getTextureByName("cube_diffuse"));
+    //bindNormalMap(getTextureByName("street_normal"));
     location(glm::vec3{0, 1, -2});
     drawMesh();
     location({0, 0, 0});
@@ -163,7 +157,7 @@ void ServerViz::renderArcade() {
         activateFrameBuffer(_postProcessedFrameBuffer);
         glViewport(0, 0, _postProcessedFrameBuffer->texture->bitmap->width,
                        _postProcessedFrameBuffer->texture->bitmap->height);
-        glClearColor(0, 1, 0, 1);
+        glClearColor(0.6, 0.1, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
@@ -205,37 +199,36 @@ void ServerViz::renderArcade() {
     // We take the last framebuffer, which has the final image of the
     // inner arcade game. We use this as a texture to project onto our cabinet screen.
     activateFrameBuffer(nullptr);
-    glViewport(0, 0, window_width, window_height);
-
+    glViewport(0, 0, scaled_width, scaled_height);
 
     // We draw our main 3D world through a separate camera,
     // which is not influenced by a mover.
     // Of course, if we go into world-mode (instead of arcade-mode),
     // this must change so the player can actually control inside the 3D world.
     // (Then we can ignore the rendering of the arcade world).
-    bindCamera(_cameraIn3DWorld);
+    bindCamera(getUICamera());
 
     // The screen is a bent plane mesh, which gets the current main image
     // as its texture.
     // It is not lit, everything lighing is already done in the rendering and post-processing.
     // Here we present the image as is on the "screen".
     bindMesh(getMeshByName("screen_plane"));
-    bindNormalMap(getTextureByName("wood_normal"));
+    scale({scaled_width, scaled_height, 1});
+    //bindNormalMap(getTextureByName("wood_normal"));
     bindTexture(_postProcessedFrameBuffer->texture);
     flipUvs(false);
-    location({0, 1.8, -0.05});
-    rotation({0, 0, 0});
-    drawMesh();
+    location({scaled_width/2, scaled_height/2, -0.5});
+    drawPlane();
 
     // The arcade cabinet itself is lit, it is a normal 3D model in the main world.
-    lightingOn();
-    bindMesh(getMeshByName("cabinet"));
-    bindNormalMap(getTextureByName("wood_normal"));
-    bindTexture(getTextureByName("wood_albedo"));
-    foregroundColor({1, 1, 1, 1});
-    location({0, 1.8, -0.05});
-    rotation({0, 0, 0});
-    drawMesh();
+    // lightingOn();
+    // bindMesh(getMeshByName("cabinet"));
+    // bindNormalMap(getTextureByName("wood_normal"));
+    // bindTexture(getTextureByName("wood_albedo"));
+    // foregroundColor({1, 1, 1, 1});
+    // location({0, 1.8, -0.05});
+    // rotation({0, 0, 0});
+    // drawMesh();
 
     foregroundColor({0.9, 0.2, 0.2, .5});
     renderFPS();

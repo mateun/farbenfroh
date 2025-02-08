@@ -116,11 +116,8 @@ namespace editor {
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        scale({1, 1, 1});
-        location({0, 0, 0});
-        foregroundColor({0.3, 0.6, 0.2, .1});
-        gridLines(100);
-        drawGrid();
+        static auto gridData = createGrid(100);
+        drawGrid(gridData);
 
         // Draw the imported mesh,
         // regardless if this is a static or skeleton mesh
@@ -316,11 +313,9 @@ namespace editor {
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        scale({1, 1, 1});
-        location({0, 0, 0});
-        foregroundColor({0.3, 0.6, 0.2, .1});
-        gridLines(100);
-        drawGrid();
+
+        static auto gd = createGrid(100);
+        drawGrid(gd);
 
 
         static bool showMesh = true;

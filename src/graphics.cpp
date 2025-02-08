@@ -61,9 +61,6 @@ struct GLDefaultObjects {
     bool inBatchMode = false;
     std::vector<glm::mat4> boneMatrices;
 
-
-    Grid grid;
-
     // Batch lists
     std::vector<Vec3> vertices;
     std::vector<GLuint> indices;
@@ -240,6 +237,14 @@ void drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, Bitm
 	// 	}
 	// }
 
+}
+
+GridData * createGrid(int lines) {
+    auto vao = createGridVAO(lines);
+    auto gd = new GridData();
+    gd->numLines = lines;
+    gd->vao = vao;
+    return gd;
 }
 
 void drawText(const char* text, int posx, int posy, Bitmap* font) {
@@ -1068,8 +1073,8 @@ Texture *createTextureFromBitmap(Bitmap *bm, ColorFormat colorFormat) {
 
     glBindTexture(GL_TEXTURE_2D, handle);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -1166,16 +1171,34 @@ Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFor
     GLuint handle;
     glGenTextures(1, &handle);
     glBindTexture(GL_TEXTURE_2D, handle);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexImage2D(GL_TEXTURE_2D,
                  0,
-                 GL_RGBA, bm->width, bm->height,
+                 GL_RGBA,
+                 bm->width,
+                 bm->height,
                  0,
                  toGLColorFormat(colorFormat),
-                 GL_UNSIGNED_BYTE, bm->pixels);
+                 GL_UNSIGNED_BYTE,
+                 bm->pixels);
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Set aniso filtering
+    {
+        if (!glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
+            throw std::runtime_error("Anisotropic filtering not supported!");
+        }
+
+        GLfloat maxAniso = 0.0f;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
+
+    }
+
     Texture* target = new Texture();
     target->handle = handle;
     target->bitmap = bm;
@@ -1608,15 +1631,15 @@ void bindShadowMapCamera(Camera* camera) {
     glDefaultObjects->currentRenderState->shadowMapCamera = camera;
 }
 
-GLuint* createGridVAO() {
-    GLuint* vao = new GLuint();
-    glGenVertexArrays(1, vao);
-    glBindVertexArray(*vao);
+GLuint createGridVAO(int numLines) {
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
     int horizontalDistance = 1;
     int verticalDistance = 1;
-    int horizontalLines = glDefaultObjects->grid.horizontalLines;
-    int verticalLines = glDefaultObjects->grid.verticalLines;
+    int horizontalLines = numLines;
+    int verticalLines = numLines;
 
     GLuint vboPos;
     auto positions = std::vector<float>((horizontalLines * 2 * 3) + (verticalLines * 2* 3) + 2 * 2 * 3);
@@ -1625,12 +1648,12 @@ GLuint* createGridVAO() {
     int firstV = -verticalLines / 2 * verticalDistance;
     for (int h = 0; h < horizontalLines; h++) {
         // Start point
-        positions[posIndex++] = -150;    // x
+        positions[posIndex++] = firstH;    // x
         positions[posIndex++] = -0.01;                              // we are on the ground, y = zero
         positions[posIndex++] = firstH + h * horizontalDistance;    // z
 
         // End point
-        positions[posIndex++] = 150;                            // x
+        positions[posIndex++] = -firstH;                            // x
         positions[posIndex++] = -.01;                              // we are on the ground, y = zero
         positions[posIndex++] = firstH + h * horizontalDistance;    // z
 
@@ -1640,12 +1663,12 @@ GLuint* createGridVAO() {
         // Start point V
         positions[posIndex++] = firstV + v * verticalDistance; ;    // x
         positions[posIndex++] = -.02;                              // we are on the ground, y = zero
-        positions[posIndex++] = 150;   // z
+        positions[posIndex++] = firstV;   // z
 
         // End point vertical
         positions[posIndex++] = firstV + v * verticalDistance; ;                            // x
         positions[posIndex++] = -.02;                              // we are on the ground, y = zero
-        positions[posIndex++] = -150;  // z
+        positions[posIndex++] = -firstV;  // z
     }
 
     int sizeOfHLines = horizontalLines * 6 * 4;
@@ -1661,44 +1684,42 @@ GLuint* createGridVAO() {
     return vao;
 }
 
-void drawGrid(GridData gridData) {
+void drawGrid(GridData* gridData, bool blurred) {
 
-    // Some default assumptions here:
-    scale({gridData.scale, gridData.scale,  gridData.scale});
-    foregroundColor(gridData.color);
-    location(gridData.loc);
-    gridLines(gridData.numLines);
-
-    GLenum err = 0;
-
-    // Lazy init of grid VAO
-    if (glDefaultObjects->gridVAO == nullptr) {
-        glDefaultObjects->gridVAO = createGridVAO();
-    }
-
-    glBindVertexArray(*glDefaultObjects->gridVAO);
+    glBindVertexArray(gridData->vao);
     bindShader(glDefaultObjects->gridShader);
 
+
+    location(gridData->loc);
     glm::mat4 matWorld = getWorldMatrixFromGlobalState();
     glUniformMatrix4fv(	6,1,GL_FALSE,value_ptr(matWorld));
     glUniformMatrix4fv( 7, 1, GL_FALSE, value_ptr(viewMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
     glUniformMatrix4fv(8, 1, GL_FALSE, value_ptr(projectionMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
     glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
 
-    activateFrameBuffer(glDefaultObjects->gridFBO);
-    glViewport(0, 0, scaled_width/2, scaled_height/2);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArrays(GL_LINES, 0, (glDefaultObjects->grid.horizontalLines * 2) + (glDefaultObjects->grid.verticalLines * 2));
-    activateFrameBuffer(nullptr);
-    bindTexture(glDefaultObjects->gridFBO->texture);
-    bindCamera(glDefaultObjects->defaultUICamera);
-    scale({scaled_width, scaled_height, 1});
-    location({scaled_width/2, scaled_height/2, -3});
-    forceShader(glDefaultObjects->gridPostProcessShader);
-    setUniformFloat(10, ftSeconds, glDefaultObjects->gridPostProcessShader);
-    glViewport(0, 0, scaled_width, scaled_height);
-    drawPlane();
-    forceShader(nullptr);
+    if (blurred) {
+        activateFrameBuffer(glDefaultObjects->gridFBO);
+        glViewport(0, 0, scaled_width/2, scaled_height/2);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawArrays(GL_LINES, 0, (gridData->numLines * 2) + (gridData->numLines * 2));
+        activateFrameBuffer(nullptr);
+        bindTexture(glDefaultObjects->gridFBO->texture);
+        bindCamera(glDefaultObjects->defaultUICamera);
+        scale({scaled_width, scaled_height, 1});
+        location({scaled_width/2, scaled_height/2, -3});
+        forceShader(glDefaultObjects->gridPostProcessShader);
+        setUniformFloat(10, ftSeconds, glDefaultObjects->gridPostProcessShader);
+        glViewport(0, 0, scaled_width, scaled_height);
+        drawPlane();
+        forceShader(nullptr);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+
+        glDrawArrays(GL_LINES, 0, (gridData->numLines * 2) + (gridData->numLines * 2));
+        glEnable(GL_DEPTH_TEST);
+    }
+
+
     glBindVertexArray(0);
 
 }
@@ -2480,11 +2501,6 @@ void setUniformFloat(int location, float val, Shader *shader) {
     }
     glUniform1f(location, val);
 
-}
-
-void gridLines(int val) {
-    glDefaultObjects->grid.horizontalLines = val;
-    glDefaultObjects->grid.verticalLines = val;
 }
 
 void deferredStart() {
@@ -3506,8 +3522,7 @@ FrameBuffer *createFrameBuffer(int width, int height) {
     // Step 3: Create a renderbuffer for depth attachment
     glGenRenderbuffers(1, &depthRenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, depthRenderbuffer);
-    //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, width, height);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
 
 
     // Attach the renderbuffer to the framebuffer's depth attachment point

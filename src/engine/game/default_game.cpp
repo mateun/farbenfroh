@@ -120,11 +120,8 @@ void DefaultGame::render() {
     bindCamera(getGameplayCamera());
     lightingOn();
 
-    scale({1, 1,1});
-    foregroundColor({0.3, 0.6, 0.2, .1});
-    location(glm::vec3{0, 0, 0});
-    gridLines(100);
-    drawGrid();
+    static auto gd = createGrid(100);
+    drawGrid(gd);
 }
 
 Camera *DefaultGame::getShadowMapCamera() {

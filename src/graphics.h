@@ -67,13 +67,6 @@ private:
     Bitmap* bitmap = nullptr;
 };
 
-struct Grid {
-    int centerlineOffset = 0;
-    int horizontalLines = 0;
-    int verticalLines = 0;
-};
-
-
 struct AnimationSample {
     std::string jointName;
     float time;
@@ -585,11 +578,13 @@ struct GridData {
     glm::vec4 color = {0.6, 0.8, 0.2, .5};
     glm::vec3 loc = {0, 0, 0};
     int numLines = 100;
+    GLuint vao;
 };
 
 glm::vec3 lightDirection{0.6, -2, -0.5};
 
-
+GridData* createGrid(int lines = 100);
+GLuint createGridVAO(int lines = 100);
 void drawText(const char* text, int x, int y, Bitmap* font);
 void drawBitmap(int x, int y, Bitmap* bm);
 void drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, Bitmap* bitmap, int offsetX  = 0, int offsetY = 0);
@@ -600,7 +595,7 @@ void drawMesh();
 void drawMeshSimple();
 void drawMeshInstanced(int num);
 void drawParticleEffect(bool instancedRender = false);
-void drawGrid(GridData gridData = {});
+void drawGrid(GridData* gridData = {}, bool blurred = false);
 void drawBitmap(int x, int y, uint8_t* bitmapPixels);
 glm::mat4 getWorldMatrixFromGlobalState();
 Texture* createTextureFromFile(const std::string& fileName, ColorFormat colorFormat = ColorFormat::RGBA);
@@ -618,7 +613,6 @@ void panUVS(glm::vec2 pan);
 void location(glm::vec3 loc);
 void overrideAlpha(float val);
 void instanceOffsets(std::vector<glm::vec2> offsets);
-void gridLines(int val);
 void bindTexture(Texture* tex);
 void bindNormalMap(Texture* tex, int unit = 2);
 void tilingOn(bool val);
