@@ -11,7 +11,7 @@ Camera* DefaultGame::getGameplayCamera() {
     if (!_gameplayCamera) {
         _gameplayCamera = new Camera();
         _gameplayCamera->location = {0, 5, 5};
-        _gameplayCamera->lookAtTarget = {0, 0, -5};
+        _gameplayCamera->lookAtTarget = {0, 0, 0};
         _gameplayCamera->type = CameraType::Perspective;
     }
 

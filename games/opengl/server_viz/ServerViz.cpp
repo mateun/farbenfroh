@@ -141,23 +141,26 @@ void ServerViz::renderArcade() {
     //     drawPlane();
     // }
 
+
     bindSkyboxTexture(_skyboxTexture);
     drawSkybox();
 
+
+
+
     static auto gd = createGrid(75);
     scale({1,1,1});
-    // rotation({0, 0, 0});
     drawGrid(gd);
 
     // Our ground plane
-    bindMesh(getMeshByName("cube"));
-    bindTexture(getTextureByName("wood_albedo"));
-    bindNormalMap(getTextureByName("wood_normal"));
-    uvScale(55);
-    location(glm::vec3{0, 0, 0});
-    scale({100, .1, 100});
-    //drawMesh();
-
+    // bindMesh(getMeshByName("cube"));
+    // bindTexture(getTextureByName("wood_albedo"));
+    // bindNormalMap(getTextureByName("wood_normal"));
+    // uvScale(55);
+    // location(glm::vec3{0, 0, 0});
+    // scale({100, .1, 100});
+    // drawMesh();
+    //
     // // Ship
     uvScale(1);
     scale({1,1,1});
@@ -168,6 +171,8 @@ void ServerViz::renderArcade() {
     location(glm::vec3{0, 1, -2});
     drawMesh();
     location({0, 0, 0});
+
+
 
     // Deactivate the full screen framebuffer and render the texture as
     // a quad into the postprocessed framebuffer.
@@ -207,12 +212,13 @@ void ServerViz::renderArcade() {
     setUniformFloat(10, ftSeconds * 4000, _postProcessShader);
     // scaled_width = 1024;
     // scaled_height = 768;
-
     drawPlane();
     rotation({0, 0, 0});
     scale({1, 1, 1});
     tint({1, 1, 1, 1});
     forceShader(nullptr);
+
+
 
     // Now back to the main backbuffer.
     // We take the last framebuffer, which has the final image of the
@@ -239,7 +245,11 @@ void ServerViz::renderArcade() {
     location({scaled_width/2, scaled_height/2, -0.5});
     drawPlane();
 
-    // The arcade cabinet itself is lit, it is a normal 3D model in the main world.
+
+
+
+
+    //The arcade cabinet itself is lit, it is a normal 3D model in the main world.
     // lightingOn();
     // bindMesh(getMeshByName("cabinet"));
     // bindNormalMap(getTextureByName("wood_normal"));

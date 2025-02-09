@@ -1420,21 +1420,24 @@ void drawMeshSimple() {
     glBindVertexArray(0);
 }
 
+/**
+* Draws a skybox by
+*/
 void drawSkybox() {
     glBindVertexArray(glDefaultObjects->skyboxVAO);
     bindShader(glDefaultObjects->skyboxShader);
-    GL_ERROR_EXIT(8341, "error binding shader");
-    glm::mat4 matview = glm::lookAt(glm::vec3(0, 0, -1), glm::vec3(0, 0, 1), glm::vec3(0, 1,0));
+    //glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
     glUniformMatrix4fv( 0, 1, GL_FALSE, value_ptr(viewMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
-    //glUniformMatrix4fv( 0, 1, GL_FALSE, value_ptr(matview));
+    glUniformMatrix4fv( 1, 1, GL_FALSE, value_ptr(projectionMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, glDefaultObjects->currentRenderState->skyboxTexture->handle);
-    GL_ERROR_EXIT(8342, "error binding shader texture");
-    //glDrawArrays(GL_TRIANGLES, 0, 3);
-    glDisable(GL_DEPTH_TEST);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-    glDisable(GL_DEPTH_TEST);
-    GL_ERROR_EXIT(8344, "Error drawing skybox");
+
+    glDepthMask(GL_FALSE);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDepthMask(GL_TRUE);
+
 
 }
 
