@@ -50,7 +50,7 @@ extern void clearGLBuffers();
 // This is all necessary to provide simple drawing features
 // without any further setup from the game side.
 // For drawing simple shapes, text etc.
-extern void createDefaultGLObjects();
+extern void initDefaultGLObjects();
 
 int window_width = 1280;
 int window_height= 720;
@@ -407,8 +407,8 @@ void initGLContext(HWND hwnd, HDC hdc) {
         WGL_COLOR_BITS_ARB,     32,
         WGL_DEPTH_BITS_ARB,     24,
         WGL_STENCIL_BITS_ARB,   8,
-        WGL_SAMPLE_BUFFERS_ARB, 0,      // <-- Enable multi-sample buffer
-        WGL_SAMPLES_ARB,        0,      // <-- # of samples
+        WGL_SAMPLE_BUFFERS_ARB, 1,      // <-- Enable multi-sample buffer
+        WGL_SAMPLES_ARB,        4,      // <-- # of samples
         0                       // End
     };
 
@@ -499,10 +499,10 @@ void initGLContext(HWND hwnd, HDC hdc) {
     glFrontFace(GL_CCW);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
-    //glEnable(GL_MULTISAMPLE);
-    //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST );
+    glEnable(GL_MULTISAMPLE);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST );
     //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST );
-    //glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_LINE_SMOOTH);
     //glEnable(GL_POLYGON_SMOOTH);
     glViewport(0, 0, window_width, window_height);
     enableVsync(false);
@@ -1233,7 +1233,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         }
         else if (renderer == "opengl" || renderer == "") {
             initGLContext(hwnd, hdc);
-            createDefaultGLObjects();
+            initDefaultGLObjects();
         }
         else if (renderer == "vulkan") {
 

@@ -52,6 +52,8 @@ class ServerViz : public DefaultGame {
     Shader * _postProcessShader = nullptr;
     Camera* _cameraIn3DWorld = nullptr;
     State _state = State::LoadingScreen;
+    Texture * _skyboxTexture = nullptr;
+    Texture * _skyboxFront = nullptr;
 };
 
 

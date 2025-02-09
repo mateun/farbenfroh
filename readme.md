@@ -1,15 +1,22 @@
-# simple-king
+# game-engine
 
-This is a "simple" strategy game on win32. 
-It uses a very thin OpenGL layer to present 1 fullscreen texture per frame. 
-All contents of the game are therefore "software rendered". 
+Simple opengl based game engine. 
+Its main features are 
+- forward rendering
+- simple map editor (todo)
+- automatic asset loading
+- sound playback
+- lua scripting (todo)
+- skeletal animation
 
 
 ### TODO
 
 - [x] Unlit shader option
-- [ ] Integrate IMGUI
-- [ ] Draw debug grid
+- [x] Integrate IMGUI
+- [x] Draw debug grid
+- [ ] Map editor
+- 
  
 
 

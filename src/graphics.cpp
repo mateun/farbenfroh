@@ -50,6 +50,7 @@ struct GLDefaultObjects {
     GLuint* quadVAO = nullptr;
     GLuint* textQuadVAO = nullptr;
     GLuint* gridVAO = nullptr;
+    GLuint skyboxVAO;
     GLuint shadowMapFramebuffer = 0;
     GLuint quadPosBuffer = 0;
     GLuint quadIndexBuffer = 0;
@@ -70,11 +71,31 @@ struct GLDefaultObjects {
     // For skinned rendering
     GLuint boneIndexBuffer;
     GLuint boneWeightBuffer;
+
 };
 
 GLDefaultObjects* glDefaultObjects = nullptr;
 
-void createDefaultGLObjects() {
+GLuint createSkyboxVAO() {
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    GLuint indices[] = {
+        0, 1, 2,
+        3, 2, 1
+    };
+
+    GLuint indexBuffer;
+    glGenBuffers(1, &indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * 6, indices, GL_STATIC_DRAW);
+    glBindVertexArray(0);
+
+    return vao;
+
+}
+
+void initDefaultGLObjects() {
     auto vsrc = readFile("../assets/shaders/vshader.glsl");
     auto vsrc_skinned = readFile("../assets/shaders/vshader_skinned.glsl");
     auto vsrc_instanced= readFile("../assets/shaders/vshader_instanced.glsl");
@@ -85,8 +106,8 @@ void createDefaultGLObjects() {
     auto fsrc_skinned = readFile("../assets/shaders/fshader_single_color_skinned.glsl");
     auto tfsrc = readFile("../assets/shaders/fshader_diffuse_texture.glsl");
     auto tfsrc_instanced = readFile("../assets/shaders/fshader_diffuse_texture_instanced.glsl");
-    auto skyboxvs = readFile("../assets/shaders/vshader_sky.glsl");
-    auto skyboxfs = readFile("../assets/shaders/fshader_sky.glsl");
+    auto skyboxvs = readFile("../assets/shaders/sky.vert");
+    auto skyboxfs = readFile("../assets/shaders/sky.frag");
     auto gridVertSource = readFile("../assets/shaders/grid.vert");
     auto gridFragSource = readFile("../assets/shaders/grid.frag");
     auto gridVertPostProcessSource = readFile("../assets/shaders/grid_postprocess.vert");
@@ -121,6 +142,7 @@ void createDefaultGLObjects() {
     glDefaultObjects->defaultUICamera = new Camera();
     glDefaultObjects->defaultUICamera->type = CameraType::Ortho;
     glDefaultObjects->defaultUICamera->updateLocation({0, 0, 2});
+    glDefaultObjects->skyboxVAO = createSkyboxVAO();
 
     srand(time(NULL));
 }
@@ -1064,6 +1086,7 @@ void location(glm::vec3 loc) {
 GLenum toGLColorFormat(ColorFormat cf) {
     if (cf == ColorFormat::RGBA) return GL_RGBA;
     else if (cf == ColorFormat::BGRA) return GL_BGRA;
+    else if (cf == ColorFormat::RGB) return GL_RGB;
     else return GL_R;
 }
 
@@ -1093,18 +1116,23 @@ Texture *createTextureFromBitmap(Bitmap *bm, ColorFormat colorFormat) {
     return target;
 }
 
-Texture* createCubeMapTextureFromFile(const std::string &dirName, ColorFormat colorFormat) {
+/**
+* Expects a directory which contains 6 files, named top, bottom, back, left, right, front.
+* The filetype (extension can be given)
+*/
+Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType) {
     unsigned int textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
+
     std::vector<std::string> faces = {
-            "right.png",
-            "left.jpg",
-            "top.jpg",
-            "bottom.jpg",
-            "back.jpg",
-            "front.jpg"
+            "right." + fileType,
+            "left." + fileType,
+            "top." + fileType,
+            "bottom." + fileType,
+            "back." + fileType,
+            "front." + fileType,
     };
 
     for (unsigned int i = 0; i < faces.size(); i++)
@@ -1126,9 +1154,7 @@ Texture* createCubeMapTextureFromFile(const std::string &dirName, ColorFormat co
         }
         else
         {
-            std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
-            // TODO
-//            stbi_image_free(data);
+            throw std::runtime_error("Cubemap texture failed to load at path: " + dirName);
         }
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1136,7 +1162,7 @@ Texture* createCubeMapTextureFromFile(const std::string &dirName, ColorFormat co
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    Texture* target = new Texture();
+    auto target = new Texture();
     target->handle = textureID;
     return target;
 }
@@ -1165,7 +1191,7 @@ glm::mat4 getWorldMatrixFromGlobalState() {
 
 }
 
-Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFormat) {
+Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFormat, ColorFormat internalColorFormat) {
     Bitmap* bm;
     loadBitmap(fileName.c_str(), &bm);
     GLuint handle;
@@ -1177,7 +1203,7 @@ Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFor
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexImage2D(GL_TEXTURE_2D,
                  0,
-                 GL_RGBA,
+                 toGLColorFormat(internalColorFormat),
                  bm->width,
                  bm->height,
                  0,
@@ -1195,6 +1221,7 @@ Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFor
 
         GLfloat maxAniso = 0.0f;
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
+        printf("maxAniso: %f\n", maxAniso);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
 
     }
@@ -1391,6 +1418,24 @@ void drawMeshSimple() {
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
+}
+
+void drawSkybox() {
+    glBindVertexArray(glDefaultObjects->skyboxVAO);
+    bindShader(glDefaultObjects->skyboxShader);
+    GL_ERROR_EXIT(8341, "error binding shader");
+    glm::mat4 matview = glm::lookAt(glm::vec3(0, 0, -1), glm::vec3(0, 0, 1), glm::vec3(0, 1,0));
+    glUniformMatrix4fv( 0, 1, GL_FALSE, value_ptr(viewMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
+    //glUniformMatrix4fv( 0, 1, GL_FALSE, value_ptr(matview));
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, glDefaultObjects->currentRenderState->skyboxTexture->handle);
+    GL_ERROR_EXIT(8342, "error binding shader texture");
+    //glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDisable(GL_DEPTH_TEST);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    glDisable(GL_DEPTH_TEST);
+    GL_ERROR_EXIT(8344, "Error drawing skybox");
+
 }
 
 void drawMesh() {

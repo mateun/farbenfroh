@@ -392,6 +392,7 @@ public:
 enum class ColorFormat {
     RGBA,
     BGRA,
+    RGB,
     R,
     B,
     G
@@ -592,14 +593,16 @@ void loadBitmap(const char* fileName, Bitmap** bm);
 void setPixel(int x, int y, int r, int g, int b, int a);
 void drawPlane();
 void drawMesh();
+void drawSkybox();
 void drawMeshSimple();
 void drawMeshInstanced(int num);
 void drawParticleEffect(bool instancedRender = false);
 void drawGrid(GridData* gridData = {}, bool blurred = false);
 void drawBitmap(int x, int y, uint8_t* bitmapPixels);
 glm::mat4 getWorldMatrixFromGlobalState();
-Texture* createTextureFromFile(const std::string& fileName, ColorFormat colorFormat = ColorFormat::RGBA);
+Texture* createTextureFromFile(const std::string& fileName, ColorFormat colorFormat = ColorFormat::RGBA, ColorFormat internalColorFormat = ColorFormat::RGBA);
 Texture* createTextureFromBitmap(Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
+Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType = "png");
 void beginBatch();
 void endBatch();
 void foregroundColor(glm::vec4 col);

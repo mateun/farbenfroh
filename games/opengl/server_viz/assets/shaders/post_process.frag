@@ -13,7 +13,7 @@ void applyFx() {
     // ---- 1) Barrel Distortion ----
     vec2 center = vec2(0.5, 0.5);
     vec2 coord = fs_uvs - center;
-    float distFactor = -50.4; // curvature
+    float distFactor = 0.4; // curvature
     float r2 = dot(coord, coord);
     coord *= (1.0 + distFactor * r2);
     vec2 warpedUV = coord + center;

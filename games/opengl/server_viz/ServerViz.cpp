@@ -27,6 +27,9 @@ void ServerViz::init() {
     _cameraIn3DWorld->lookAtTarget = {0, 1.5, -5};
     _cameraIn3DWorld->type = CameraType::Perspective;
 
+    _skyboxTexture = createCubeMapTextureFromDirectory("../games/opengl/server_viz/assets/skybox", ColorFormat::RGBA, "png");
+    _skyboxFront = createTextureFromFile("../games/opengl/server_viz/assets/skybox/front.jpg");
+
 }
 
 void ServerViz::updateLoadingScreen() {
@@ -126,8 +129,24 @@ void ServerViz::renderArcade() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
+    // debug textures
+    // {
+    //
+    //     bindCamera(getUICamera());
+    //     lightingOff();
+    //     scale({scaled_width, scaled_height, 1});
+    //     location({scaled_width/2, scaled_height/2, -0.1});
+    //     flipUvs(true);
+    //     bindTexture(_skyboxFront);
+    //     drawPlane();
+    // }
 
-    static auto gd = createGrid(70);
+    bindSkyboxTexture(_skyboxTexture);
+    drawSkybox();
+
+    static auto gd = createGrid(75);
+    scale({1,1,1});
+    // rotation({0, 0, 0});
     drawGrid(gd);
 
     // Our ground plane
