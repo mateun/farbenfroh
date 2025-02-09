@@ -76,20 +76,17 @@ struct GLDefaultObjects {
 
 GLDefaultObjects* glDefaultObjects = nullptr;
 
+/**
+* This is just an "empty" VAO as
+* all skybox rendering is done with a fullscreen quad
+* where the vertices are within the sky.vert shader.
+* We just need a VAO to trigger the vertex-fetch stage
+* in our draw call. It will send empty vertices 4 times for a quad.
+*
+*/
 GLuint createSkyboxVAO() {
     GLuint vao;
     glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    GLuint indices[] = {
-        0, 1, 2,
-        3, 2, 1
-    };
-
-    GLuint indexBuffer;
-    glGenBuffers(1, &indexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * 6, indices, GL_STATIC_DRAW);
-    glBindVertexArray(0);
 
     return vao;
 
@@ -1421,7 +1418,7 @@ void drawMeshSimple() {
 }
 
 /**
-* Draws a skybox by
+* Draws a skybox as a fullscreen quad
 */
 void drawSkybox() {
     glBindVertexArray(glDefaultObjects->skyboxVAO);
