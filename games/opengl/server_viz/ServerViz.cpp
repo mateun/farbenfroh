@@ -3,7 +3,7 @@
 //
 
 #include "ServerViz.h"
-
+#include "../src/engine/Light.h"
 
 
 DefaultGame* getGame() {
@@ -29,6 +29,68 @@ void ServerViz::init() {
 
     _skyboxTexture = createCubeMapTextureFromDirectory("../games/opengl/server_viz/assets/skybox", ColorFormat::RGBA, "png");
     _skyboxFront = createTextureFromFile("../games/opengl/server_viz/assets/skybox/front.jpg");
+
+    // Setup the actual scene
+    scene = new Scene();
+    SceneNode* mainCameraNode = new SceneNode();
+    mainCameraNode->type = SceneNodeType::Camera;
+    mainCameraNode->camera = getGameplayCamera();
+    scene->addNode(mainCameraNode);
+
+    Light* sunlight = new Light();
+    sunlight->type = LightType::Directional;
+    sunlight->location = {-8, 10, 3};
+    sunlight->lookAtTarget = {0, 0, 0};
+    sunlight->castsShadow = true;
+    sunlight->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+
+    SceneNode* sunNode = new SceneNode();
+    sunNode->type = SceneNodeType::Light;
+    sunNode->light = sunlight;
+    //scene->addNode(sunNode);
+
+    auto lampNode = new SceneNode();
+    lampNode->type = SceneNodeType::Light;
+    lampNode->light = new Light();
+    lampNode->light->type = LightType::Point;
+    lampNode->light->location = {-2, 0.8, 3};
+    lampNode->light->lookAtTarget = {0, 0, 0};
+    lampNode->light->castsShadow = false;
+    lampNode->light->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+    scene->addNode(lampNode);
+
+    SceneNode* mnGroundPlane = new SceneNode();
+    mnGroundPlane->type = SceneNodeType::Mesh;
+    mnGroundPlane->location = {0, 0, 0};
+    mnGroundPlane->mesh = getMeshByName("cube");
+    mnGroundPlane->texture = getTextureByName("street_albedo");
+    mnGroundPlane->normalMap = getTextureByName("street_normal");
+    mnGroundPlane->uvScale = 75;
+    mnGroundPlane->scale = {55, .1, 55};
+    scene->addNode(mnGroundPlane);
+
+    auto mnCube = new SceneNode();
+    mnCube->type = SceneNodeType::Mesh;
+    mnCube->location = {0, 1, 0};
+    mnCube->mesh = getMeshByName("cube");
+    mnCube->texture = getTextureByName("wood_albedo");
+    mnCube->normalMap = getTextureByName("wood_normal");
+    mnCube->uvScale = 1;
+    mnCube->scale = {1, 1, 1};
+    scene->addNode(mnCube);
+
+    auto mnCube2 = new SceneNode();
+    mnCube2->type = SceneNodeType::Mesh;
+    mnCube2->location = {-0.5, 3, -0.2};
+    mnCube2->rotation = {0, 10, 0};
+    mnCube2->mesh = getMeshByName("cube");
+    mnCube2->texture = getTextureByName("wood_albedo");
+    mnCube2->normalMap = getTextureByName("wood_normal");
+    mnCube2->uvScale = 1;
+    mnCube2->scale = {1, 1, 1};
+    //scene->addNode(mnCube2);
+
+
 
 }
 
@@ -120,6 +182,9 @@ void ServerViz::renderArcade() {
     bindCamera(getGameplayCamera());
     lightingOn();
 
+    scene->render();
+    return;
+
     // Prepare framebuffer for fullscreen post-processing
     {
         activateFrameBuffer(_fullscreenFrameBuffer);
@@ -129,45 +194,40 @@ void ServerViz::renderArcade() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    // debug textures
-    // {
-    //
-    //     bindCamera(getUICamera());
-    //     lightingOff();
-    //     scale({scaled_width, scaled_height, 1});
-    //     location({scaled_width/2, scaled_height/2, -0.1});
-    //     flipUvs(true);
-    //     bindTexture(_skyboxFront);
-    //     drawPlane();
-    // }
-
 
     bindSkyboxTexture(_skyboxTexture);
     drawSkybox();
+    unbindSkyboxTexture();
 
-
-
-
-    static auto gd = createGrid(75);
-    scale({1,1,1});
-    drawGrid(gd);
 
     // Our ground plane
-    // bindMesh(getMeshByName("cube"));
-    // bindTexture(getTextureByName("wood_albedo"));
-    // bindNormalMap(getTextureByName("wood_normal"));
-    // uvScale(55);
-    // location(glm::vec3{0, 0, 0});
-    // scale({100, .1, 100});
-    // drawMesh();
-    //
-    // // Ship
+    bindMesh(getMeshByName("cube"));
+    bindTexture(getTextureByName("wood_albedo"));
+    bindNormalMap(getTextureByName("wood_normal"));
+    uvScale(55);
+    location(glm::vec3{0, 0, 0});
+    scale({55, .1, 55});
+    drawMesh();
+
+    // Some street tiles
+    bindMesh(getMeshByName("street"));
+    bindTexture(getTextureByName("street_albedo"));
+    bindNormalMap(getTextureByName("street_normal"));
+    uvScale(1);
+    scale({1, 1, 1});
+    for (int i = 0; i < 8; i++) {
+        location(glm::vec3{-3 + (i* 2.1), 0, -4});
+        drawMesh();
+    }
+
+
+    // Ship
     uvScale(1);
     scale({1,1,1});
     flipUvs(true);
     bindMesh(getMeshByName("cube"));
-    bindTexture(getTextureByName("cube_diffuse"));
-    //bindNormalMap(getTextureByName("street_normal"));
+    bindTexture(getTextureByName("wood_albedo"));
+    bindNormalMap(getTextureByName("wood_normal"));
     location(glm::vec3{0, 1, -2});
     drawMesh();
     location({0, 0, 0});
@@ -245,19 +305,14 @@ void ServerViz::renderArcade() {
     location({scaled_width/2, scaled_height/2, -0.5});
     drawPlane();
 
+    // TODO enable display of debug grid
+    // currently this is not visible.
+    // Even depthtest on/off did not help
+    static auto gd = createGrid(75);
+    location({0, 0.05, 0});
+    scale({1,1,1});
+    drawGrid(gd);
 
-
-
-
-    //The arcade cabinet itself is lit, it is a normal 3D model in the main world.
-    // lightingOn();
-    // bindMesh(getMeshByName("cabinet"));
-    // bindNormalMap(getTextureByName("wood_normal"));
-    // bindTexture(getTextureByName("wood_albedo"));
-    // foregroundColor({1, 1, 1, 1});
-    // location({0, 1.8, -0.05});
-    // rotation({0, 0, 0});
-    // drawMesh();
 
     foregroundColor({0.9, 0.2, 0.2, .5});
     renderFPS();

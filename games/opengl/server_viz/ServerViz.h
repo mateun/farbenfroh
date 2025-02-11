@@ -54,6 +54,7 @@ class ServerViz : public DefaultGame {
     State _state = State::LoadingScreen;
     Texture * _skyboxTexture = nullptr;
     Texture * _skyboxFront = nullptr;
+    Scene * scene = nullptr;
 };
 
 

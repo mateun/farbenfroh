@@ -1,8 +1,10 @@
 #pragma once
 
+#include <lobject.h>
 #include <string>
 #include <vector>
 #include <optional>
+#include <engine/Light.h>
 #include <glm/glm.hpp>
 #include "glm/detail/type_quat.hpp"
 #include "assimp/scene.h"
@@ -356,6 +358,8 @@ struct RenderState {
     bool skinnedDraw = false;
     bool textDraw = false;
 
+    Light* currentLight = nullptr;
+
 
     TileData tileData;
 
@@ -593,6 +597,7 @@ void loadBitmap(const char* fileName, Bitmap** bm);
 void setPixel(int x, int y, int r, int g, int b, int a);
 void drawPlane();
 void drawMesh();
+void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO);
 void drawSkybox();
 void drawMeshSimple();
 void drawMeshInstanced(int num);
@@ -618,6 +623,8 @@ void overrideAlpha(float val);
 void instanceOffsets(std::vector<glm::vec2> offsets);
 void bindTexture(Texture* tex);
 void bindNormalMap(Texture* tex, int unit = 2);
+void bindSkyboxTexture(Texture* tex);
+void unbindSkyboxTexture();
 void tilingOn(bool val);
 void tileData(int tileX, int tileY, int tileWidth, int tileHeight, int offsetX =0, int offsetY = 0);
 void bindMesh(Mesh* mesh);
@@ -715,5 +722,52 @@ public:
 
 private:
     std::vector<Mesh*> _meshes;
+
+};
+
+enum class SceneNodeType {
+    Light,
+    Camera,
+    Text,
+    Mesh
+};
+
+class SceneNode {
+public:
+    SceneNode();
+    ~SceneNode();
+
+    SceneNodeType type;
+
+    // These are type specific fields and can be null
+    Camera * camera = nullptr;
+    Light * light = nullptr;
+    Mesh* mesh = nullptr;
+    Texture* texture = nullptr;
+    Texture* normalMap = nullptr;
+
+    // Mesh specific?!
+    glm::vec3 location = glm::vec3(0);
+    glm::vec3 scale = glm::vec3(1.0f);
+    glm::vec3 rotation = glm::vec3(0);
+    glm::vec4 foregroundColor;
+    float uvScale = 1;
+
+};
+
+class Scene {
+public:
+    Scene();
+    ~Scene();
+
+    void addNode(SceneNode* node);
+    void update();
+    void render();
+
+private:
+    std::vector<SceneNode*> meshNodes;
+    std::vector<SceneNode*> textNodes;
+    std::vector<SceneNode*> cameraNodes;
+    std::vector<SceneNode*> lightNodes;
 
 };

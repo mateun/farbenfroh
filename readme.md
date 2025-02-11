@@ -20,3 +20,17 @@ Its main features are
  
 
 
+### Thougths
+
+#### Scene concept
+I am thinking if it is useful to have a container which has all the nodes which 
+shall be rendered. 
+This includes "controlling" nodes such as a camera and lights. And also the
+"drawable" nodes which include meshes and text. 
+We can keep the current imperative render style, but this is then used by the scene itself. 
+The user interacts only with the higher abstract scene in this case. 
+
+
+
+
+

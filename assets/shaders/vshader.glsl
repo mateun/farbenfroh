@@ -14,10 +14,7 @@ layout(location = 7) uniform mat4 mat_view;
 layout(location = 8) uniform mat4 mat_projection;
 layout(location = 9) uniform mat4 mat_vp_directional_light;
 
-
-
 layout(location = 18) uniform bool useNormals = true;
-
 
 layout(location = 20) uniform bool flipUVs = false;
 layout(location = 21) uniform float uvScale = 1;
@@ -32,6 +29,7 @@ out vec3 fs_normals;
 out vec3 fsFogCameraPos;
 out vec4 fragPosLightSpace;
 out vec4 vertexWeight;
+
 out VS_OUT {
     vec3 tangentLightDir;
     vec3 tangentLightPos;

@@ -26,6 +26,7 @@
 
 
 GLuint createShadowMapFramebuffer();
+FrameBuffer* createShadowMapFramebufferObject(glm::vec2 size);
 
 void prepareShadowMapTransformationMatrices();
 void prepareShadowMapTransformationMatrices(DrawCall& dc);
@@ -37,9 +38,11 @@ void debugDummyDrawSkeletalMesh(Mesh *pMesh);
 
 
 struct GLDefaultObjects {
+    Shader* shadowMapShader = nullptr;
     Shader* singleColorShader = nullptr;
     Shader* singleColorShaderInstanced = nullptr;
     Shader* skinnedShader = nullptr;
+    Shader* skinnedShadowMapShader = nullptr;
     Shader* texturedSkinnedShader = nullptr;
     Shader* instancedShader = nullptr;
     Shader* texturedShader = nullptr;
@@ -109,7 +112,11 @@ void initDefaultGLObjects() {
     auto gridFragSource = readFile("../assets/shaders/grid.frag");
     auto gridVertPostProcessSource = readFile("../assets/shaders/grid_postprocess.vert");
     auto gridFragPostProcessSource = readFile("../assets/shaders/grid_postprocess.frag");
+    auto shadowMapVertSource = readFile("../assets/shaders/shadow_map.vert");
+    auto shadowMapFragSource = readFile("../assets/shaders/shadow_map.frag");
+
     glDefaultObjects = new GLDefaultObjects();
+    glDefaultObjects->shadowMapShader = new Shader();
     glDefaultObjects->singleColorShader = new Shader();
     glDefaultObjects->singleColorShaderInstanced = new Shader();
     glDefaultObjects->skinnedShader = new Shader();
@@ -125,6 +132,7 @@ void initDefaultGLObjects() {
     glDefaultObjects->shadowMapFramebuffer = createShadowMapFramebuffer();
     glDefaultObjects->currentRenderState = new RenderState();
     glDefaultObjects->currentRenderState->foregroundColor = {0.7, 0, 0, 1};
+
     createShader(vsrc, fsrc, glDefaultObjects->singleColorShader);
     createShader(vsrc_skinned, fsrc_skinned, glDefaultObjects->skinnedShader);
     createShader(vsrc_skinned, tfsrc, glDefaultObjects->texturedSkinnedShader);
@@ -135,6 +143,8 @@ void initDefaultGLObjects() {
     createShader(vsrc_instanced, fsrc_instanced, glDefaultObjects->singleColorShaderInstanced);
     createShader(gridVertSource, gridFragSource, glDefaultObjects->gridShader);
     createShader(gridVertPostProcessSource, gridFragPostProcessSource, glDefaultObjects->gridPostProcessShader);
+    createShader(shadowMapVertSource, shadowMapFragSource, glDefaultObjects->shadowMapShader);
+
     glDefaultObjects->gridFBO = createFrameBuffer(scaled_width/2, scaled_height/2);
     glDefaultObjects->defaultUICamera = new Camera();
     glDefaultObjects->defaultUICamera->type = CameraType::Ortho;
@@ -151,21 +161,20 @@ Texture* createShadowMapTexture(int width, int height) {
     auto target = new Texture();
     glGenTextures(1, &target->handle);
     glBindTexture(GL_TEXTURE_2D, target->handle);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32,
+         width, height);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
     // These are good settings for a shadow map, to avoid
     // repeating shadows outside of the light frustum.
     // It may not be ideal for non-shadow-map purposes.
-    float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-         width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
+    // float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    // glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
 
     err = glGetError();
@@ -188,6 +197,29 @@ void clearDepthBuffer() {
     glClearBufferfv(GL_DEPTH, 0, &d);
 }
 
+FrameBuffer* createShadowMapFramebufferObject(glm::vec2 size) {
+    GLuint handle;
+    glGenFramebuffers(1, &handle);
+    glBindFramebuffer(GL_FRAMEBUFFER, handle);
+
+    auto texture = createShadowMapTexture(size.x,  size.y);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture->handle, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        printf("framebuffer completeness check failure");
+        exit(1);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    auto fbo = new FrameBuffer();
+    fbo->handle = handle;
+    fbo->texture = texture;
+    return fbo;
+
+}
+
 GLuint createShadowMapFramebuffer() {
     GLuint handle;
     glGenFramebuffers(1, &handle);
@@ -208,7 +240,12 @@ GLuint createShadowMapFramebuffer() {
 }
 
 glm::mat4 projectionMatrixForShadowmap(Camera* cam) {
-    return glm::ortho<float>(-28, 28, -28, 28, 1.0f, 43.0f);
+    if (cam->type == CameraType::Ortho) {
+        return glm::ortho<float>(-28, 28, -28, 28, 1.0f, 43.0f);
+    }
+
+    return glm::perspectiveFov<float>(glm::radians(50.0f), glDefaultObjects->shadowMap->bitmap->width, glDefaultObjects->shadowMap->bitmap->height, 1.0f, 10);
+
 }
 
 glm::mat4 projectionMatrixForCamera(Camera * cam) {
@@ -1254,6 +1291,10 @@ void bindSkyboxTexture(Texture* tex) {
     glDefaultObjects->currentRenderState->skyboxTexture = tex;
 }
 
+void unbindSkyboxTexture() {
+    glDefaultObjects->currentRenderState->skyboxTexture = nullptr;
+}
+
 
 void drawMeshCallExecution(DrawCall drawCall) {
     glBindVertexArray(drawCall.mesh->vao);
@@ -1448,7 +1489,13 @@ void drawMesh() {
 
     glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
 
+    static int i = 0;
+    i++;
+    auto glerr = glGetError();
+    if (glerr != 0) {
+        printf("i: %d\n", i);
 
+    }
 
     if (glDefaultObjects->currentRenderState->texture) {
         if (glDefaultObjects->currentRenderState->skinnedDraw) {
@@ -1459,14 +1506,7 @@ void drawMesh() {
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
-    } else if (glDefaultObjects->currentRenderState->skyboxTexture) {
-        bindShader(glDefaultObjects->skyboxShader);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, glDefaultObjects->currentRenderState->skyboxTexture->handle);
-        auto err = glGetError();
-        if (err != 0) {
-            exit(1);
-        }
+        GL_ERROR_EXIT(980);
     } else {
         if (glDefaultObjects->currentRenderState->skinnedDraw) {
             bindShader(glDefaultObjects->skinnedShader);
@@ -1480,36 +1520,37 @@ void drawMesh() {
     if (glDefaultObjects->currentRenderState->normalMap) {
         glActiveTexture(GL_TEXTURE0 + glDefaultObjects->currentRenderState->normalMapTextureUnit);
         glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->normalMap->handle);
+        GL_ERROR_EXIT(981);
     }
 
-    if (!glDefaultObjects->currentRenderState->skyboxTexture) {
+    if (glDefaultObjects->currentRenderState->lightingOn && glDefaultObjects->currentRenderState->currentLight) {
+        glUniform1i(13, 1);
 
-        if (glDefaultObjects->currentRenderState->lightingOn) {
-            glUniform1i(13, 1);
-            glUniform3fv(10, 1, (float *) &lightDirection);
+        glm::vec3 dir = glDefaultObjects->currentRenderState->currentLight->lookAtTarget - glDefaultObjects->currentRenderState->currentLight->location;
+        glUniform3fv(1, 1, glm::value_ptr(dir));
+        GLint locLightPos = glGetUniformLocation(glDefaultObjects->texturedShader->handle, "lightPos");
+        glUniform3fv(locLightPos, 1, glm::value_ptr(glDefaultObjects->currentRenderState->currentLight->location));
+
+        GLint loc = glGetUniformLocation(glDefaultObjects->texturedShader->handle, "isPointLight");
+        if (glDefaultObjects->currentRenderState->currentLight->type == LightType::Point) {
+            glUniform1i(loc, 1);
         } else {
-            glUniform1i(13, 0);
+            glUniform1i(loc, 0);
         }
 
-        if (glDefaultObjects->currentRenderState->flipUvs) {
-            glUniform1i(20, 1);
-        } else {
-            glUniform1i(20, 0);
+        GL_ERROR_EXIT(983);
 
-        }
-        glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
+    } else {
+        glUniform1i(13, 0);
     }
 
-    if (glDefaultObjects->currentRenderState->shadows) {
-        // Render everything twice, first into the shadowmap buffer here
-        glViewport(0, 0, 1024, 1024);
-        glBindFramebuffer(GL_FRAMEBUFFER, glDefaultObjects->shadowMapFramebuffer);
-        prepareShadowMapTransformationMatrices();
-        glDrawElements(GL_TRIANGLES, glDefaultObjects->currentRenderState->mesh->numberOfIndices,
-                       glDefaultObjects->currentRenderState->mesh->indexDataType, nullptr);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, window_width, window_height);
+    if (glDefaultObjects->currentRenderState->flipUvs) {
+        glUniform1i(20, 1);
+    } else {
+        glUniform1i(20, 0);
+
     }
+    glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
 
     prepareTransformationMatrices();
 
@@ -1519,20 +1560,30 @@ void drawMesh() {
         glEnable(GL_DEPTH_TEST);
     }
 
-    if (glDefaultObjects->currentRenderState->skinnedDraw) {
-        static bool doneOnce = false;
-        if (!doneOnce) {
-            //debugDummyDrawSkeletalMesh(glDefaultObjects->currentRenderState->mesh);
-            doneOnce = true;
-        }
-    }
 
-    if (glDefaultObjects->currentRenderState) {
-        glDrawElements(GL_TRIANGLES, glDefaultObjects->currentRenderState->mesh->numberOfIndices, glDefaultObjects->currentRenderState->mesh->indexDataType, nullptr);
-    }
+    glDrawElements(GL_TRIANGLES, glDefaultObjects->currentRenderState->mesh->numberOfIndices, glDefaultObjects->currentRenderState->mesh->indexDataType, nullptr);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    glBindVertexArray(0);
+}
+
+void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO) {
+    glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
+
+
+    if (glDefaultObjects->currentRenderState->skinnedDraw) {
+        bindShader(glDefaultObjects->skinnedShadowMapShader);
+    } else {
+        bindShader(glDefaultObjects->shadowMapShader);
+    }
+    glViewport(0, 0, shadowMapFBO->texture->bitmap->width, shadowMapFBO->texture->bitmap->height);
+
+    prepareShadowMapTransformationMatrices();
+    glDrawElements(GL_TRIANGLES, glDefaultObjects->currentRenderState->mesh->numberOfIndices,
+                   glDefaultObjects->currentRenderState->mesh->indexDataType, nullptr);
+
+    glViewport(0, 0, scaled_width, scaled_height);
     glBindVertexArray(0);
 }
 
@@ -1636,17 +1687,13 @@ void prepareShadowMapTransformationMatrices(glm::vec3 location, glm::vec3 scale,
     mat4 matrotZ = glm::rotate(mat4(1), glm::radians(rotation.z), {0, 0, 1} );
     mat4 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
 
-
-//    layout(location = 6) uniform mat4 mat_model;
-//    layout(location = 7) uniform mat4 mat_view;
-//    layout(location = 8) uniform mat4 mat_projection;
-//    layout(location = 9) uniform mat4 mat_vp_directional_light;
-
     glUniformMatrix4fv(	6,1,GL_FALSE,value_ptr(matworld));
     GL_ERROR_EXIT(991)
 
     glUniformMatrix4fv( 7, 1, GL_FALSE, value_ptr(viewMatrixForCamera(shadowMapCamera)));
+    GL_ERROR_EXIT(992)
     glUniformMatrix4fv(8, 1, GL_FALSE, value_ptr(projectionMatrixForShadowmap(shadowMapCamera)));
+    GL_ERROR_EXIT(993)
 
 }
 
@@ -3521,6 +3568,123 @@ void Raytracer::render(int pixelWidth, int pixelHeight) {
             }
         }
     }
+
+}
+
+SceneNode::SceneNode() {
+}
+
+SceneNode::~SceneNode() {
+}
+
+Scene::Scene() {
+}
+
+Scene::~Scene() {
+}
+
+void Scene::addNode(SceneNode *node) {
+    if (node->type == SceneNodeType::Mesh) {
+        meshNodes.push_back(node);
+    }
+
+    if (node->type == SceneNodeType::Camera) {
+        cameraNodes.push_back(node);
+    }
+
+    if (node->type == SceneNodeType::Light) {
+        lightNodes.push_back(node);
+    }
+
+    if (node->type == SceneNodeType::Text) {
+        textNodes.push_back(node);
+    }
+}
+
+void Scene::update() {
+}
+
+void Scene::render() {
+    // 1. Shadow pass
+    // Check all lights which cast a shadow
+    // These need to be used to for the shadowpass.
+    // So we need to render all meshes into the shadowmap.
+    // We need to this for every light and every mesh.
+    for (auto lightNode : lightNodes) {
+        if (!lightNode->light->castsShadow) continue;
+
+        lightNode->light->shadowMapFBO->handle;
+
+        // Build camera out of current light.
+        // We need this so the view/projection matrices are built correctly.
+        Camera lightCam;
+        lightCam.location = lightNode->light->location;
+        lightCam.lookAtTarget = lightNode->light->lookAtTarget;
+        if (lightNode->light->type == LightType::Directional) {
+            lightCam.type = CameraType::Ortho;
+        } else if (lightNode->light->type == LightType::Point) {
+            lightCam.type = CameraType::Perspective;
+        }
+
+        bindShadowMapCamera(&lightCam);
+        glBindFramebuffer(GL_FRAMEBUFFER, lightNode->light->shadowMapFBO->handle);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        for (auto m : meshNodes) {
+            // Build the actual render commands for each node and
+            // render it into the shadow map.
+            location(m->location);
+            scale(m->scale);
+            rotation(m->rotation);
+            bindMesh(m->mesh);
+            drawMeshIntoShadowMap(lightNode->light->shadowMapFBO);
+        }
+    }
+    activateFrameBuffer(nullptr);
+
+
+    // 2. Actual render pass
+    for (auto lightNode : lightNodes) {
+        glDefaultObjects->currentRenderState->currentLight = lightNode->light;
+        lightingOn();
+
+        if (lightNode->light->castsShadow) {
+            shadowOn();
+            Camera lightCam;
+            lightCam.location = lightNode->light->location;
+            lightCam.lookAtTarget = lightNode->light->lookAtTarget;
+            if (lightNode->light->type == LightType::Directional) {
+                lightCam.type = CameraType::Ortho;
+            } else if (lightNode->light->type == LightType::Point) {
+                lightCam.type = CameraType::Perspective;
+            }
+
+            bindShadowMapCamera(&lightCam);
+            glDefaultObjects->shadowMap = lightNode->light->shadowMapFBO->texture;
+        } else {
+             shadowOff();
+        }
+
+        for (auto m : meshNodes) {
+            // Build the actual render commands for each node and
+            // render it into the shadow map.
+            location(m->location);
+            scale(m->scale);
+            rotation(m->rotation);
+            bindMesh(m->mesh);
+            bindTexture(m->texture);
+            bindNormalMap(m->normalMap);
+            uvScale(m->uvScale);
+            foregroundColor(m->foregroundColor);
+            drawMesh();
+
+
+        }
+
+        shadowOff();
+        lightingOff();
+    }
+
 
 }
 

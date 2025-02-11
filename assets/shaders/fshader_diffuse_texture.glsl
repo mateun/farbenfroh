@@ -12,6 +12,20 @@ layout (location = 14) uniform bool debugShadowMap = false;
 layout (location = 15) uniform float overrideAlpha = 1.0f;
 layout (location = 16) uniform vec4 tint = vec4(1, 1, 1, 1);
 
+uniform vec3 lightSpecular;
+uniform float pointLightConstant = 1.0f;
+uniform float pointLightLinear = 0.08f;
+uniform float pointLightQuadratic = .01f;
+uniform bool isPointLight = false;
+
+struct Light {
+    vec3 position;
+
+    vec3 ambient;
+    vec3 diffuse;
+
+};
+
 in vec3 fs_normals;
 in vec4 fragPosLightSpace;
 in vec3 fsFogCameraPos;
@@ -36,14 +50,31 @@ bool isInShadow() {
 
 
 void diffuseLighting(vec4 baseColor, vec3 normal) {
-    if (lit) {
-        vec3 lightVector = normalize(-fs_in.tangentLightDir);
 
-        float diffuse = max(dot(normalize(normal), lightVector), 0.2);
-        color  = vec4(baseColor.xyz * diffuse, baseColor.w);
-        if (isInShadow()) {
-            //color.rgb *= 0.1;
+    if (lit) {
+
+
+
+        // In the case of a point light we calculate some radial falloff:
+        if (isPointLight) {
+            vec3 lightVector = normalize(fs_in.tangentLightPos - fs_in.tangentFragPos);
+            float diffuse = max(dot(normalize(normal), lightVector), 0.2);
+            color  = vec4(baseColor.xyz * diffuse, baseColor.w);
+            float distance = length(fs_in.tangentLightPos - fs_in.tangentFragPos);
+            float att = 1.0 / (pointLightConstant + pointLightLinear * distance + pointLightQuadratic * (distance * distance));
+            color.rgb *= att;
+
+        } else {
+            vec3 lightVector = normalize(-fs_in.tangentLightDir);
+            float diffuse = max(dot(normalize(normal), lightVector), 0.2);
+            color  = vec4(baseColor.xyz * diffuse, baseColor.w);
+            color  = vec4(baseColor.xyz * diffuse, baseColor.w);
         }
+
+        if (isInShadow()) {
+            color.rgb *= 0.2;
+        }
+
     }
 }
 
@@ -55,11 +86,9 @@ void main() {
     normal = normalize(normal * 2.0 - 1.0);
     normal *= 1;
 
-
     diffuseLighting(color, normal);
     color.a *= overrideAlpha;
     color *= tint;
-
 
     if (lit) {
         float maxDistance = 70;
