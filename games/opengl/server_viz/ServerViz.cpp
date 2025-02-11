@@ -47,7 +47,7 @@ void ServerViz::init() {
     SceneNode* sunNode = new SceneNode();
     sunNode->type = SceneNodeType::Light;
     sunNode->light = sunlight;
-    //scene->addNode(sunNode);
+    scene->addNode(sunNode);
 
     auto lampNode = new SceneNode();
     lampNode->type = SceneNodeType::Light;

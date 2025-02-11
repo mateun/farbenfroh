@@ -597,6 +597,7 @@ void loadBitmap(const char* fileName, Bitmap** bm);
 void setPixel(int x, int y, int r, int g, int b, int a);
 void drawPlane();
 void drawMesh();
+void drawMeshTextured(Light* directionalList, std::vector<Light*> pointLights);
 void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO);
 void drawSkybox();
 void drawMeshSimple();
@@ -765,9 +766,12 @@ public:
     void render();
 
 private:
+    Light* directionalLight;
+    std::vector<Light*> pointLights;
+    Camera* gameplayCamera = nullptr;
+    Camera* uiCamera = nullptr;
+
     std::vector<SceneNode*> meshNodes;
     std::vector<SceneNode*> textNodes;
-    std::vector<SceneNode*> cameraNodes;
-    std::vector<SceneNode*> lightNodes;
 
 };

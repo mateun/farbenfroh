@@ -774,14 +774,6 @@ void prepareTransformationMatrices(glm::vec3 location, glm::vec3 scale, glm::vec
 
     }
 
-
-    if (shadows) {
-        auto dirLightLoc = glGetUniformLocation(glDefaultObjects->currentRenderState->shader->handle, "mat_vp_directional_light");
-        mat4 directionalLightViewProjection = projectionMatrixForShadowmap(shadowMapCamera) * viewMatrixForCamera(shadowMapCamera);
-        glUniformMatrix4fv( dirLightLoc, 1, GL_FALSE, value_ptr(directionalLightViewProjection));
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, glDefaultObjects->shadowMap->handle);
-    }
 }
 
 /**
@@ -1543,6 +1535,89 @@ void drawMesh() {
     } else {
         glUniform1i(13, 0);
     }
+
+    if (glDefaultObjects->currentRenderState->flipUvs) {
+        glUniform1i(20, 1);
+    } else {
+        glUniform1i(20, 0);
+
+    }
+    glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
+
+    prepareTransformationMatrices();
+
+    if (!glDefaultObjects->currentRenderState->depthTest) {
+        glDisable(GL_DEPTH_TEST);
+    } else {
+        glEnable(GL_DEPTH_TEST);
+    }
+
+
+    glDrawElements(GL_TRIANGLES, glDefaultObjects->currentRenderState->mesh->numberOfIndices, glDefaultObjects->currentRenderState->mesh->indexDataType, nullptr);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    glBindVertexArray(0);
+}
+
+//
+void drawMeshTextured(Light* directionalLight, std::vector<Light*> pointLights) {
+    glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
+    auto shader = glDefaultObjects->texturedShader;
+
+    if (glDefaultObjects->currentRenderState->skinnedDraw) {
+        shader = glDefaultObjects->texturedSkinnedShader;
+    }
+
+    bindShader(shader);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+    GL_ERROR_EXIT(980);
+
+
+    // else {
+    //     if (glDefaultObjects->currentRenderState->skinnedDraw) {
+    //         bindShader(glDefaultObjects->skinnedShader);
+    //     } else {
+    //         bindShader(glDefaultObjects->singleColorShader);
+    //     }
+    //     glUniform4fv(1, 1, (float *) &glDefaultObjects->currentRenderState->foregroundColor);
+    // }
+
+
+    if (glDefaultObjects->currentRenderState->normalMap) {
+        glActiveTexture(GL_TEXTURE0 + glDefaultObjects->currentRenderState->normalMapTextureUnit);
+        glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->normalMap->handle);
+        GL_ERROR_EXIT(981);
+    }
+
+
+    // Set all light data
+    GLint locDirectionalLightDir = glGetUniformLocation(shader->handle, "directionalLightData.direction");
+    glm::vec3 dir = directionalLight->lookAtTarget - directionalLight->location;
+    glUniform3fv(locDirectionalLightDir, 1, glm::value_ptr(dir));
+
+    GLint locDirLightDiffuseColor = glGetUniformLocation(glDefaultObjects->texturedShader->handle, "directionalLightData.diffuseColor");
+    glUniform3fv(locDirLightDiffuseColor, 1, value_ptr(glm::vec3(1,1,1)));
+
+    auto locDirLightMVP = glGetUniformLocation(glDefaultObjects->currentRenderState->shader->handle, "directionalLightData.mat_view_proj");
+
+    Camera directionalLightCam;
+    directionalLightCam.location = directionalLight->location;
+    directionalLightCam.lookAtTarget = directionalLight->lookAtTarget;
+    directionalLightCam.type = CameraType::Ortho;
+    glm::mat4 directionalLightViewProjection = projectionMatrixForShadowmap(&directionalLightCam) * viewMatrixForCamera(&directionalLightCam);
+    glUniformMatrix4fv( locDirLightMVP, 1, GL_FALSE, value_ptr(directionalLightViewProjection));
+
+    // Need to provide the shadow map for every light
+    // Directional light goes into 1,
+    // then all point lights go into 2 - n
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, directionalLight->shadowMapFBO->texture->handle);
+
+    // TODO handle point lights
+
 
     if (glDefaultObjects->currentRenderState->flipUvs) {
         glUniform1i(20, 1);
@@ -3588,14 +3663,6 @@ void Scene::addNode(SceneNode *node) {
         meshNodes.push_back(node);
     }
 
-    if (node->type == SceneNodeType::Camera) {
-        cameraNodes.push_back(node);
-    }
-
-    if (node->type == SceneNodeType::Light) {
-        lightNodes.push_back(node);
-    }
-
     if (node->type == SceneNodeType::Text) {
         textNodes.push_back(node);
     }
@@ -3610,24 +3677,22 @@ void Scene::render() {
     // These need to be used to for the shadowpass.
     // So we need to render all meshes into the shadowmap.
     // We need to this for every light and every mesh.
-    for (auto lightNode : lightNodes) {
-        if (!lightNode->light->castsShadow) continue;
 
-        lightNode->light->shadowMapFBO->handle;
+    // First, our directional light
+    {
+
+        directionalLight->shadowMapFBO->handle;
 
         // Build camera out of current light.
         // We need this so the view/projection matrices are built correctly.
         Camera lightCam;
-        lightCam.location = lightNode->light->location;
-        lightCam.lookAtTarget = lightNode->light->lookAtTarget;
-        if (lightNode->light->type == LightType::Directional) {
-            lightCam.type = CameraType::Ortho;
-        } else if (lightNode->light->type == LightType::Point) {
-            lightCam.type = CameraType::Perspective;
-        }
+        lightCam.location = directionalLight->location;
+        lightCam.lookAtTarget = directionalLight->lookAtTarget;
+        lightCam.type = CameraType::Ortho;
+
 
         bindShadowMapCamera(&lightCam);
-        glBindFramebuffer(GL_FRAMEBUFFER, lightNode->light->shadowMapFBO->handle);
+        glBindFramebuffer(GL_FRAMEBUFFER, directionalLight->shadowMapFBO->handle);
         glClear(GL_DEPTH_BUFFER_BIT);
 
         for (auto m : meshNodes) {
@@ -3637,34 +3702,42 @@ void Scene::render() {
             scale(m->scale);
             rotation(m->rotation);
             bindMesh(m->mesh);
-            drawMeshIntoShadowMap(lightNode->light->shadowMapFBO);
+            drawMeshIntoShadowMap(directionalLight->shadowMapFBO);
+        }
+    }
+
+    // Next the pointlights
+    for (auto lightNode : pointLights) {
+        if (!lightNode->castsShadow) continue;
+
+        lightNode->shadowMapFBO->handle;
+
+        // Build camera out of current light.
+        // We need this so the view/projection matrices are built correctly.
+        Camera lightCam;
+        lightCam.location = lightNode->location;
+        lightCam.lookAtTarget = lightNode->lookAtTarget;
+        lightCam.type = CameraType::Perspective;
+
+
+        bindShadowMapCamera(&lightCam);
+        glBindFramebuffer(GL_FRAMEBUFFER, lightNode->shadowMapFBO->handle);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        for (auto m : meshNodes) {
+            // Build the actual render commands for each node and
+            // render it into the shadow map.
+            location(m->location);
+            scale(m->scale);
+            rotation(m->rotation);
+            bindMesh(m->mesh);
+            drawMeshIntoShadowMap(lightNode->shadowMapFBO);
         }
     }
     activateFrameBuffer(nullptr);
 
 
     // 2. Actual render pass
-    for (auto lightNode : lightNodes) {
-        glDefaultObjects->currentRenderState->currentLight = lightNode->light;
-        lightingOn();
-
-        if (lightNode->light->castsShadow) {
-            shadowOn();
-            Camera lightCam;
-            lightCam.location = lightNode->light->location;
-            lightCam.lookAtTarget = lightNode->light->lookAtTarget;
-            if (lightNode->light->type == LightType::Directional) {
-                lightCam.type = CameraType::Ortho;
-            } else if (lightNode->light->type == LightType::Point) {
-                lightCam.type = CameraType::Perspective;
-            }
-
-            bindShadowMapCamera(&lightCam);
-            glDefaultObjects->shadowMap = lightNode->light->shadowMapFBO->texture;
-        } else {
-             shadowOff();
-        }
-
         for (auto m : meshNodes) {
             // Build the actual render commands for each node and
             // render it into the shadow map.
@@ -3676,13 +3749,8 @@ void Scene::render() {
             bindNormalMap(m->normalMap);
             uvScale(m->uvScale);
             foregroundColor(m->foregroundColor);
-            drawMesh();
+            drawMeshTextured(directionalLight, pointLights);
 
-
-        }
-
-        shadowOff();
-        lightingOff();
     }
 
 

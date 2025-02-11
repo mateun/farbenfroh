@@ -28,6 +28,19 @@ public:
 
 };
 
+struct DirectionalLightData {
+  glm::vec3 direction;
+  glm::vec3 diffuseColor;
+};
+
+struct PointLightData {
+  glm::vec3 position;
+  float constant;
+  float linear;
+  float quadratic;
+
+};
+
 
 
 #endif //LIGHT_H
