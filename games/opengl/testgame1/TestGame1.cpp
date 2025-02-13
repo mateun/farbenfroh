@@ -17,6 +17,37 @@ void TestGame1::init() {
     cam->updateLocation({0, 2.8, 10});
     cam->updateLookupTarget({0, 1, -2});
     cameraMover = new CameraMover(cam);
+
+    scene = new Scene();
+    auto mechNode = new SceneNode();
+    mechNode->location = glm::vec3(0, 0, -5);
+    mechNode->mesh = getMeshByName("mech");
+    mechNode->texture = getTextureByName("mech_albedo");
+    mechNode->normalMap = getTextureByName("mech_normal");
+    mechNode->type = SceneNodeType::Mesh;
+    mechNode->uvScale= 1;
+    mechNode->shader = mechShader;
+    scene->addNode(mechNode);
+
+    auto groundNode = new SceneNode();
+    groundNode->location = glm::vec3(0, 0, 0);
+    groundNode->mesh = getMeshByName("ground_plane");
+    groundNode->texture = getTextureByName("ground_albedo");
+    groundNode->normalMap = getTextureByName("debug_normal");
+    groundNode->type = SceneNodeType::Mesh;
+    groundNode->uvScale = 205;
+    groundNode->scale = glm::vec3(20, 0.5, 20);
+    groundNode->shader = mechShader;
+    scene->addNode(groundNode);
+
+    Light* sun = sun = new Light();
+    sun->location = {3, 3,8 };
+    sun->lookAtTarget = {0,0, 0};
+    sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+    scene->setDirectionalLight(sun);
+
+    scene->setCamera(cam);
+
 }
 
 void TestGame1::update() {
@@ -25,39 +56,33 @@ void TestGame1::update() {
 
 void TestGame1::render() {
 
-    static Light* sun = nullptr;
-    if (!sun) {
-        sun = new Light();
 
-        sun->location = {-3, 8,1 };
-        sun->lookAtTarget = {0,0, 0};
-        sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
-    }
+    scene->render();
 
-    MeshDrawData dd;
-    dd.mesh = getMeshByName("mech");
-    dd.location = {0, 0, -8};
-    dd.texture = getTextureByName("mech_albedo");
-    dd.normalMap = getTextureByName("mech_normal");
-    dd.uvScale = 1;
-    dd.directionalLight = sun;
-    dd.camera = getGameplayCamera();
-    dd.shader = mechShader;
-    drawMesh(dd);
-
-    dd.location = {-3, 0, -4};
-    drawMesh(dd);
-
-    dd.location = {4, 0, -7.3};
-    drawMesh(dd);
-
-
-    dd.mesh = getMeshByName("ground_plane");
-    dd.texture = getTextureByName("ground_albedo");
-    dd.normalMap = getTextureByName("debug_normal");
-    dd.scale = {5, 1, 5};
-    dd.uvScale = 45;
-    drawMesh(dd);
+    // MeshDrawData dd;
+    // dd.mesh = getMeshByName("mech");
+    // dd.location = {0, 0, -8};
+    // dd.texture = getTextureByName("mech_albedo");
+    // dd.normalMap = getTextureByName("mech_normal");
+    // dd.uvScale = 1;
+    // dd.directionalLight = sun;
+    // dd.camera = getGameplayCamera();
+    // dd.shader = mechShader;
+    // drawMesh(dd);
+    //
+    // dd.location = {-3, 0, -4};
+    // drawMesh(dd);
+    //
+    // dd.location = {4, 0, -7.3};
+    // drawMesh(dd);
+    //
+    //
+    // dd.mesh = getMeshByName("ground_plane");
+    // dd.texture = getTextureByName("ground_albedo");
+    // dd.normalMap = getTextureByName("debug_normal");
+    // dd.scale = {5, 1, 5};
+    // dd.uvScale = 45;
+    // drawMesh(dd);
     renderFPS();
 }
 

@@ -122,8 +122,8 @@ void initDefaultGLObjects() {
     // auto gridFragSource = readFile("../assets/shaders/grid.frag");
     // auto gridVertPostProcessSource = readFile("../assets/shaders/grid_postprocess.vert");
     // auto gridFragPostProcessSource = readFile("../assets/shaders/grid_postprocess.frag");
-    // auto shadowMapVertSource = readFile("../assets/shaders/shadow_map.vert");
-    // auto shadowMapFragSource = readFile("../assets/shaders/shadow_map.frag");
+    auto shadowMapVertSource = readFile("../assets/shaders/shadow_map.vert");
+    auto shadowMapFragSource = readFile("../assets/shaders/shadow_map.frag");
 
     glDefaultObjects = new GLDefaultObjects();
     glDefaultObjects->shadowMapShader = new Shader();
@@ -156,7 +156,7 @@ void initDefaultGLObjects() {
     // createShader(vsrc_instanced, fsrc_instanced, glDefaultObjects->singleColorShaderInstanced);
     // createShader(gridVertSource, gridFragSource, glDefaultObjects->gridShader);
     // createShader(gridVertPostProcessSource, gridFragPostProcessSource, glDefaultObjects->gridPostProcessShader);
-    // createShader(shadowMapVertSource, shadowMapFragSource, glDefaultObjects->shadowMapShader);
+    createShader(shadowMapVertSource, shadowMapFragSource, glDefaultObjects->shadowMapShader);
 
     glDefaultObjects->gridFBO = createFrameBuffer(scaled_width/2, scaled_height/2);
     glDefaultObjects->defaultUICamera = new Camera();
@@ -3920,6 +3920,10 @@ Scene::Scene() {
 Scene::~Scene() {
 }
 
+void Scene::setCamera(Camera* camera) {
+    gameplayCamera = camera;
+}
+
 void Scene::addNode(SceneNode *node) {
     if (node->type == SceneNodeType::Mesh) {
         meshNodes.push_back(node);
@@ -3928,6 +3932,10 @@ void Scene::addNode(SceneNode *node) {
     if (node->type == SceneNodeType::Text) {
         textNodes.push_back(node);
     }
+}
+
+void Scene::setDirectionalLight(Light *light) {
+    directionalLight = light;
 }
 
 void Scene::update() {
@@ -3943,7 +3951,6 @@ void Scene::render() {
     // First, our directional light
     {
 
-        directionalLight->shadowMapFBO->handle;
 
         // Build camera out of current light.
         // We need this so the view/projection matrices are built correctly.
@@ -4010,8 +4017,11 @@ void Scene::render() {
             mdd.mesh = m->mesh;
             mdd.texture = m->texture;
             mdd.normalMap = m->normalMap;
-            //mdd.uvScale(m->uvScale);
+            mdd.shader = m->shader;
+            mdd.camera = gameplayCamera;
+            mdd.uvScale = m->uvScale;
             mdd.color = m->foregroundColor;
+            mdd.directionalLight = directionalLight;
             drawMesh(mdd);
 
     }

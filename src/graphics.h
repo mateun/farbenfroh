@@ -201,6 +201,17 @@ struct Camera {
         return lookAt((location), (lookAtTarget), glm::vec3(0, 1,0));
     }
 
+    glm::mat4 getLightProjectionMaatrix() {
+        // Directional light
+        if (type == CameraType::Ortho) {
+            return glm::ortho<float>(0, scaled_width, 0, scaled_height, 0.1f, 200);
+        }
+
+        // Assume perspective
+        return glm::ortho<float>(-10, 10, -8, 8, 0.1f, 400);
+
+    }
+
     glm::mat4 getProjectionMatrix() {
         if (type == CameraType::Ortho) {
             return glm::ortho<float>(0, scaled_width, 0, scaled_height, 0.1f, 200);
@@ -795,6 +806,7 @@ public:
     Mesh* mesh = nullptr;
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
+    Shader* shader = nullptr;
 
     // Mesh specific?!
     glm::vec3 location = glm::vec3(0);
@@ -810,7 +822,10 @@ public:
     Scene();
     ~Scene();
 
+    void setCamera(Camera *camera);
+
     void addNode(SceneNode* node);
+    void setDirectionalLight(Light* light);
     void update();
     void render();
 

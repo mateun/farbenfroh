@@ -11,11 +11,15 @@ glm::mat4 Light::getViewProjectionMatrix() const {
     directionalLightCam.location = location;
     directionalLightCam.lookAtTarget = lookAtTarget;
 
-	  if (type == LightType::Directional) {
-    		directionalLightCam.type = CameraType::Ortho;
+	// Default create an ortho projection for a directional light.
+	glm::mat4 projectionMatrix = glm::ortho<float>(-28, 28, -28, 28, 1.0f, 43.0f);
+
+	// Make it a perspective matrix in case we are a point light.
+	if (type == LightType::Point) {
+  		projectionMatrix = glm::perspectiveFov<float>(glm::radians(50.0f), shadowMapFBO->texture->bitmap->width, shadowMapFBO->texture->bitmap->height, 1.0f, 10);
   	}
 
-      return directionalLightCam.getProjectionMatrix() * directionalLightCam.getViewMatrix();
+	return projectionMatrix * directionalLightCam.getViewMatrix();
  }
 
 void Light::bindShadowMap(int unitIndex) {

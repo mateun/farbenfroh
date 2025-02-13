@@ -44,7 +44,6 @@ bool isInShadow() {
     projCoords = projCoords * 0.5 + 0.5;
     float closestDepth = texture(shadowMap, projCoords.xy).r;
     float currentDepth = projCoords.z;
-
     return currentDepth > (closestDepth + 0.004) ;
 }
 
@@ -86,6 +85,10 @@ void main() {
     color = calculateDirectionalLight(albedo, normal);
     // TODO
     //color += calculatePointLight(albedo, normal);
+
+    if (isInShadow()) {
+        color *= 0.1;
+    }
 
     color.a *= overrideAlpha;
     color *= tint;

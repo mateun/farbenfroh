@@ -23,6 +23,7 @@ uniform DirectionalLightData directionalLightData;
 out vec2 fs_uvs;
 out vec3 fs_normals;
 out vec3 fsFogCameraPos;
+out vec4 fragPosLightSpace;
 
 out mat3 tbn;
 out vec3 tangentFragPos;
@@ -53,6 +54,7 @@ void main() {
     tangentFragPos = tbn * vec3(mat_model * vec4(pos, 1.0));
 
     fsFogCameraPos = (mat_view * mat_model * vec4(pos,1)).xyz;
+    fragPosLightSpace =  directionalLightData.mat_view_proj * mat_model * vec4(pos, 1);
 
 }
 
