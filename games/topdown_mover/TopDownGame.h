@@ -5,7 +5,7 @@
 #ifndef SIMPLE_KING_TOPDOWNGAME_H
 #define SIMPLE_KING_TOPDOWNGAME_H
 
-#include "../src/engine/game/default_game.h"
+#include "../src/engine/game/default_app.h"
 #include <unordered_map>
 #include <map>
 #include <string>

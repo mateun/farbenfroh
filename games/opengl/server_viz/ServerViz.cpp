@@ -175,7 +175,7 @@ void ServerViz::renderLoadingScreen() {
     scale({scaled_width, scaled_height, 1});
 
     tint({1, 1, 1, appearAlpha});
-    drawPlane();
+    drawPlane(nullptr, {});
 }
 
 void ServerViz::renderArcade() {

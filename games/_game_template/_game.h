@@ -4,7 +4,7 @@
 
 #ifndef SIMPLE_KING_KING_GAME_H
 #define SIMPLE_KING_KING_GAME_H
-#include "engine/game/default_game.h"
+#include "engine/game/default_app.h"
 
 namespace king {
 

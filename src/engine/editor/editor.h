@@ -67,7 +67,7 @@ namespace editor {
  * Using the same tools, we test them along the way.
  *
  */
-    class EditorGame : public DefaultGame {
+    class EditorGame : public DefaultApp {
     public:
         void update() override;
         void init() override;

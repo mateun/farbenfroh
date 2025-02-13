@@ -20,13 +20,20 @@ public:
   LightType type;
   glm::vec3 location;
   glm::vec3 lookAtTarget;
+  glm::vec3 color;
   bool castsShadow = false;
 
   // Stays zero if we do not cast shadows from this light
   FrameBuffer* shadowMapFBO = nullptr;
 
+  glm::mat4 getViewProjectionMatrix() const;
 
+  // We need to bind the shadowmap of this light into
+  // a texture unit slot, so while rendering
+  // we can do the shadow lookup.
+  void bindShadowMap(int i);
 };
+
 
 struct DirectionalLightData {
   glm::vec3 direction;

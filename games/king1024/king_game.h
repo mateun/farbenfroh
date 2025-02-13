@@ -4,7 +4,7 @@
 
 #ifndef SIMPLE_KING_KING_GAME_H
 #define SIMPLE_KING_KING_GAME_H
-#include "../src/engine/game/default_game.h"
+#include "../src/engine/game/default_app.h"
 #include "../../src/engine/terrain/planet.h"
 #include "physics.h"
 

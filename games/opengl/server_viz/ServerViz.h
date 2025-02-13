@@ -5,7 +5,7 @@
 #ifndef SERVERVIZ_H
 #define SERVERVIZ_H
 
-#include "../../../src/engine/game/default_game.h"
+#include "../../../src/engine/game/default_app.h"
 
 enum class State {
     None,
@@ -18,7 +18,7 @@ enum class State {
     Settings
 };
 
-class ServerViz : public DefaultGame {
+class ServerViz : public DefaultApp {
 
     void init() override;
 

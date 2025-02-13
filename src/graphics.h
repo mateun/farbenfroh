@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <optional>
-#include <engine/Light.h>
+#include <engine/lighting/Light.h>
 #include <glm/glm.hpp>
 #include "glm/detail/type_quat.hpp"
 #include "assimp/scene.h"
@@ -15,6 +15,7 @@
                             exit(code); \
                         }
 
+extern int scaled_width, scaled_height;
 class JsonElement;
 
 struct BITMAP_FILE {
@@ -41,6 +42,14 @@ enum class PlanePivot {
 struct Shader {
     GLuint handle;
 
+    void setFloatValue(float uv_scale, const std::string& name);
+    void setVec3Value(glm::vec<3, float> vec, const std::string& name);
+    void setVec4Value(const glm::vec4 vec, const std::string& name);
+    void setMat4Value(glm::mat4 mat, const std::string& str);
+
+    void initFromFiles(const std::string& vertexShader, const std::string& fragmentShader);
+
+
 };
 
 struct Ray {
@@ -57,6 +66,8 @@ struct Result {
 struct Texture {
     GLuint handle;
     Bitmap* bitmap;
+
+    void bindAt(int unitIndex);
 };
 
 class FBFont {
@@ -186,6 +197,25 @@ struct Camera {
         lookAtTarget = t;
     }
 
+    glm::mat4 getViewMatrix() {
+        return lookAt((location), (lookAtTarget), glm::vec3(0, 1,0));
+    }
+
+    glm::mat4 getProjectionMatrix() {
+        if (type == CameraType::Ortho) {
+            return glm::ortho<float>(0, scaled_width, 0, scaled_height, 0.1f, 200);
+        }else if (type == CameraType::OrthoGameplay) {
+            return glm::ortho<float>(-10, 10, -8, 8, 0.1f, 400);
+        }
+        else {
+             // if (glDefaultObjects->currentRenderState->renderToFrameBuffer != nullptr) {
+             //     return glm::perspectiveFov<float>(glm::radians(50.0f), glDefaultObjects->currentRenderState->renderToFrameBuffer->texture->bitmap->width, glDefaultObjects->currentRenderState->renderToFrameBuffer->texture->bitmap->height, 0.1f, 1000);
+             // } else {
+                 return glm::perspectiveFov<float>(glm::radians(50.0f), scaled_width, scaled_height, 0.1f, 1000);
+             // }
+         }
+    }
+
 
 };
 
@@ -233,7 +263,7 @@ private:
     CameraCollider* cameraCollider;
 
     float movementSpeed = 5;
-    bool fixedPlaneFwdMovment = false;
+    bool fixedPlaneFwdMovement = false;
     bool clampPitch = false;
     glm::vec3 originalLocation;
     glm::vec3 originalTarget;
@@ -588,6 +618,24 @@ struct GridData {
 
 glm::vec3 lightDirection{0.6, -2, -0.5};
 
+/**
+* This holds everything we need to issue a physical draw call.
+* A lot ... but what can you do.
+*/
+struct MeshDrawData {
+    glm::vec3 location = {0, 0, 0};
+    glm::vec3 scale = {1, 1, 1};
+    glm::vec3 rotationEulers = {0, 0, 0};
+    Mesh* mesh = nullptr;
+    Shader* shader = nullptr;
+    Camera* camera = nullptr;
+    Texture* texture = nullptr;
+    Texture* normalMap = nullptr;
+    glm::vec4 color = {1, 0, 1, 1}; // Nice pink if we have no texture set.
+    Light* directionalLight = nullptr;
+    float uvScale = 1;
+};
+
 GridData* createGrid(int lines = 100);
 GLuint createGridVAO(int lines = 100);
 void drawText(const char* text, int x, int y, Bitmap* font);
@@ -596,8 +644,9 @@ void drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, Bitm
 void loadBitmap(const char* fileName, Bitmap** bm);
 void setPixel(int x, int y, int r, int g, int b, int a);
 void drawPlane();
+void drawPlane(Light* directionalLight, const std::vector<Light*>& pointLights);
 void drawMesh();
-void drawMeshTextured(Light* directionalList, std::vector<Light*> pointLights);
+void drawMesh(const MeshDrawData& drawData);
 void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO);
 void drawSkybox();
 void drawMeshSimple();
@@ -662,7 +711,7 @@ void setWorldMatrix(glm::mat4 worldMatrix);
 void setSkinnedDraw(bool value);
 void setBoneMatrices(std::vector<glm::mat4> boneMatrices);
 glm::mat4 calculateWorldTransform(Joint* j, glm::mat4 currentTransform);
-GLuint* createQuadVAO(PlanePivot pivot = PlanePivot::center);
+GLuint createQuadVAO(PlanePivot pivot = PlanePivot::center);
 
 glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera);
 

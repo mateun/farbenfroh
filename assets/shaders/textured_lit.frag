@@ -24,19 +24,15 @@ struct PointLightData {
 
 #define NR_POINT_LIGHTS 4
 // TODO use actual array for point lights
-uniform PointLightData pointLightData;
+uniform PointLightData pointLightDatas;
 
-struct TangentLightData {
-    vec3 lightDir;
-    vec3 lightPos;
-    vec3 viewPos;
-    vec3 fragPos;
-};
+
 
 in vec3 fs_normals;
 in vec4 fragPosLightSpace;
 in vec3 fsFogCameraPos;
 in vec2 fs_uvs;
+in vec3 viewPos;
 in mat3 tbn;
 in vec3 tangentFragPos;
 
@@ -52,41 +48,28 @@ bool isInShadow() {
     return currentDepth > (closestDepth + 0.004) ;
 }
 
-void diffuseLighting(vec4 baseColor, vec3 normal) {
-
-    // In the case of a point light we calculate some radial falloff:
-    if (isPointLight) {
-        vec3 lightVector = normalize(fs_in.tangentLightPos - fs_in.tangentFragPos);
-        float diffuse = max(dot(normalize(normal), lightVector), 0.2);
-        color  = vec4(baseColor.xyz * diffuse, baseColor.w);
-        float distance = length(fs_in.tangentLightPos - fs_in.tangentFragPos);
-        float att = 1.0 / (pointLightConstant + pointLightLinear * distance + pointLightQuadratic * (distance * distance));
-        color.rgb *= att;
-
-    } else {
-        vec3 lightVector = normalize(-fs_in.tangentLightDir);
-        float diffuse = max(dot(normalize(normal), lightVector), 0.2);
-        color  = vec4(baseColor.xyz * diffuse, baseColor.w);
-        color  = vec4(baseColor.xyz * diffuse, baseColor.w);
-    }
-
-    if (isInShadow()) {
-        color.rgb *= 0.2;
-    }
-
-}
-
 vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
-    vec3 lightDir = normalize(tbn * directionalLightData.direction) * -1;
-    //tld.viewPos = tbn * viewPos;
+    vec3 tangentlightDir = normalize(tbn * directionalLightData.direction) * -1;
 
-    float diffuse = max(dot(normalize(normal), lightDir), 0.2);
-    vec4 col  = vec4(albedo.xyz * diffuse, baseColor.w);
+
+    float diffuse = max(dot(normalize(normal), tangentlightDir), 0.2);
+    vec4 col  = vec4(albedo.xyz * diffuse, albedo.w);
     return col;
 
 }
 
-void calculatePointLight(vec4 albedo, vec3 normal) {
+vec4 calculatePointLight(vec4 albedo, vec3 normal, PointLightData pointLightData) {
+    // First move the lightpos into the tangent space
+    vec3 tangentLightPos = tbn * pointLightData.position;
+
+    // Next calculate the actual light direction from this fragment to the point light.
+    vec3 tangentLightDir = normalize(tangentLightPos - tangentFragPos);
+
+    float diffuse = max(dot(normalize(normal), tangentLightDir), 0.2);
+    vec4 col  = vec4(albedo.xyz * diffuse, albedo.w);
+    float distance = length(tangentLightPos - tangentFragPos);
+    float att = 1.0 / (pointLightData.constant + pointLightData.linear * distance + pointLightData.quadratic * (distance * distance));
+    return col * att;
 
 }
 
@@ -100,12 +83,15 @@ void main() {
     normal *= 1;
 
     color = calculateDirectionalLight(albedo, normal);
+    // TODO
     //color += calculatePointLight(albedo, normal);
 
     color.a *= overrideAlpha;
     color *= tint;
 
     // TODO fog
+
+    color = vec4(1, 0, 1, 1);
 
 
 

@@ -45,13 +45,14 @@ struct GLDefaultObjects {
     Shader* skinnedShadowMapShader = nullptr;
     Shader* texturedSkinnedShader = nullptr;
     Shader* instancedShader = nullptr;
-    Shader* texturedShader = nullptr;
+    Shader* texturedShaderLit = nullptr;
+    Shader* texturedShaderUnlit = nullptr;
     Shader* skyboxShader = nullptr;
     Shader* gridShader = nullptr;
     Shader* gridPostProcessShader = nullptr;
     Shader* spriteShader = nullptr;
-    GLuint* quadVAO = nullptr;
-    GLuint* textQuadVAO = nullptr;
+    GLuint quadVAO = -1;
+    GLuint textQuadVAO = -1;
     GLuint* gridVAO = nullptr;
     GLuint skyboxVAO;
     GLuint shadowMapFramebuffer = 0;
@@ -96,24 +97,33 @@ GLuint createSkyboxVAO() {
 }
 
 void initDefaultGLObjects() {
-    auto vsrc = readFile("../assets/shaders/vshader.glsl");
-    auto vsrc_skinned = readFile("../assets/shaders/vshader_skinned.glsl");
-    auto vsrc_instanced= readFile("../assets/shaders/vshader_instanced.glsl");
-    auto spriteShaderVertexSource = readFile("../assets/shaders/sprite_vshader.glsl");
-    auto spriteFragmentSource = readFile("../assets/shaders/sprite_fragment_shader.glsl");
-    auto fsrc = readFile("../assets/shaders/fshader_single_color.glsl");
-    auto fsrc_instanced = readFile("../assets/shaders/fshader_single_color_instanced.glsl");
-    auto fsrc_skinned = readFile("../assets/shaders/fshader_single_color_skinned.glsl");
-    auto tfsrc = readFile("../assets/shaders/fshader_diffuse_texture.glsl");
-    auto tfsrc_instanced = readFile("../assets/shaders/fshader_diffuse_texture_instanced.glsl");
-    auto skyboxvs = readFile("../assets/shaders/sky.vert");
-    auto skyboxfs = readFile("../assets/shaders/sky.frag");
-    auto gridVertSource = readFile("../assets/shaders/grid.vert");
-    auto gridFragSource = readFile("../assets/shaders/grid.frag");
-    auto gridVertPostProcessSource = readFile("../assets/shaders/grid_postprocess.vert");
-    auto gridFragPostProcessSource = readFile("../assets/shaders/grid_postprocess.frag");
-    auto shadowMapVertSource = readFile("../assets/shaders/shadow_map.vert");
-    auto shadowMapFragSource = readFile("../assets/shaders/shadow_map.frag");
+    // auto texturedLitVert = readFile("../assets/shaders/textured_lit.vert");
+    auto texturedUnlitVert = readFile("../assets/shaders/textured_unlit.vert");
+    // auto texturedLitFrag = readFile("../assets/shaders/textured_lit.frag");
+    auto texturedUnlitFrag = readFile("../assets/shaders/textured_unlit.frag");
+    //
+    // auto singleColLitVert = readFile("../assets/shaders/singlecol_lit.vert");
+    // auto singleColUnlitVert = readFile("../assets/shaders/singlecol_unlit.vert");
+    // auto singleColLitFrag = readFile("../assets/shaders/singlecol_lit.frag");
+    // auto singleColUnlitFrag = readFile("../assets/shaders/singlecol_unlit.frag");
+    //
+    // auto vsrc_skinned = readFile("../assets/shaders/vshader_skinned.glsl");
+    // auto vsrc_instanced= readFile("../assets/shaders/vshader_instanced.glsl");
+    // auto spriteShaderVertexSource = readFile("../assets/shaders/sprite_vshader.glsl");
+    // auto spriteFragmentSource = readFile("../assets/shaders/sprite_fragment_shader.glsl");
+    // auto fsrc = readFile("../assets/shaders/fshader_single_color.glsl");
+    // auto fsrc_instanced = readFile("../assets/shaders/fshader_single_color_instanced.glsl");
+    // auto fsrc_skinned = readFile("../assets/shaders/fshader_single_color_skinned.glsl");
+    // auto tfsrc = readFile("../assets/shaders/fshader_diffuse_texture.glsl");
+    // auto tfsrc_instanced = readFile("../assets/shaders/fshader_diffuse_texture_instanced.glsl");
+    // auto skyboxvs = readFile("../assets/shaders/sky.vert");
+    // auto skyboxfs = readFile("../assets/shaders/sky.frag");
+    // auto gridVertSource = readFile("../assets/shaders/grid.vert");
+    // auto gridFragSource = readFile("../assets/shaders/grid.frag");
+    // auto gridVertPostProcessSource = readFile("../assets/shaders/grid_postprocess.vert");
+    // auto gridFragPostProcessSource = readFile("../assets/shaders/grid_postprocess.frag");
+    // auto shadowMapVertSource = readFile("../assets/shaders/shadow_map.vert");
+    // auto shadowMapFragSource = readFile("../assets/shaders/shadow_map.frag");
 
     glDefaultObjects = new GLDefaultObjects();
     glDefaultObjects->shadowMapShader = new Shader();
@@ -121,7 +131,8 @@ void initDefaultGLObjects() {
     glDefaultObjects->singleColorShaderInstanced = new Shader();
     glDefaultObjects->skinnedShader = new Shader();
     glDefaultObjects->texturedSkinnedShader = new Shader();
-    glDefaultObjects->texturedShader = new Shader();
+    glDefaultObjects->texturedShaderLit = new Shader();
+    glDefaultObjects->texturedShaderUnlit = new Shader();
     glDefaultObjects->spriteShader = new Shader();
     glDefaultObjects->skyboxShader = new Shader();
     glDefaultObjects->gridShader = new Shader();
@@ -133,17 +144,19 @@ void initDefaultGLObjects() {
     glDefaultObjects->currentRenderState = new RenderState();
     glDefaultObjects->currentRenderState->foregroundColor = {0.7, 0, 0, 1};
 
-    createShader(vsrc, fsrc, glDefaultObjects->singleColorShader);
-    createShader(vsrc_skinned, fsrc_skinned, glDefaultObjects->skinnedShader);
-    createShader(vsrc_skinned, tfsrc, glDefaultObjects->texturedSkinnedShader);
-    createShader(vsrc, tfsrc, glDefaultObjects->texturedShader);
-    createShader(skyboxvs, skyboxfs, glDefaultObjects->skyboxShader);
-    createShader(spriteShaderVertexSource, spriteFragmentSource, glDefaultObjects->spriteShader);
-    createShader(vsrc_instanced, tfsrc_instanced, glDefaultObjects->instancedShader);
-    createShader(vsrc_instanced, fsrc_instanced, glDefaultObjects->singleColorShaderInstanced);
-    createShader(gridVertSource, gridFragSource, glDefaultObjects->gridShader);
-    createShader(gridVertPostProcessSource, gridFragPostProcessSource, glDefaultObjects->gridPostProcessShader);
-    createShader(shadowMapVertSource, shadowMapFragSource, glDefaultObjects->shadowMapShader);
+    // createShader(singleColLitVert, singleColLitFrag, glDefaultObjects->singleColorShader);
+    // createShader(singleColUnlitVert, singleColUnlitFrag, glDefaultObjects->singleColorShader);
+    // createShader(vsrc_skinned, fsrc_skinned, glDefaultObjects->skinnedShader);
+    // createShader(vsrc_skinned, tfsrc, glDefaultObjects->texturedSkinnedShader);
+    // createShader(texturedLitVert, texturedLitFrag, glDefaultObjects->texturedShaderLit);
+    createShader(texturedUnlitVert, texturedUnlitFrag, glDefaultObjects->texturedShaderUnlit);
+    // createShader(skyboxvs, skyboxfs, glDefaultObjects->skyboxShader);
+    // createShader(spriteShaderVertexSource, spriteFragmentSource, glDefaultObjects->spriteShader);
+    // createShader(vsrc_instanced, tfsrc_instanced, glDefaultObjects->instancedShader);
+    // createShader(vsrc_instanced, fsrc_instanced, glDefaultObjects->singleColorShaderInstanced);
+    // createShader(gridVertSource, gridFragSource, glDefaultObjects->gridShader);
+    // createShader(gridVertPostProcessSource, gridFragPostProcessSource, glDefaultObjects->gridPostProcessShader);
+    // createShader(shadowMapVertSource, shadowMapFragSource, glDefaultObjects->shadowMapShader);
 
     glDefaultObjects->gridFBO = createFrameBuffer(scaled_width/2, scaled_height/2);
     glDefaultObjects->defaultUICamera = new Camera();
@@ -479,8 +492,7 @@ void beginBatch() {
     // Not allowed to stack batch modes.
     assert(glDefaultObjects->inBatchMode == false);
     glDefaultObjects->inBatchMode = true;
-    glBindVertexArray(*glDefaultObjects->quadVAO);
-
+    glBindVertexArray(glDefaultObjects->quadVAO);
 
 
 }
@@ -616,10 +628,10 @@ Result createShader(const std::string &vsrc, const std::string &fsrc, Shader* ta
 
 
 
-GLuint* createQuadVAO(PlanePivot pivot) {
-    GLuint* vao = new GLuint;
-    glGenVertexArrays(1, vao);
-    glBindVertexArray(*vao);
+GLuint createQuadVAO(PlanePivot pivot) {
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
     // This is the case for center pivot (default):
     std::vector<float> positions = {
@@ -792,6 +804,8 @@ void prepareTransformationMatrices(DrawCall dc) {
 
 }
 
+
+
 /**
  * This method is a convenient shortcut to prepare all
  * transformation matrices before a draw call.
@@ -869,9 +883,9 @@ DrawCall createPlaneDrawCall() {
 }
 
 void drawPlaneCallExecution(DrawCall dc) {
-    glBindVertexArray(*glDefaultObjects->quadVAO);
+    glBindVertexArray(glDefaultObjects->quadVAO);
     if (dc.texture) {
-        bindShader(glDefaultObjects->texturedShader);
+        bindShader(glDefaultObjects->texturedShaderUnlit);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, dc.texture->handle);
     } else {
@@ -943,9 +957,102 @@ void drawPlaneCallExecution(DrawCall dc) {
     glBindVertexArray(0);
 }
 
+void drawPlaneUnlit() {
 
+    if (glDefaultObjects->currentRenderState->textDraw) {
+        glBindVertexArray(glDefaultObjects->textQuadVAO);
+        GL_ERROR_EXIT(110)
+    } else {
+        glBindVertexArray(glDefaultObjects->quadVAO);
+    }
+
+    // Shader selection:
+    // We check if a specific shader has been set (forced), then we use it.
+    // Otherwise there is some logic which shader to choose as a best guess.
+    if (glDefaultObjects->currentRenderState->forcedShader) {
+        bindShader(glDefaultObjects->currentRenderState->forcedShader);
+        GL_ERROR_EXIT(44)
+        // Assuming the forced shader uses a texture?!
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+    } else {
+        if (glDefaultObjects->currentRenderState->texture) {
+            bindShader(glDefaultObjects->texturedShaderUnlit);
+            GL_ERROR_EXIT(45)
+            glActiveTexture(GL_TEXTURE0);
+            GL_ERROR_EXIT(46)
+            glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+            GL_ERROR_EXIT(47)
+        } else {
+            bindShader(glDefaultObjects->singleColorShader);
+            glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
+            GL_ERROR_EXIT(123)
+        }
+    }
+
+    // Tinting
+    glUniform4fv(16, 1, (float*) &glDefaultObjects->currentRenderState->tint);
+    GL_ERROR_EXIT(124)
+
+    // Flip UVs
+    glUniform1i(20, glDefaultObjects->currentRenderState->flipUvs ? 1 : 0);
+    GL_ERROR_EXIT(125)
+
+    // UV Panning
+    glUniform1f(22, glDefaultObjects->currentRenderState->panUVS.x);
+    glUniform1f(23, glDefaultObjects->currentRenderState->panUVS.y);
+    GL_ERROR_EXIT(126)
+
+    // Manipulate the uvs for tiling.
+    if (glDefaultObjects->currentRenderState->tilingOn) {
+        //glUniform1i(20, 0);
+        float width_uv = (float)  glDefaultObjects->currentRenderState->tileData.tileWidth / (float) glDefaultObjects->currentRenderState->texture->bitmap->width ;
+        float height_uv = (float) glDefaultObjects->currentRenderState->tileData.tileHeight / (float) glDefaultObjects->currentRenderState->texture->bitmap->height;
+        int tileX = glDefaultObjects->currentRenderState->tileData.tileX;
+        int tileY = glDefaultObjects->currentRenderState->tileData.tileY;
+        float tileOffsetX = (float) glDefaultObjects->currentRenderState->tileData.tileOffsetX / (float) glDefaultObjects->currentRenderState->texture->bitmap->width;
+        float tileOffsetY = (float) glDefaultObjects->currentRenderState->tileData.tileOffsetY / (float) glDefaultObjects->currentRenderState->texture->bitmap->height;
+        float uvs[] = {
+                tileOffsetX + (tileX * width_uv) , ( 1 - tileOffsetY - (tileY * height_uv)),
+                tileOffsetX + (tileX * width_uv), (1- tileOffsetY - (tileY * height_uv) - height_uv),
+                tileOffsetX + (tileX * width_uv) + width_uv,  (1- tileOffsetY -  (tileY * height_uv)- height_uv),
+                tileOffsetX + (tileX * width_uv) + width_uv, (1 - tileOffsetY - (tileY * height_uv)),
+
+        };
+        glBindBuffer(GL_ARRAY_BUFFER, glDefaultObjects->quadUVBuffer);
+        glBufferData(GL_ARRAY_BUFFER, 12 * 4, uvs, GL_STATIC_DRAW);
+    }
+
+    prepareTransformationMatrices();
+
+    glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
+    GL_ERROR_EXIT(343)
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    GL_ERROR_EXIT(344)
+
+
+    if (glDefaultObjects->currentRenderState->tilingOn) {
+        glUniform1i(20, 0);
+        float uvs[] = {
+                0, 1,
+                0, 0,
+                1, 0,
+                1, 1,
+
+        };
+        glBindBuffer(GL_ARRAY_BUFFER, glDefaultObjects->quadUVBuffer);
+        glBufferData(GL_ARRAY_BUFFER, 12 * 4, uvs, GL_STATIC_DRAW);
+        GL_ERROR_EXIT(345)
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+
+}
+
+[[Deprecated("Use drawPlane(dirLight, pointLights) instead.")]]
 void drawPlane() {
-    auto err = glGetError();
     if (glDefaultObjects->currentRenderState->deferred) {
         // Only create a draw call here.
         auto dc = createPlaneDrawCall();
@@ -954,10 +1061,10 @@ void drawPlane() {
     }
 
     if (glDefaultObjects->currentRenderState->textDraw) {
-        glBindVertexArray(*glDefaultObjects->textQuadVAO);
-        err = glGetError();
+        glBindVertexArray(glDefaultObjects->textQuadVAO);
+        GL_ERROR_EXIT(110)
     } else {
-        glBindVertexArray(*glDefaultObjects->quadVAO);
+        glBindVertexArray(glDefaultObjects->quadVAO);
     }
 
     // Shader selection:
@@ -965,18 +1072,19 @@ void drawPlane() {
     // Otherwise there is some logic which shader to choose as a best guess.
     if (glDefaultObjects->currentRenderState->forcedShader) {
         bindShader(glDefaultObjects->currentRenderState->forcedShader);
-        err = glGetError();
+        GL_ERROR_EXIT(44)
         // Assuming the forced shader uses a texture?!
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
     } else {
         if (glDefaultObjects->currentRenderState->texture) {
-            bindShader(glDefaultObjects->texturedShader);
-            err = glGetError();
+            // Deprecated; we choose unlit here, but don't use this anymore anyway.
+            bindShader(glDefaultObjects->texturedShaderUnlit);
+            GL_ERROR_EXIT(45)
             glActiveTexture(GL_TEXTURE0);
-            err = glGetError();
+            GL_ERROR_EXIT(46)
             glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
-            err = glGetError();
+            GL_ERROR_EXIT(47)
         } else {
             bindShader(glDefaultObjects->singleColorShader);
             glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
@@ -989,20 +1097,20 @@ void drawPlane() {
     } else {
         glUniform1i(13, 0);
     }
-    err = glGetError();
+    GL_ERROR_EXIT(123)
 
     // Tinting
     glUniform4fv(16, 1, (float*) &glDefaultObjects->currentRenderState->tint);
-    err = glGetError();
+    GL_ERROR_EXIT(124)
 
     // Flip UVs
     glUniform1i(20, glDefaultObjects->currentRenderState->flipUvs ? 1 : 0);
-    err = glGetError();
+    GL_ERROR_EXIT(125)
 
     // UV Panning
     glUniform1f(22, glDefaultObjects->currentRenderState->panUVS.x);
     glUniform1f(23, glDefaultObjects->currentRenderState->panUVS.y);
-    err = glGetError();
+    GL_ERROR_EXIT(126)
 
     // Manipulate the uvs for tiling.
     if (glDefaultObjects->currentRenderState->tilingOn) {
@@ -1039,7 +1147,7 @@ void drawPlane() {
     glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-    err = glGetError();
+    GL_ERROR_EXIT(344)
 
 
     if (glDefaultObjects->currentRenderState->tilingOn) {
@@ -1061,6 +1169,127 @@ void drawPlane() {
     glBindVertexArray(0);
 
 }
+
+void drawPlaneLit(Light *directionalLight, const std::vector<Light *> &pointLights) {
+
+    if (glDefaultObjects->currentRenderState->textDraw) {
+        glBindVertexArray(glDefaultObjects->textQuadVAO);
+        GL_ERROR_EXIT(110)
+    } else {
+        glBindVertexArray(glDefaultObjects->quadVAO);
+    }
+
+    // Shader selection:
+    // We check if a specific shader has been set (forced), then we use it.
+    // Otherwise there is some logic which shader to choose as a best guess.
+    if (glDefaultObjects->currentRenderState->forcedShader) {
+        bindShader(glDefaultObjects->currentRenderState->forcedShader);
+        GL_ERROR_EXIT(44)
+        // Assuming the forced shader uses a texture?!
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+    } else {
+        if (glDefaultObjects->currentRenderState->texture) {
+            bindShader(glDefaultObjects->texturedShaderLit);
+            GL_ERROR_EXIT(45)
+            glActiveTexture(GL_TEXTURE0);
+            GL_ERROR_EXIT(46)
+            glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+            GL_ERROR_EXIT(47)
+        } else {
+            bindShader(glDefaultObjects->singleColorShader);
+            glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
+        }
+    }
+
+    if (glDefaultObjects->currentRenderState->lightingOn) {
+        glUniform1i(13, 1);
+        glUniform3fv(10, 1, (float *) &lightDirection);
+    } else {
+        glUniform1i(13, 0);
+    }
+    GL_ERROR_EXIT(123)
+
+    // Tinting
+    glUniform4fv(16, 1, (float*) &glDefaultObjects->currentRenderState->tint);
+    GL_ERROR_EXIT(124)
+
+    // Flip UVs
+    glUniform1i(20, glDefaultObjects->currentRenderState->flipUvs ? 1 : 0);
+    GL_ERROR_EXIT(125)
+
+    // UV Panning
+    glUniform1f(22, glDefaultObjects->currentRenderState->panUVS.x);
+    glUniform1f(23, glDefaultObjects->currentRenderState->panUVS.y);
+    GL_ERROR_EXIT(126)
+
+    // Manipulate the uvs for tiling.
+    if (glDefaultObjects->currentRenderState->tilingOn) {
+        //glUniform1i(20, 0);
+        float width_uv = (float)  glDefaultObjects->currentRenderState->tileData.tileWidth / (float) glDefaultObjects->currentRenderState->texture->bitmap->width ;
+        float height_uv = (float) glDefaultObjects->currentRenderState->tileData.tileHeight / (float) glDefaultObjects->currentRenderState->texture->bitmap->height;
+        int tileX = glDefaultObjects->currentRenderState->tileData.tileX;
+        int tileY = glDefaultObjects->currentRenderState->tileData.tileY;
+        float tileOffsetX = (float) glDefaultObjects->currentRenderState->tileData.tileOffsetX / (float) glDefaultObjects->currentRenderState->texture->bitmap->width;
+        float tileOffsetY = (float) glDefaultObjects->currentRenderState->tileData.tileOffsetY / (float) glDefaultObjects->currentRenderState->texture->bitmap->height;
+        float uvs[] = {
+                tileOffsetX + (tileX * width_uv) , ( 1 - tileOffsetY - (tileY * height_uv)),
+                tileOffsetX + (tileX * width_uv), (1- tileOffsetY - (tileY * height_uv) - height_uv),
+                tileOffsetX + (tileX * width_uv) + width_uv,  (1- tileOffsetY -  (tileY * height_uv)- height_uv),
+                tileOffsetX + (tileX * width_uv) + width_uv, (1 - tileOffsetY - (tileY * height_uv)),
+
+        };
+        glBindBuffer(GL_ARRAY_BUFFER, glDefaultObjects->quadUVBuffer);
+        glBufferData(GL_ARRAY_BUFFER, 12 * 4, uvs, GL_STATIC_DRAW);
+    }
+
+    if (glDefaultObjects->currentRenderState->shadows) {
+        // Render everything twice, first into the shadowmap buffer here
+        glViewport(0, 0, 1024, 1024);
+        prepareShadowMapTransformationMatrices();
+        glBindFramebuffer(GL_FRAMEBUFFER, glDefaultObjects->shadowMapFramebuffer);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, window_width, window_height);
+    }
+
+    prepareTransformationMatrices();
+
+    glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    GL_ERROR_EXIT(344)
+
+
+    if (glDefaultObjects->currentRenderState->tilingOn) {
+        glUniform1i(20, 0);
+        float uvs[] = {
+                0, 1,
+                0, 0,
+                1, 0,
+                1, 1,
+
+        };
+        glBindBuffer(GL_ARRAY_BUFFER, glDefaultObjects->quadUVBuffer);
+        glBufferData(GL_ARRAY_BUFFER, 12 * 4, uvs, GL_STATIC_DRAW);
+    }
+
+
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+
+}
+
+void drawPlane(Light *directionalLight, const std::vector<Light *>& pointLights) {
+    if (!directionalLight && pointLights.empty()) {
+        drawPlaneUnlit();
+        return;
+    }
+
+    drawPlaneLit(directionalLight, pointLights);
+}
+
 void foregroundColor(glm::vec4 col) {
     glDefaultObjects->currentRenderState->foregroundColor = {col.x, col.y, col.z, col.w};
 }
@@ -1223,8 +1452,8 @@ Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFor
     GLuint handle;
     glGenTextures(1, &handle);
     glBindTexture(GL_TEXTURE_2D, handle);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexImage2D(GL_TEXTURE_2D,
@@ -1407,7 +1636,7 @@ DrawCall createMeshDrawCall() {
 void drawMeshSimple() {
     glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
     if (glDefaultObjects->currentRenderState->texture) {
-        bindShader(glDefaultObjects->texturedShader);
+        bindShader(glDefaultObjects->texturedShaderUnlit);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
     } else {
@@ -1493,7 +1722,7 @@ void drawMesh() {
         if (glDefaultObjects->currentRenderState->skinnedDraw) {
             bindShader(glDefaultObjects->texturedSkinnedShader);
         } else {
-            bindShader(glDefaultObjects->texturedShader);
+            bindShader(glDefaultObjects->texturedShaderLit);
         }
 
         glActiveTexture(GL_TEXTURE0);
@@ -1520,10 +1749,10 @@ void drawMesh() {
 
         glm::vec3 dir = glDefaultObjects->currentRenderState->currentLight->lookAtTarget - glDefaultObjects->currentRenderState->currentLight->location;
         glUniform3fv(1, 1, glm::value_ptr(dir));
-        GLint locLightPos = glGetUniformLocation(glDefaultObjects->texturedShader->handle, "lightPos");
+        GLint locLightPos = glGetUniformLocation(glDefaultObjects->texturedShaderLit->handle, "lightPos");
         glUniform3fv(locLightPos, 1, glm::value_ptr(glDefaultObjects->currentRenderState->currentLight->location));
 
-        GLint loc = glGetUniformLocation(glDefaultObjects->texturedShader->handle, "isPointLight");
+        GLint loc = glGetUniformLocation(glDefaultObjects->texturedShaderLit->handle, "isPointLight");
         if (glDefaultObjects->currentRenderState->currentLight->type == LightType::Point) {
             glUniform1i(loc, 1);
         } else {
@@ -1560,88 +1789,121 @@ void drawMesh() {
     glBindVertexArray(0);
 }
 
-//
-void drawMeshTextured(Light* directionalLight, std::vector<Light*> pointLights) {
-    glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
-    auto shader = glDefaultObjects->texturedShader;
+void drawMeshSimple2(const MeshDrawData& drawData) {
+    glBindVertexArray(drawData.mesh->vao);
+    bindShader(drawData.shader);
+    drawData.texture->bindAt(0);
+    GL_ERROR_EXIT(88100)
 
-    if (glDefaultObjects->currentRenderState->skinnedDraw) {
-        shader = glDefaultObjects->texturedSkinnedShader;
-    }
+    {
+        using namespace glm;
 
-    bindShader(shader);
+        // Object to world transformation
+        mat4 mattrans = translate(mat4(1), drawData.location);
+        mat4 matscale = glm::scale(mat4(1),drawData.scale);
+        mat4 matworld = glm::mat4(1);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
-    GL_ERROR_EXIT(980);
+        // For rotation we check if we have a rotation matrix set.
+        if (glDefaultObjects->currentRenderState->rotMatrix) {
+            matworld = mattrans * (*glDefaultObjects->currentRenderState->rotMatrix) * matscale;
 
+        } else {
+            mat4 matrotX = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.x), {1, 0, 0} );
+            mat4 matrotY = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.y), {0, 1, 0} );
+            mat4 matrotZ = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.z), {0, 0, 1} );
+            matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
+        }
 
-    // else {
-    //     if (glDefaultObjects->currentRenderState->skinnedDraw) {
-    //         bindShader(glDefaultObjects->skinnedShader);
-    //     } else {
-    //         bindShader(glDefaultObjects->singleColorShader);
-    //     }
-    //     glUniform4fv(1, 1, (float *) &glDefaultObjects->currentRenderState->foregroundColor);
-    // }
-
-
-    if (glDefaultObjects->currentRenderState->normalMap) {
-        glActiveTexture(GL_TEXTURE0 + glDefaultObjects->currentRenderState->normalMapTextureUnit);
-        glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->normalMap->handle);
-        GL_ERROR_EXIT(981);
-    }
-
-
-    // Set all light data
-    GLint locDirectionalLightDir = glGetUniformLocation(shader->handle, "directionalLightData.direction");
-    glm::vec3 dir = directionalLight->lookAtTarget - directionalLight->location;
-    glUniform3fv(locDirectionalLightDir, 1, glm::value_ptr(dir));
-
-    GLint locDirLightDiffuseColor = glGetUniformLocation(glDefaultObjects->texturedShader->handle, "directionalLightData.diffuseColor");
-    glUniform3fv(locDirLightDiffuseColor, 1, value_ptr(glm::vec3(1,1,1)));
-
-    auto locDirLightMVP = glGetUniformLocation(glDefaultObjects->currentRenderState->shader->handle, "directionalLightData.mat_view_proj");
-
-    Camera directionalLightCam;
-    directionalLightCam.location = directionalLight->location;
-    directionalLightCam.lookAtTarget = directionalLight->lookAtTarget;
-    directionalLightCam.type = CameraType::Ortho;
-    glm::mat4 directionalLightViewProjection = projectionMatrixForShadowmap(&directionalLightCam) * viewMatrixForCamera(&directionalLightCam);
-    glUniformMatrix4fv( locDirLightMVP, 1, GL_FALSE, value_ptr(directionalLightViewProjection));
-
-    // Need to provide the shadow map for every light
-    // Directional light goes into 1,
-    // then all point lights go into 2 - n
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, directionalLight->shadowMapFBO->texture->handle);
-
-    // TODO handle point lights
-
-
-    if (glDefaultObjects->currentRenderState->flipUvs) {
-        glUniform1i(20, 1);
-    } else {
-        glUniform1i(20, 0);
-
-    }
-    glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
-
-    prepareTransformationMatrices();
-
-    if (!glDefaultObjects->currentRenderState->depthTest) {
-        glDisable(GL_DEPTH_TEST);
-    } else {
-        glEnable(GL_DEPTH_TEST);
+        drawData.shader->setMat4Value(matworld, "mat_model");
+        drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
+        drawData.shader->setMat4Value(drawData.camera->getProjectionMatrix(), "mat_projection");
+        GL_ERROR_EXIT(88101)
     }
 
 
-    glDrawElements(GL_TRIANGLES, glDefaultObjects->currentRenderState->mesh->numberOfIndices, glDefaultObjects->currentRenderState->mesh->indexDataType, nullptr);
+    glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices, drawData.mesh->indexDataType, nullptr);
+    GL_ERROR_EXIT(88102);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     glBindVertexArray(0);
+
+
 }
+
+void drawMesh(const MeshDrawData &drawData) {
+    glBindVertexArray(drawData.mesh->vao);
+    bindShader(drawData.shader);
+
+    if (drawData.texture) {
+        drawData.texture->bindAt(0);
+    } else {
+        drawData.shader->setVec4Value(drawData.color, "foregroundColor");
+    }
+
+    if (drawData.normalMap) {
+        // Normal map starts at 2
+        drawData.normalMap->bindAt(2);
+        GL_ERROR_EXIT(981);
+    }
+
+    // Set all light data
+    if (drawData.directionalLight) {
+        drawData.shader->setVec3Value(drawData.directionalLight->lookAtTarget - drawData.directionalLight->location, "directionalLightData.direction");
+        drawData.shader->setVec3Value(drawData.directionalLight->color, "directionalLightData.diffuseColor");
+        drawData.shader->setMat4Value(drawData.directionalLight->getViewProjectionMatrix(), "directionalLightData.mat_view_proj");
+        drawData.directionalLight->bindShadowMap(1);
+        GL_ERROR_EXIT(982)
+
+
+        // TODO handle point lights
+    }
+
+    drawData.shader->setFloatValue(drawData.uvScale, "uvScale");
+
+    GL_ERROR_EXIT(983);
+
+
+    {
+        using namespace glm;
+
+        // Object to world transformation
+        mat4 mattrans = translate(mat4(1), drawData.location);
+        mat4 matscale = glm::scale(mat4(1),drawData.scale);
+        mat4 matworld = glm::mat4(1);
+
+        // For rotation we check if we have a rotation matrix set.
+        if (glDefaultObjects->currentRenderState->rotMatrix) {
+            matworld = mattrans * (*glDefaultObjects->currentRenderState->rotMatrix) * matscale;
+
+        } else {
+            mat4 matrotX = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.x), {1, 0, 0} );
+            mat4 matrotY = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.y), {0, 1, 0} );
+            mat4 matrotZ = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.z), {0, 0, 1} );
+            matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
+        }
+
+        drawData.shader->setMat4Value(matworld, "mat_model");
+        drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
+        drawData.shader->setMat4Value(drawData.camera->getProjectionMatrix(), "mat_projection");
+
+    }
+
+
+    glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices, drawData.mesh->indexDataType, nullptr);
+    GL_ERROR_EXIT(993);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    glBindVertexArray(0);
+
+
+}
+
+
+void drawMesh(Mesh *mesh, glm::vec4 singleColor, Light *directionalList, const std::vector<Light *> &pointLights) {
+}
+
 
 void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO) {
     glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
@@ -2941,7 +3203,7 @@ void updateAndDrawText(const char *text, Texture *pTexture, int screenPosX, int 
     location(glm::vec3{(float)screenPosX, (float)screenPosY, screenPosZ});
     bindTexture(tex);
     glDefaultObjects->currentRenderState->textDraw = true;
-    drawPlane();
+    drawPlaneUnlit();
     glDefaultObjects->currentRenderState->textDraw = false;
     bindTexture(nullptr);
 
@@ -3741,15 +4003,16 @@ void Scene::render() {
         for (auto m : meshNodes) {
             // Build the actual render commands for each node and
             // render it into the shadow map.
-            location(m->location);
-            scale(m->scale);
-            rotation(m->rotation);
-            bindMesh(m->mesh);
-            bindTexture(m->texture);
-            bindNormalMap(m->normalMap);
-            uvScale(m->uvScale);
-            foregroundColor(m->foregroundColor);
-            drawMeshTextured(directionalLight, pointLights);
+            MeshDrawData mdd;
+            mdd.location = m->location;
+            mdd.scale = m->scale;
+            mdd.rotationEulers = m->rotation;
+            mdd.mesh = m->mesh;
+            mdd.texture = m->texture;
+            mdd.normalMap = m->normalMap;
+            //mdd.uvScale(m->uvScale);
+            mdd.color = m->foregroundColor;
+            drawMesh(mdd);
 
     }
 
@@ -3973,7 +4236,7 @@ void CameraMover::update() {
         auto locCandidateFwd =  loc + glm::vec3{camspeed * fwdAfterYaw.x, 0, camspeed * fwdAfterYaw.z} * dir;
 
         // Move always horizontally straight fwd (i.e. without pitch)
-        if (!fixedPlaneFwdMovment) {
+        if (!fixedPlaneFwdMovement) {
             locCandidateFwd = loc +  glm::vec3{camspeed * fwdAfterPitch.x, camspeed * fwdAfterPitch.y, camspeed * fwdAfterPitch.z} * dir;
         }
 
@@ -3989,7 +4252,7 @@ void CameraMover::update() {
         }
     } else {
         // Forward
-        if (fixedPlaneFwdMovment ) {
+        if (fixedPlaneFwdMovement ) {
 
             // Check for lower and upper bounds
             auto locCandidate = loc + glm::vec3{camspeed * fwdAfterYaw.x, 0, camspeed * fwdAfterYaw.z} * dir;
@@ -4004,7 +4267,7 @@ void CameraMover::update() {
                 loc += glm::vec3{camspeed * fwdAfterYaw.x, 0, camspeed * fwdAfterYaw.z} * panFwd;
             } else {
                 auto locCandidate = loc + glm::vec3{camspeed * fwdAfterPitch.x, camspeed * fwdAfterPitch.y, camspeed * fwdAfterPitch.z} * dir;
-                if (locCandidate.y < 5 || locCandidate.y > 55) {
+                if (locCandidate.y < .5 || locCandidate.y > 555) {
                     // nothing
                 } else {
                     loc = locCandidate;
@@ -4033,7 +4296,7 @@ void CameraMover::setMovementSpeed(float val) {
 }
 
 void CameraMover::setFixedPlaneForwardMovement(bool b) {
-    fixedPlaneFwdMovment = b;
+    fixedPlaneFwdMovement = b;
 }
 
 void CameraMover::reset() {
@@ -4066,6 +4329,109 @@ void FBFont::renderText(const std::string &text, glm::vec3 position) {
     font(bitmap);
     updateAndDrawText(buf, texture, position.x,position.y, position.z);
     free(buf);
+}
+
+void Shader::setVec4Value(const glm::vec4 vec, const std::string& name) {
+    auto loc = glGetUniformLocation(this->handle, name.c_str());
+    glUniform4f(loc, vec.x, vec.y, vec.z, vec.w);
+    GL_ERROR_EXIT(442, "Could not set uniform vec4");
+}
+
+void Shader::setFloatValue(float val, const std::string &name) {
+    auto loc = glGetUniformLocation(this->handle, name.c_str());
+    glUniform1f(loc, val);
+}
+
+void Shader::setVec3Value(glm::vec<3, float> vec, const std::string &name) {
+    auto loc = glGetUniformLocation(this->handle, name.c_str());
+    glUniform3f(loc, vec.x, vec.y, vec.z);
+    GL_ERROR_EXIT(443, "Could not set uniform vec3");
+}
+
+void Shader::setMat4Value(glm::mat4 mat, const std::string &name) {
+    auto loc = glGetUniformLocation(this->handle, name.c_str());
+    glUniformMatrix4fv(loc,1,  GL_FALSE, glm::value_ptr(mat));
+    GL_ERROR_EXIT(444, "Could not set uniform mat4");
+}
+
+void Shader::initFromFiles(const std::string &vertFile, const std::string &fragFile) {
+    auto vertSource = readFile(vertFile);
+    auto fragSource = readFile(fragFile);
+
+    GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
+    const GLchar* vssource_char = vertSource.c_str();
+    glShaderSource(vshader, 1, &vssource_char, NULL);
+    glCompileShader(vshader);
+    GLint compileStatus;
+    glGetShaderiv(vshader, GL_COMPILE_STATUS, &compileStatus);
+    if (GL_FALSE == compileStatus) {
+        OutputDebugString("Error while compiling the vertex shader\n");
+
+        GLint logSize = 0;
+        glGetShaderiv(vshader, GL_INFO_LOG_LENGTH, &logSize);
+        std::vector<GLchar> errorLog(logSize);
+        glGetShaderInfoLog(vshader, logSize, &logSize, &errorLog[0]);
+        //    result.errorMessage = errorLog.data();
+        char buf[512];
+        sprintf(buf, "vshader error: %s", errorLog.data());
+        printf(buf);
+        OutputDebugStringA(buf);
+        glDeleteShader(vshader);
+        //  return result;
+
+
+    }
+
+
+    GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
+    const GLchar* fssource_char = fragSource.c_str();
+    glShaderSource(fshader, 1, &fssource_char, NULL);
+    glCompileShader(fshader);
+
+    glGetShaderiv(fshader, GL_COMPILE_STATUS, &compileStatus);
+    if (GL_FALSE == compileStatus) {
+        GLint logSize = 0;
+        glGetShaderiv(fshader, GL_INFO_LOG_LENGTH, &logSize);
+        std::vector<GLchar> errorLog(logSize);
+        glGetShaderInfoLog(fshader, logSize, &logSize, &errorLog[0]);
+        //   result.errorMessage = errorLog.data();
+        printf("fragment shader error: %s", errorLog.data());
+        glDeleteShader(fshader);
+
+    }
+
+    GLuint p = glCreateProgram();
+    glAttachShader(p, vshader);
+    glAttachShader(p, fshader);
+    glLinkProgram(p);
+
+    glGetProgramiv(p, GL_LINK_STATUS, &compileStatus);
+
+    if (GL_FALSE == compileStatus) {
+        OutputDebugStringA("Error during shader linking\n");
+        GLint maxLength = 0;
+        glGetProgramiv(p, GL_INFO_LOG_LENGTH, &maxLength);
+        std::vector<GLchar> infoLog(maxLength);
+        glGetProgramInfoLog(p, maxLength, &maxLength, &infoLog[0]);
+        OutputDebugStringA(infoLog.data());
+        glDeleteProgram(p);
+        glDeleteShader(vshader);
+        glDeleteShader(fshader);
+    }
+
+    GL_ERROR_EXIT(9876)
+
+    glDeleteShader(vshader);
+    glDeleteShader(fshader);
+
+    handle = p;
+
+}
+
+void Texture::bindAt(int unitIndex) {
+    glActiveTexture(GL_TEXTURE0 + unitIndex);
+    glBindTexture(GL_TEXTURE_2D, handle);
+    GL_ERROR_EXIT(980);
 }
 
 FBFont::FBFont(const std::string &fileName) {

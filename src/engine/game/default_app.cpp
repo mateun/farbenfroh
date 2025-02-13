@@ -2,12 +2,12 @@
 // Created by mgrus on 07.06.2024.
 //
 
-#include "default_game.h"
+#include "default_app.h"
 #include <filesystem>
 #include <string>
 #include <iostream>
 
-Camera* DefaultGame::getGameplayCamera() {
+Camera* DefaultApp::getGameplayCamera() {
     if (!_gameplayCamera) {
         _gameplayCamera = new Camera();
         _gameplayCamera->location = {0, 5, 5};
@@ -18,7 +18,7 @@ Camera* DefaultGame::getGameplayCamera() {
     return _gameplayCamera;
 }
 
-void DefaultGame::renderFPS() {
+void DefaultApp::renderFPS() {
 
     if (!fpsFont) {
         fpsFont = new FBFont("../assets/font.bmp");
@@ -37,7 +37,7 @@ void DefaultGame::renderFPS() {
 
 }
 
-Camera *DefaultGame::getUICamera() {
+Camera *DefaultApp::getUICamera() {
     if (!_uiCamera) {
         _uiCamera = new Camera();
         _uiCamera->location = {0, 0, 1};
@@ -49,11 +49,11 @@ Camera *DefaultGame::getUICamera() {
 
 }
 
-DefaultGame::DefaultGame()  {
+DefaultApp::DefaultApp()  {
 
 }
 
-void DefaultGame::init() {
+void DefaultApp::init() {
     performanceFrequency = performance_frequency;
 
     // Doing the base class initialiations and then calling the derived class:
@@ -75,48 +75,48 @@ void DefaultGame::init() {
 
 }
 
-gru::SpriteBatch *DefaultGame::getGameplaySpritebatch() {
+gru::SpriteBatch *DefaultApp::getGameplaySpritebatch() {
     return _spriteBatch;
 }
 
-Mesh* DefaultGame::getMeshByName(const std::string &name) {
+Mesh* DefaultApp::getMeshByName(const std::string &name) {
     return folderAssetLoader->getMesh(name);
 }
 
-Sound * DefaultGame::getSoundByName(const std::string &name) {
+Sound * DefaultApp::getSoundByName(const std::string &name) {
     return folderAssetLoader->getSound(name);
 }
 
-Texture* DefaultGame::getTextureByName(const std::string &name) {
+Texture* DefaultApp::getTextureByName(const std::string &name) {
     return folderAssetLoader->getTexture(name);
 
 }
 
-Sound * DefaultGame::getCurrentlyPlayingMusic() {
+Sound * DefaultApp::getCurrentlyPlayingMusic() {
     return currentMusic;
 }
 
-bool DefaultGame::shouldAutoImportAssets() {
+bool DefaultApp::shouldAutoImportAssets() {
     return false;
 }
 
-std::vector<std::string> DefaultGame::getAssetFolder() {
+std::vector<std::string> DefaultApp::getAssetFolder() {
     return {};
 }
 
-bool DefaultGame::shouldStillRun() {
+bool DefaultApp::shouldStillRun() {
     return true;
 }
 
-std::string DefaultGame::getName() {
+std::string DefaultApp::getName() {
     return "GenericGame";
 }
 
-std::string DefaultGame::getVersion() {
+std::string DefaultApp::getVersion() {
     return "0.0.1";
 }
 
-void DefaultGame::render() {
+void DefaultApp::render() {
     bindCamera(getGameplayCamera());
     lightingOn();
 
@@ -124,7 +124,7 @@ void DefaultGame::render() {
     drawGrid(gd);
 }
 
-Camera *DefaultGame::getShadowMapCamera() {
+Camera *DefaultApp::getShadowMapCamera() {
     if (!_shadowMapCamera) {
         _shadowMapCamera = new Camera();
         glm::vec3 shadowCamOffsetToNormalCam = {12, -1, 1};
@@ -137,11 +137,11 @@ Camera *DefaultGame::getShadowMapCamera() {
     return _shadowMapCamera;
 }
 
-void DefaultGame::setCurrentMusic(Sound *music) {
+void DefaultApp::setCurrentMusic(Sound *music) {
     this->currentMusic = music;
 }
 
-void DefaultGame::stopGame() {
+void DefaultApp::stopGame() {
     // noop
 }
 

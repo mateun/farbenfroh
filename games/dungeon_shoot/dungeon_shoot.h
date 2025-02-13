@@ -5,7 +5,7 @@
 #ifndef SIMPLE_KING_DUNGEON_SHOOT_H
 #define SIMPLE_KING_DUNGEON_SHOOT_H
 
-#include "../src/engine/game/default_game.h"
+#include "../src/engine/game/default_app.h"
 #include "../src/engine/physics/Particle.h"
 #include "../src/engine/editor/editor.h"
 

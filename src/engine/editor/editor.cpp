@@ -827,7 +827,7 @@ namespace editor {
     }
 
     void EditorGame::init() {
-        DefaultGame::init();
+        DefaultApp::init();
 
         editor = new Editor();
     }

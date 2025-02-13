@@ -12,10 +12,12 @@
 
 
 class Mesh;
-class DefaultGame {
+class DefaultApp {
 
 public:
-    DefaultGame();
+    virtual ~DefaultApp() = default;
+
+    DefaultApp();
 
     virtual void update() = 0;
 
