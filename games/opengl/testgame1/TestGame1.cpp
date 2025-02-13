@@ -45,6 +45,12 @@ void TestGame1::render() {
     dd.shader = mechShader;
     drawMesh(dd);
 
+    dd.location = {-3, 0, -4};
+    drawMesh(dd);
+
+    dd.location = {4, 0, -7.3};
+    drawMesh(dd);
+
 
     dd.mesh = getMeshByName("ground_plane");
     dd.texture = getTextureByName("ground_albedo");
