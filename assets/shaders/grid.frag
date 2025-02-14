@@ -1,6 +1,6 @@
-#version 450
+#version 450 core
 
-layout(location = 1) uniform vec4 singleColor = vec4(0, 0.4, 0, 1);
+uniform vec4 singleColor = vec4(0, 0.4, 0, 1);
 
 out vec4 color;
 

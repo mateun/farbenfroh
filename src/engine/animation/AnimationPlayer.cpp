@@ -40,6 +40,10 @@ int AnimationPlayer::getRotationIndex(const std::string& jointName) {
     return -1;
 }
 
+std::vector<glm::mat4> AnimationPlayer::getCurrentBoneMatrices() {
+    return boneMatrices;
+}
+
 void AnimationPlayer::update() {
 
     static float frameTime = 0;
@@ -61,9 +65,10 @@ void AnimationPlayer::update() {
 
 
 
-        std::vector<glm::mat4> boneMatrices;
+        boneMatrices.clear();
         for (auto j: mesh->skeleton->joints) {
             if (animation) {
+
                 auto jointSamples = animation->samplesPerJoint[j->name];
                 if (jointSamples) {
 
@@ -94,7 +99,7 @@ void AnimationPlayer::update() {
             }
             boneMatrices.push_back(j->finalTransform);
         }
-        setBoneMatrices(boneMatrices);
+        //setBoneMatrices(boneMatrices);
     }
 }
 

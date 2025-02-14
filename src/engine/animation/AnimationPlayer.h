@@ -26,6 +26,8 @@ public:
     int getRotationIndex(const std::string& jointName);
     int getTranslationIndex();
 
+    std::vector<glm::mat4> getCurrentBoneMatrices();
+
 private:
     Animation* animation= nullptr;
     Mesh *mesh = nullptr;
@@ -34,8 +36,7 @@ private:
     bool looped = false;
     double currentFrame = 0;
     float animTime = 0;
-
-
+    std::vector<glm::mat4> boneMatrices;
 };
 
 

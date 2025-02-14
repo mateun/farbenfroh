@@ -105,6 +105,7 @@ namespace editor {
             return;
         }
 
+
         cameraMover->update();
         ImGui::Begin("Mesh Viewer");
         //ImGui::SetWindowSize("Mesh Viewer", {1000, 600});
@@ -117,7 +118,10 @@ namespace editor {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         static auto gridData = createGrid(100);
+
         drawGrid(gridData);
+
+
 
         // Draw the imported mesh,
         // regardless if this is a static or skeleton mesh
@@ -133,57 +137,63 @@ namespace editor {
             glEnable(GL_POLYGON_OFFSET_FILL);
             glPolygonOffset(1.0f, 1.0f);
 
-            if (currentAnimation && animationPlaying) {
-                setSkinnedDraw(true);
-                animationPlayer->update();
-            }
+
+
+            // Basic directional light for the render
+            Light* sun = new Light();
+            sun->type = LightType::Directional;
+            sun->location = {-1, 5, 2};
+            sun->lookAtTarget = {0, 0, 0};
+            sun->castsShadow = false;
 
             // Draw the filled mesh
-            drawMesh();
+            MeshDrawData dd;
+            dd.mesh = importedMesh;
+            dd.camera = getMeshViewerCamera();
+            dd.color = {0.9, 0.9, 0.9, 1};
+            dd.directionalLight = sun;
+
+
+            if (currentAnimation && animationPlaying) {
+                animationPlayer->update();
+                dd.skinnedDraw = true;
+                dd.shader = skinnedMeshShader;
+                dd.boneMatrices = animationPlayer->getCurrentBoneMatrices();
+            } else {
+                dd.shader = staticMeshShader;
+            }
+
+            drawMesh(dd);
 
             // Now draw the wireframe version
             wireframeOn();
-            lightingOff();
-            foregroundColor({0.9, 0.1, 0.1, 1});
-            drawMesh();
+            drawMesh(dd);
             wireframeOff();
-            lightingOn();
 
-            if (currentAnimation && animationPlaying) {
-                setSkinnedDraw(false);
-            }
         }
 
         // Draw the skeleton if the mesh has one
         {
             if (importedMesh->skeleton) {
-                lightingOff();
-                bindMesh(assetLoader->getMesh("bone_mesh"));
-                foregroundColor({0.5, 0.5, 1, 1});
 
-                int jointCounter = 0;
+
                 if (importedMesh->skeleton) {
-                    // To actually see the bones in front of the mesh, we turn depth test off:
-                    depthTestOff();
-
                     for (auto j: importedMesh->skeleton->joints) {
                         auto finalTransform = j->globalTransform;
                         if (currentAnimation  && !animationPlaying) {
                             finalTransform = animationPlayer->calculateFramePoseForJoint(currentAnimationFrame, j);
                         }
 
-                        useWorldMatrix(true);
-                        setWorldMatrix(finalTransform);
-                        foregroundColor({0.7, 0.7, 0, 1});
-                        jointCounter++;
-                        //scale(glm::vec3(1));
-                        drawMesh();
-                    }
 
-                    // Reset our render state back to normal:
-                    depthTestOn();
-                    useWorldMatrix(false);
-                    lightingOn();
+                        MeshDrawData dd;
+                        dd.mesh = assetLoader->getMesh("bone_mesh");
+                        dd.color = {0.7, 0.7, 0, 1};
+                        dd.camera = getMeshViewerCamera();
+                        dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletally animated.
+                        dd.worldTransform = finalTransform;
+                        dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
+                        drawMesh(dd);
+                    }
 
                 }
             }
@@ -294,6 +304,7 @@ namespace editor {
         ImGui::End();
     }
 
+    [[Deprecated("Please use the ext version")]]
     void Editor::renderMeshViewer() {
         if (!importedMesh) {
             return;
@@ -824,6 +835,10 @@ namespace editor {
         cameraMover = new CameraMover(getMeshViewerCamera());
         cameraMover->setMovementSpeed(30);
         animationPlayer = new AnimationPlayer(nullptr, nullptr);
+        staticMeshShader = new Shader();
+        staticMeshShader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
+        skinnedMeshShader = new Shader();
+        skinnedMeshShader->initFromFiles("../src/engine/editor/assets/shaders/skinned_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
     }
 
     void EditorGame::init() {

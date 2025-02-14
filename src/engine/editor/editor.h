@@ -40,6 +40,8 @@ namespace editor {
         std::string lastImporteTextureFileName = "";
         std::string lastImportedAnimationFileName = "";
         AnimationPlayer* animationPlayer = nullptr;
+        Shader * staticMeshShader = nullptr;
+        Shader* skinnedMeshShader = nullptr;
 
     private:
         void drawAnimationTimeline();

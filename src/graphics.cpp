@@ -118,8 +118,8 @@ void initDefaultGLObjects() {
     // auto tfsrc_instanced = readFile("../assets/shaders/fshader_diffuse_texture_instanced.glsl");
     // auto skyboxvs = readFile("../assets/shaders/sky.vert");
     // auto skyboxfs = readFile("../assets/shaders/sky.frag");
-    // auto gridVertSource = readFile("../assets/shaders/grid.vert");
-    // auto gridFragSource = readFile("../assets/shaders/grid.frag");
+    auto gridVertSource = readFile("../assets/shaders/grid.vert");
+    auto gridFragSource = readFile("../assets/shaders/grid.frag");
     // auto gridVertPostProcessSource = readFile("../assets/shaders/grid_postprocess.vert");
     // auto gridFragPostProcessSource = readFile("../assets/shaders/grid_postprocess.frag");
     auto shadowMapVertSource = readFile("../assets/shaders/shadow_map.vert");
@@ -145,7 +145,7 @@ void initDefaultGLObjects() {
     glDefaultObjects->currentRenderState->foregroundColor = {0.7, 0, 0, 1};
 
     // createShader(singleColLitVert, singleColLitFrag, glDefaultObjects->singleColorShader);
-    // createShader(singleColUnlitVert, singleColUnlitFrag, glDefaultObjects->singleColorShader);
+    //createShader(singleColUnlitVert, singleColUnlitFrag, glDefaultObjects->singleColorShader);
     // createShader(vsrc_skinned, fsrc_skinned, glDefaultObjects->skinnedShader);
     // createShader(vsrc_skinned, tfsrc, glDefaultObjects->texturedSkinnedShader);
     // createShader(texturedLitVert, texturedLitFrag, glDefaultObjects->texturedShaderLit);
@@ -154,7 +154,7 @@ void initDefaultGLObjects() {
     // createShader(spriteShaderVertexSource, spriteFragmentSource, glDefaultObjects->spriteShader);
     // createShader(vsrc_instanced, tfsrc_instanced, glDefaultObjects->instancedShader);
     // createShader(vsrc_instanced, fsrc_instanced, glDefaultObjects->singleColorShaderInstanced);
-    // createShader(gridVertSource, gridFragSource, glDefaultObjects->gridShader);
+    createShader(gridVertSource, gridFragSource, glDefaultObjects->gridShader);
     // createShader(gridVertPostProcessSource, gridFragPostProcessSource, glDefaultObjects->gridPostProcessShader);
     createShader(shadowMapVertSource, shadowMapFragSource, glDefaultObjects->shadowMapShader);
 
@@ -1708,6 +1708,7 @@ void drawMesh() {
         return;
     }
 
+
     glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
 
     static int i = 0;
@@ -1838,7 +1839,7 @@ void drawMesh(const MeshDrawData &drawData) {
     if (drawData.texture) {
         drawData.texture->bindAt(0);
     } else {
-        drawData.shader->setVec4Value(drawData.color, "foregroundColor");
+        drawData.shader->setVec4Value(drawData.color, "singleColor");
     }
 
     if (drawData.normalMap) {
@@ -1864,37 +1865,56 @@ void drawMesh(const MeshDrawData &drawData) {
     GL_ERROR_EXIT(983);
 
 
+    // Setting transformation matrices
     {
         using namespace glm;
 
-        // Object to world transformation
-        mat4 mattrans = translate(mat4(1), drawData.location);
-        mat4 matscale = glm::scale(mat4(1),drawData.scale);
-        mat4 matworld = glm::mat4(1);
-
-        // For rotation we check if we have a rotation matrix set.
-        if (glDefaultObjects->currentRenderState->rotMatrix) {
-            matworld = mattrans * (*glDefaultObjects->currentRenderState->rotMatrix) * matscale;
-
+        // Do we have a complete world transform matrix already set?
+        // Then we just use it!
+        // Otherwise we build it ourselves
+        if (drawData.worldTransform.has_value()) {
+            drawData.shader->setMat4Value(drawData.worldTransform.value(), "mat_model");
         } else {
-            mat4 matrotX = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.x), {1, 0, 0} );
-            mat4 matrotY = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.y), {0, 1, 0} );
-            mat4 matrotZ = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.z), {0, 0, 1} );
-            matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
-        }
+            // Object to world transformation
+            mat4 mattrans = translate(mat4(1), drawData.location);
+            mat4 matscale = glm::scale(mat4(1),drawData.scale);
+            mat4 matworld = glm::mat4(1);
 
-        drawData.shader->setMat4Value(matworld, "mat_model");
+            // For rotation we check if we have a rotation matrix set.
+            if (glDefaultObjects->currentRenderState->rotMatrix) {
+                matworld = mattrans * (*glDefaultObjects->currentRenderState->rotMatrix) * matscale;
+
+            } else {
+                mat4 matrotX = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.x), {1, 0, 0} );
+                mat4 matrotY = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.y), {0, 1, 0} );
+                mat4 matrotZ = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.z), {0, 0, 1} );
+                matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
+
+            }
+            drawData.shader->setMat4Value(matworld, "mat_model");
+
+        }
         drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
         drawData.shader->setMat4Value(drawData.camera->getProjectionMatrix(), "mat_projection");
 
     }
 
+    if (drawData.skinnedDraw) {
+        drawData.shader->setMat4Array(drawData.boneMatrices, "u_BoneMatrices");
+    }
+
+    if (!drawData.depthTest) {
+        glDisable(GL_DEPTH_TEST);
+    }
 
     glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices, drawData.mesh->indexDataType, nullptr);
     GL_ERROR_EXIT(993);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    if (!drawData.depthTest) {
+        glEnable(GL_DEPTH_TEST);
+    }
     glBindVertexArray(0);
 
 
@@ -2119,12 +2139,14 @@ void drawGrid(GridData* gridData, bool blurred) {
     bindShader(glDefaultObjects->gridShader);
 
 
+
     location(gridData->loc);
     glm::mat4 matWorld = getWorldMatrixFromGlobalState();
-    glUniformMatrix4fv(	6,1,GL_FALSE,value_ptr(matWorld));
-    glUniformMatrix4fv( 7, 1, GL_FALSE, value_ptr(viewMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
-    glUniformMatrix4fv(8, 1, GL_FALSE, value_ptr(projectionMatrixForCamera(glDefaultObjects->currentRenderState->camera)));
-    glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
+    glDefaultObjects->gridShader->setMat4Value(matWorld, "mat_world");
+    glDefaultObjects->gridShader->setMat4Value(viewMatrixForCamera(glDefaultObjects->currentRenderState->camera), "mat_view");
+    glDefaultObjects->gridShader->setMat4Value(projectionMatrixForCamera(glDefaultObjects->currentRenderState->camera), "mat_projection");
+    glDefaultObjects->gridShader->setVec4Value(glDefaultObjects->currentRenderState->foregroundColor, "singleColor");
+
 
     if (blurred) {
         activateFrameBuffer(glDefaultObjects->gridFBO);
@@ -2145,6 +2167,7 @@ void drawGrid(GridData* gridData, bool blurred) {
         glDisable(GL_DEPTH_TEST);
 
         glDrawArrays(GL_LINES, 0, (gridData->numLines * 2) + (gridData->numLines * 2));
+        GL_ERROR_EXIT(7654)
         glEnable(GL_DEPTH_TEST);
     }
 
@@ -4133,6 +4156,7 @@ void setBoneMatrices(std::vector<glm::mat4> boneMatrices) {
     glDefaultObjects->boneMatrices = boneMatrices;
 }
 
+[[Deprecated]]
 void wireframeOn() {
     glLineWidth(3.0f);
     glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
@@ -4362,6 +4386,12 @@ void Shader::setMat4Value(glm::mat4 mat, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
     glUniformMatrix4fv(loc,1,  GL_FALSE, glm::value_ptr(mat));
     GL_ERROR_EXIT(444, "Could not set uniform mat4");
+}
+
+void Shader::setMat4Array(const std::vector<glm::mat4> mats, const std::string &name) {
+    auto loc = glGetUniformLocation(this->handle, name.c_str());
+    glUniformMatrix4fv(loc,mats.size(),  GL_FALSE, value_ptr(mats[0]));
+    GL_ERROR_EXIT(445, "Could not set uniform mat4 array");
 }
 
 void Shader::initFromFiles(const std::string &vertFile, const std::string &fragFile) {

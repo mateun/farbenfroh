@@ -46,6 +46,7 @@ struct Shader {
     void setVec3Value(glm::vec<3, float> vec, const std::string& name);
     void setVec4Value(const glm::vec4 vec, const std::string& name);
     void setMat4Value(glm::mat4 mat, const std::string& str);
+    void setMat4Array(const std::vector<glm::mat4> mats, const std::string& name);
 
     void initFromFiles(const std::string& vertexShader, const std::string& fragmentShader);
 
@@ -637,6 +638,8 @@ struct MeshDrawData {
     glm::vec3 location = {0, 0, 0};
     glm::vec3 scale = {1, 1, 1};
     glm::vec3 rotationEulers = {0, 0, 0};
+    std::vector<glm::mat4> boneMatrices;
+    std::optional<glm::mat4> worldTransform;
     Mesh* mesh = nullptr;
     Shader* shader = nullptr;
     Camera* camera = nullptr;
@@ -645,6 +648,8 @@ struct MeshDrawData {
     glm::vec4 color = {1, 0, 1, 1}; // Nice pink if we have no texture set.
     Light* directionalLight = nullptr;
     float uvScale = 1;
+    bool depthTest = true;
+    bool skinnedDraw = false;
 };
 
 GridData* createGrid(int lines = 100);
@@ -703,6 +708,7 @@ void lightingOn();
 void lightingOff();
 void shadowOff();
 void shadowOn();
+[[Deprecated]]
 void wireframeOn();
 void wireframeOff();
 void deferredStart();
