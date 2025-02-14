@@ -1891,7 +1891,7 @@ void drawMesh(const MeshDrawData &drawData) {
                 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
 
             }
-            drawData.shader->setMat4Value(matworld, "mat_model");
+            drawData.shader->setMat4Value(matworld, "mat_world");
 
         }
         drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
@@ -2138,15 +2138,21 @@ void drawGrid(GridData* gridData, bool blurred) {
     glBindVertexArray(gridData->vao);
     bindShader(glDefaultObjects->gridShader);
 
-
-
     location(gridData->loc);
-    glm::mat4 matWorld = getWorldMatrixFromGlobalState();
-    glDefaultObjects->gridShader->setMat4Value(matWorld, "mat_world");
-    glDefaultObjects->gridShader->setMat4Value(viewMatrixForCamera(glDefaultObjects->currentRenderState->camera), "mat_view");
-    glDefaultObjects->gridShader->setMat4Value(projectionMatrixForCamera(glDefaultObjects->currentRenderState->camera), "mat_projection");
-    glDefaultObjects->gridShader->setVec4Value(glDefaultObjects->currentRenderState->foregroundColor, "singleColor");
 
+    using namespace glm;
+    mat4 mattrans = translate(mat4(1), gridData->loc);
+    mat4 matscale = glm::scale(mat4(1), vec3(gridData->scale));
+    mat4 matrotX = glm::rotate(mat4(1), glm::radians(glDefaultObjects->currentRenderState->rot.x), {1, 0, 0} );
+    mat4 matrotY = glm::rotate(mat4(1), glm::radians(glDefaultObjects->currentRenderState->rot.y), {0, 1, 0} );
+    mat4 matrotZ = glm::rotate(mat4(1), glm::radians(glDefaultObjects->currentRenderState->rot.z), {0, 0, 1} );
+    mat4 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
+
+
+    glDefaultObjects->gridShader->setMat4Value(matworld, "mat_world");
+    glDefaultObjects->gridShader->setMat4Value(gridData->camera->getViewMatrix(), "mat_view");
+    glDefaultObjects->gridShader->setMat4Value(gridData->camera->getProjectionMatrix(), "mat_projection");
+    glDefaultObjects->gridShader->setVec4Value(gridData->color, "singleColor");
 
     if (blurred) {
         activateFrameBuffer(glDefaultObjects->gridFBO);

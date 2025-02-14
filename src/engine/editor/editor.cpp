@@ -118,7 +118,8 @@ namespace editor {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         static auto gridData = createGrid(100);
-
+        gridData->camera = getMeshViewerCamera();
+        gridData->color = glm::vec4(.5, .5, 0, 1);
         drawGrid(gridData);
 
 
@@ -187,7 +188,7 @@ namespace editor {
 
                         MeshDrawData dd;
                         dd.mesh = assetLoader->getMesh("bone_mesh");
-                        dd.color = {0.7, 0.7, 0, 1};
+                        dd.color = {0.7, 0.1, .1, 1};
                         dd.camera = getMeshViewerCamera();
                         dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletally animated.
                         dd.worldTransform = finalTransform;

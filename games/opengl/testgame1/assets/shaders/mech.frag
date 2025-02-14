@@ -48,14 +48,22 @@ bool isInShadow() {
 }
 
 vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
-    vec3 tangentlightDir = normalize(tbn * directionalLightData.direction) * -1;
-
+    vec3 tangentlightDir = normalize(tbn * -directionalLightData.direction) ;
 
     float diffuse = max(dot(normalize(normal), tangentlightDir), 0.2);
     vec4 col  = vec4(albedo.xyz * diffuse, albedo.w);
     return col;
 
 }
+
+vec4 calculateDirectionalLightWithoutNormalMap(vec4 albedo) {
+    float diffuse = max(dot(normalize(fs_normals), -normalize(directionalLightData.direction)), 0.2);
+    vec4 col  = vec4(albedo.xyz * diffuse, albedo.w);
+    return col;
+
+}
+
+
 
 vec4 calculatePointLight(vec4 albedo, vec3 normal, PointLightData pointLightData) {
     // First move the lightpos into the tangent space
@@ -83,11 +91,12 @@ void main() {
     normal = normalize(normal * 2.0 - 1.0);
 
     color = calculateDirectionalLight(albedo, normal);
+    //color = calculateDirectionalLightWithoutNormalMap(albedo);
     // TODO
     //color += calculatePointLight(albedo, normal);
 
     if (isInShadow()) {
-        color *= 0.1;
+       color *= 0.1;
     }
 
     color.a *= overrideAlpha;

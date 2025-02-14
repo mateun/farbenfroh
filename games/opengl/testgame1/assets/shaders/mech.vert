@@ -5,7 +5,7 @@ layout(location = 1) in vec2 uvs;
 layout(location = 2) in vec3 normals;
 layout(location = 12) in vec3  tangent;
 
-uniform mat4 mat_model;
+uniform mat4 mat_world;
 uniform mat4 mat_view;
 uniform mat4 mat_projection;
 
@@ -29,12 +29,11 @@ out mat3 tbn;
 out vec3 tangentFragPos;
 out vec3 tangentViewPos;
 
-
 void uvPanning();
 
 void main() {
 
-    gl_Position = mat_projection * mat_view * mat_model* vec4(pos, 1);
+    gl_Position = mat_projection * mat_view * mat_world* vec4(pos, 1);
     fs_uvs = uvs;
     fs_uvs.y = 1- uvs.y;
 
@@ -42,19 +41,19 @@ void main() {
     uvPanning();
 
     vec3 nn = normalize(normals.xyz);
-    vec4 normals_transformed = inverse(transpose(mat_model)) * vec4(nn, 1);
+    vec4 normals_transformed = inverse(transpose(mat_world)) * vec4(nn, 1);
     fs_normals = normalize(normals_transformed.xyz);
 
     // Calculate the TBN matrix
     // And also calculate the tangentFragPos, we can do this here in the vertex shader
-    vec3 T = normalize(vec3(mat_model * vec4(tangent, 0)));
-    vec3 N = normalize(vec3(mat_model * vec4(fs_normals, 0)));
+    vec3 T = normalize(vec3(mat_world * vec4(tangent, 0)));
+    vec3 N = normalize(vec3(mat_world * vec4(normals, 0)));
     vec3 B = cross(N, T);
     tbn = transpose(mat3(T, B, N));
-    tangentFragPos = tbn * vec3(mat_model * vec4(pos, 1.0));
+    tangentFragPos = tbn * vec3(mat_world * vec4(pos, 1.0));
 
-    fsFogCameraPos = (mat_view * mat_model * vec4(pos,1)).xyz;
-    fragPosLightSpace =  directionalLightData.mat_view_proj * mat_model * vec4(pos, 1);
+    fsFogCameraPos = (mat_view * mat_world * vec4(pos,1)).xyz;
+    fragPosLightSpace =  directionalLightData.mat_view_proj * mat_world * vec4(pos, 1);
 
 }
 

@@ -19,6 +19,7 @@ class TestGame1 : public DefaultApp {
     Shader * mechShader = nullptr;
     CameraMover * cameraMover = nullptr;
     Scene * scene = nullptr;
+    Light * sun = nullptr;
 };
 
 

@@ -626,6 +626,7 @@ struct GridData {
     glm::vec3 loc = {0, 0, 0};
     int numLines = 100;
     GLuint vao;
+    Camera* camera = nullptr;
 };
 
 glm::vec3 lightDirection{0.6, -2, -0.5};

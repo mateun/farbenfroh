@@ -29,6 +29,16 @@ void TestGame1::init() {
     mechNode->shader = mechShader;
     scene->addNode(mechNode);
 
+    auto playerNode = new SceneNode();
+    playerNode->location = glm::vec3(-2, 0, 2);
+    playerNode->mesh = getMeshByName("human4");
+    playerNode->texture = getTextureByName("debug_texture");
+    //playerNode->normalMap = getTextureByName("debug_normal");
+    playerNode->shader = mechShader;
+    playerNode->rotation = glm::vec3(0, 180, 0);
+    playerNode->type = SceneNodeType::Mesh;
+    scene->addNode(playerNode);
+
     auto groundNode = new SceneNode();
     groundNode->location = glm::vec3(0, 0, 0);
     groundNode->mesh = getMeshByName("ground_plane");
@@ -40,12 +50,11 @@ void TestGame1::init() {
     groundNode->shader = mechShader;
     scene->addNode(groundNode);
 
-    Light* sun = sun = new Light();
+    sun = new Light();
     sun->location = {3, 3,8 };
     sun->lookAtTarget = {0,0, 0};
     sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
     scene->setDirectionalLight(sun);
-
     scene->setCamera(cam);
 
 }
@@ -55,7 +64,6 @@ void TestGame1::update() {
 }
 
 void TestGame1::render() {
-
 
     scene->render();
 
@@ -71,6 +79,7 @@ void TestGame1::render() {
     // drawMesh(dd);
     //
     // dd.location = {-3, 0, -4};
+    // dd.rotationEulers = {0, 180, 0};
     // drawMesh(dd);
     //
     // dd.location = {4, 0, -7.3};
