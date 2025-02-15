@@ -1873,7 +1873,7 @@ void drawMesh(const MeshDrawData &drawData) {
         // Then we just use it!
         // Otherwise we build it ourselves
         if (drawData.worldTransform.has_value()) {
-            drawData.shader->setMat4Value(drawData.worldTransform.value(), "mat_model");
+            drawData.shader->setMat4Value(drawData.worldTransform.value(), "mat_world");
         } else {
             // Object to world transformation
             mat4 mattrans = translate(mat4(1), drawData.location);
@@ -3943,6 +3943,23 @@ SceneNode::SceneNode() {
 SceneNode::~SceneNode() {
 }
 
+void SceneNode::yaw(float degrees) {
+    glm::mat4 yawMatrix = glm::rotate(glm::mat4(1.0f), rotation.y, glm::vec3(0, 1, 0));
+
+    glm::vec4 newForward = yawMatrix * glm::vec4(forward, 1.0f);
+    forward = normalize(glm::vec3{newForward.x, newForward.y, newForward.z});
+    right = normalize(cross( forward, {0, 1, 0}));
+
+}
+
+glm::vec3 SceneNode::getRightVector() {
+    return right;
+}
+
+glm::vec3 SceneNode::getForwardVector() {
+    return forward;
+}
+
 Scene::Scene() {
 }
 
@@ -4029,6 +4046,14 @@ void Scene::render() {
             scale(m->scale);
             rotation(m->rotation);
             bindMesh(m->mesh);
+
+            // TODO
+            // if (m->skinnedMesh) {
+            //     mdd.skinnedDraw = m->skinnedMesh;
+            //     mdd.boneMatrices = m->boneMatrices;
+            // }
+
+
             drawMeshIntoShadowMap(lightNode->shadowMapFBO);
         }
     }
@@ -4036,22 +4061,28 @@ void Scene::render() {
 
 
     // 2. Actual render pass
-        for (auto m : meshNodes) {
-            // Build the actual render commands for each node and
-            // render it into the shadow map.
-            MeshDrawData mdd;
-            mdd.location = m->location;
-            mdd.scale = m->scale;
-            mdd.rotationEulers = m->rotation;
-            mdd.mesh = m->mesh;
-            mdd.texture = m->texture;
-            mdd.normalMap = m->normalMap;
-            mdd.shader = m->shader;
-            mdd.camera = gameplayCamera;
-            mdd.uvScale = m->uvScale;
-            mdd.color = m->foregroundColor;
-            mdd.directionalLight = directionalLight;
-            drawMesh(mdd);
+    for (auto m : meshNodes) {
+        // Build the actual render commands for each node and
+        // render it into the shadow map.
+        MeshDrawData mdd;
+        mdd.location = m->location;
+        mdd.scale = m->scale;
+        mdd.rotationEulers = m->rotation;
+        mdd.mesh = m->mesh;
+        mdd.texture = m->texture;
+        mdd.normalMap = m->normalMap;
+        mdd.shader = m->shader;
+        mdd.camera = gameplayCamera;
+        mdd.uvScale = m->uvScale;
+        mdd.color = m->foregroundColor;
+        mdd.directionalLight = directionalLight;
+
+        if (m->skinnedMesh) {
+            mdd.skinnedDraw = m->skinnedMesh;
+            mdd.boneMatrices = m->boneMatrices;
+        }
+
+        drawMesh(mdd);
 
     }
 
@@ -4076,6 +4107,15 @@ bool Mesh::rayCollides(Ray ray, glm::vec4 &color) {
         // Check ray against this triangle
     }
     return false;
+}
+
+Animation * Mesh::findAnimation(const std::string &name) {
+    for (auto a: animations) {
+        if (a->name == name) {
+            return a;
+        }
+    }
+    return nullptr;
 }
 
 glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera) {
@@ -4384,18 +4424,21 @@ void Shader::setFloatValue(float val, const std::string &name) {
 
 void Shader::setVec3Value(glm::vec<3, float> vec, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
+    if (loc == -1) throw std::runtime_error("Could not get uniform location");
     glUniform3f(loc, vec.x, vec.y, vec.z);
     GL_ERROR_EXIT(443, "Could not set uniform vec3");
 }
 
 void Shader::setMat4Value(glm::mat4 mat, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
+    if (loc == -1) throw std::runtime_error("Could not get uniform location");
     glUniformMatrix4fv(loc,1,  GL_FALSE, glm::value_ptr(mat));
     GL_ERROR_EXIT(444, "Could not set uniform mat4");
 }
 
 void Shader::setMat4Array(const std::vector<glm::mat4> mats, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
+    if (loc == -1) throw std::runtime_error("Could not get uniform location");
     glUniformMatrix4fv(loc,mats.size(),  GL_FALSE, value_ptr(mats[0]));
     GL_ERROR_EXIT(445, "Could not set uniform mat4 array");
 }

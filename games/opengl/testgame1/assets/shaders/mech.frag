@@ -52,6 +52,7 @@ vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
 
     float diffuse = max(dot(normalize(normal), tangentlightDir), 0.2);
     vec4 col  = vec4(albedo.xyz * diffuse, albedo.w);
+    col *= vec4(directionalLightData.diffuseColor, 1);
     return col;
 
 }
@@ -84,6 +85,7 @@ void main() {
 
     color = vec4(1, 0, 1, 1);
 
+
     vec4 albedo = texture(diffuseTexture, fs_uvs);
 
     //Extract normal from map
@@ -104,7 +106,7 @@ void main() {
 
     // TODO fog
 
-
+    //color = vec4(1, 0,1, 1);
 
 
 

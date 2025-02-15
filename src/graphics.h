@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <engine/input/UpdateSwitcher.h>
 #include <engine/lighting/Light.h>
 #include <glm/glm.hpp>
 #include "glm/detail/type_quat.hpp"
@@ -159,6 +160,7 @@ struct Mesh {
     std::vector<Animation*> animations;
 
     bool rayCollides(Ray ray, glm::vec4& color);
+    Animation* findAnimation(const std::string& name);
 };
 
 enum class CameraType {
@@ -259,11 +261,11 @@ private:
  * CameraMove can process inputs to move a camera around.
  * Mainly useable for debug cameras with classical WASD movement scheme.
  */
-class CameraMover {
+class CameraMover : public Updatable {
 
 public:
     CameraMover(Camera* cam, CameraCollider* cameraCollider = nullptr);
-    void update();
+    void update() override;
     void setMovementSpeed(float val);
     void setFixedPlaneForwardMovement(bool b);
 
@@ -805,22 +807,28 @@ public:
     SceneNode();
     ~SceneNode();
 
+    void yaw(float degrees);
+
+    glm::vec3 getForwardVector();
+    glm::vec3 getRightVector();
+
     SceneNodeType type;
 
     // These are type specific fields and can be null
-    Camera * camera = nullptr;
-    Light * light = nullptr;
     Mesh* mesh = nullptr;
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
     Shader* shader = nullptr;
 
-    // Mesh specific?!
     glm::vec3 location = glm::vec3(0);
     glm::vec3 scale = glm::vec3(1.0f);
     glm::vec3 rotation = glm::vec3(0);
-    glm::vec4 foregroundColor;
+    glm::vec3 forward= {0, 0, -1};   // This is normally how we face when coming from Blender
+    glm::vec3 right = {1, 0, 0}; // Based on the incoming Blender default orientation
+    glm::vec4 foregroundColor = {1, 0,1, 1};
     float uvScale = 1;
+    bool skinnedMesh = false;
+    std::vector<glm::mat4> boneMatrices;
 
 };
 

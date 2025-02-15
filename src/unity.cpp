@@ -8,10 +8,11 @@
 #include "engine/game/game_model.cpp"
 #include "engine/animation/AnimationPlayer.cpp"
 #include "engine/algo/Bvh.cpp"
+#include "engine/input/UpdateSwitcher.cpp"
 #include "engine/vulkan/VulkanRenderer.cpp"
 #include "engine/lighting/Light.cpp"
 #include "graphics.cpp"
-
+#include "engine/animation/CharacterController.cpp"
 
 //#include "../games/simple_king/king_main.cpp"
 

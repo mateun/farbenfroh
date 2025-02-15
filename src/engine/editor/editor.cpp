@@ -128,16 +128,10 @@ namespace editor {
         // regardless if this is a static or skeleton mesh
         {
 
-            bindMesh(importedMesh);
-            location({0, 0, 0});
-            rotation({0, 0, 0});
-            scale({1, 1, 1});
-            foregroundColor({0.9, 0.9, 0.9, 1});
 
             // These 2 lines are good (necessary?) for avoiding z-fighting with the following wireframe mesh
             glEnable(GL_POLYGON_OFFSET_FILL);
             glPolygonOffset(1.0f, 1.0f);
-
 
 
             // Basic directional light for the render
@@ -150,6 +144,7 @@ namespace editor {
             // Draw the filled mesh
             MeshDrawData dd;
             dd.mesh = importedMesh;
+            dd.location = {-2, 0, 2};
             dd.camera = getMeshViewerCamera();
             dd.color = {0.9, 0.9, 0.9, 1};
             dd.directionalLight = sun;
@@ -164,7 +159,7 @@ namespace editor {
                 dd.shader = staticMeshShader;
             }
 
-            drawMesh(dd);
+            //drawMesh(dd);
 
             // Now draw the wireframe version
             wireframeOn();
@@ -190,7 +185,7 @@ namespace editor {
                         dd.mesh = assetLoader->getMesh("bone_mesh");
                         dd.color = {0.7, 0.1, .1, 1};
                         dd.camera = getMeshViewerCamera();
-                        dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletally animated.
+                        dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
                         dd.worldTransform = finalTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
                         drawMesh(dd);

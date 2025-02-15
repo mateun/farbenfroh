@@ -99,7 +99,6 @@ void AnimationPlayer::update() {
             }
             boneMatrices.push_back(j->finalTransform);
         }
-        //setBoneMatrices(boneMatrices);
     }
 }
 

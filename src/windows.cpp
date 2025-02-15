@@ -600,6 +600,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
             lbuttonUp = true;
             lbuttonDown = false;
             break;
+        case WM_SYSKEYDOWN:
+            lastKeyPress = wParam;
 
         case WM_KEYDOWN:
             lastKeyPress = wParam;

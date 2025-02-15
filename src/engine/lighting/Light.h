@@ -20,7 +20,7 @@ public:
   LightType type;
   glm::vec3 location;
   glm::vec3 lookAtTarget;
-  glm::vec3 color;
+  glm::vec3 color = {1, 1,1};
   bool castsShadow = false;
 
   // Stays zero if we do not cast shadows from this light

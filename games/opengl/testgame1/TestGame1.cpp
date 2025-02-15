@@ -13,6 +13,9 @@ void TestGame1::init() {
     DefaultApp::init();
     mechShader = new Shader();
     mechShader->initFromFiles("../games/opengl/testgame1/assets/shaders/mech.vert", "../games/opengl/testgame1/assets/shaders/mech.frag");
+    skinnedShader = new Shader();
+    skinnedShader->initFromFiles("../games/opengl/testgame1/assets/shaders/skinned.vert", "../games/opengl/testgame1/assets/shaders/mech.frag");
+
     auto cam = getGameplayCamera();
     cam->updateLocation({0, 2.8, 10});
     cam->updateLookupTarget({0, 1, -2});
@@ -29,13 +32,13 @@ void TestGame1::init() {
     mechNode->shader = mechShader;
     scene->addNode(mechNode);
 
-    auto playerNode = new SceneNode();
+    playerNode = new SceneNode();
     playerNode->location = glm::vec3(-2, 0, 2);
-    playerNode->mesh = getMeshByName("human4");
+    playerNode->mesh = getMeshByName("human4_oriented");
     playerNode->texture = getTextureByName("debug_texture");
-    //playerNode->normalMap = getTextureByName("debug_normal");
-    playerNode->shader = mechShader;
-    playerNode->rotation = glm::vec3(0, 180, 0);
+    playerNode->normalMap = getTextureByName("mech_normal");
+    playerNode->shader = skinnedShader;
+    playerNode->skinnedMesh = true;
     playerNode->type = SceneNodeType::Mesh;
     scene->addNode(playerNode);
 
@@ -57,10 +60,25 @@ void TestGame1::init() {
     scene->setDirectionalLight(sun);
     scene->setCamera(cam);
 
+    characterController = new CharacterController(playerNode);
+    updateSwitcher = new UpdateSwitcher({characterController, cameraMover}, VK_F10);
+
+    idlePlayer = new AnimationPlayer(getMeshByName("human4_oriented")->findAnimation("idle"), getMeshByName("human4_oriented"));
+    walkPlayer = new AnimationPlayer(getMeshByName("human4_oriented")->findAnimation("walk"), getMeshByName("human4_oriented"));
+    idlePlayer->play(true);
+
 }
 
 void TestGame1::update() {
-    cameraMover->update();
+    updateSwitcher->update();
+
+    // Temp. implement animation switching here
+    idlePlayer->update();
+    playerNode->boneMatrices = idlePlayer->getCurrentBoneMatrices();
+
+    // end temp
+
+
 }
 
 void TestGame1::render() {
@@ -68,14 +86,16 @@ void TestGame1::render() {
     scene->render();
 
     // MeshDrawData dd;
-    // dd.mesh = getMeshByName("mech");
-    // dd.location = {0, 0, -8};
+    // dd.mesh = getMeshByName("human4_oriented");
+    // dd.location = {-1, 1, -4};
     // dd.texture = getTextureByName("mech_albedo");
     // dd.normalMap = getTextureByName("mech_normal");
     // dd.uvScale = 1;
     // dd.directionalLight = sun;
     // dd.camera = getGameplayCamera();
-    // dd.shader = mechShader;
+    // dd.shader = skinnedShader;
+    // dd.skinnedDraw = true;
+    // dd.boneMatrices = idlePlayer->getCurrentBoneMatrices();
     // drawMesh(dd);
     //
     // dd.location = {-3, 0, -4};
@@ -86,6 +106,7 @@ void TestGame1::render() {
     // drawMesh(dd);
     //
     //
+    // dd.skinnedDraw = false;
     // dd.mesh = getMeshByName("ground_plane");
     // dd.texture = getTextureByName("ground_albedo");
     // dd.normalMap = getTextureByName("debug_normal");
