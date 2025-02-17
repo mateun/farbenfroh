@@ -29,9 +29,15 @@ class AnimationState {
     std::vector<AnimationTransition*> getOutgoingTransitions();
     std::vector<AnimationTransition*> getIncomingTransitions();
 
+    Animation* getAnimation();
+    AnimationBlender* getBlender();
+
 private:
     std::vector<AnimationTransition*> _outgoingTransitions;
     std::vector<AnimationTransition*> _incomingTransitions;
+    std::string _name;
+    Animation * _animation = nullptr;
+    AnimationBlender * _blender = nullptr;
 };
 
 

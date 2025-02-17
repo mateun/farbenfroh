@@ -22,6 +22,7 @@ void AnimationPlayer::stop() {
 void AnimationPlayer::switchAnimation(Animation *animation) {
     stop();
     this->animation = animation;
+    this->animTime = 0;
 }
 
 void AnimationPlayer::setMesh(Mesh* mesh) {

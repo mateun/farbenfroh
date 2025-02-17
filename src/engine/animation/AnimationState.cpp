@@ -4,10 +4,10 @@
 
 #include "AnimationState.h"
 
-AnimationState::AnimationState(Animation *animation, const std::string &name) {
+AnimationState::AnimationState(Animation *animation, const std::string &name) : _animation(animation), _name(name) {
 }
 
-AnimationState::AnimationState(AnimationBlender *blender, const std::string &name) {
+AnimationState::AnimationState(AnimationBlender *blender, const std::string &name) : _blender(blender), _name(name) {
 }
 
 AnimationState::~AnimationState() {
@@ -27,4 +27,12 @@ std::vector<AnimationTransition *> AnimationState::getOutgoingTransitions() {
 
 std::vector<AnimationTransition *> AnimationState::getIncomingTransitions() {
     return _incomingTransitions;
+}
+
+Animation * AnimationState::getAnimation() {
+    return _animation;
+}
+
+AnimationBlender * AnimationState::getBlender() {
+    return _blender;
 }
