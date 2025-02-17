@@ -39,10 +39,12 @@ int main(int argc, const char * argv[]) {
     constraint.propertyKey = "foo";
 
     Animation animation;
-    AnimationState sourceState(&animation, "idle");
-    AnimationState targetState(&animation, "walk");
+    AnimationState idleState(&animation, "idle");
+    AnimationState walkState(&animation, "walk");
+    animationController->addAnimationState(&idleState);
+    animationController->addAnimationState(&walkState);
 
-    AnimationTransition transition(animationController, &sourceState, &targetState );
+    AnimationTransition transition(animationController, &idleState, &walkState );
     transition.addConstraint(&constraint);
     auto result = transition.evaluate();
     if (!result) {
@@ -67,6 +69,14 @@ int main(int argc, const char * argv[]) {
     if (!result) {
         throw new std::runtime_error("Failed evaluating idle-walk transition");
     }
+
+    // Test transition
+    animationController->update();
+    if (animationController->getCurrentState() != &walkState) {
+        throw std::runtime_error("Failed updating idle-walk transition");
+    }
+
+    // TODO test actual bone matrices
 
 
 

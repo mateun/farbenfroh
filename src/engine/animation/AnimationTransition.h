@@ -26,6 +26,8 @@ public:
 
     void clearConstraints();
 
+    AnimationState * getEndState();
+    AnimationState * getStartState();
 
 private:
     std::vector<TransitionConstraint*> constraints;

@@ -6,9 +6,13 @@
 #define ANIMATIONCONTROLLER_H
 
 #include <map>
+#include <vector>
 #include <string>
 #include <optional>
+#include <glm/glm.hpp>
 #include "AnimationProperty.h"
+#include "AnimationState.h"
+
 
 
 
@@ -24,11 +28,32 @@ class AnimationController {
 
 public:
     AnimationController();
-	std::optional<AnimationProperty> getProperty(const std::string& key);
+    ~AnimationController();
+    void addAnimationState(AnimationState* animationState);
+
+    /**
+    * This must be called each frame so the animation states can be accurately calculated.
+    */
+    void update();
+
+    /**
+    * This function returns the bone matrices for any current valid animations/blends.
+    *
+    */
+    std::vector<glm::mat4> getBoneMatrices();
+
+    /**
+    * Get and set the properties of this controller.
+    */
+    std::optional<AnimationProperty> getProperty(const std::string& key);
     void setProperty(const std::string key, AnimationProperty animationProperty);
 
+    AnimationState* getCurrentState();
+
 private:
-  std::map<std::string, AnimationProperty> properties;
+    std::map<std::string, AnimationProperty> properties;
+    AnimationState* _currentState = nullptr;
+    std::vector<AnimationState*> _animationStates;
 
 };
 

@@ -7,6 +7,8 @@
 
 AnimationTransition::AnimationTransition(AnimationController *animationController, AnimationState *startState,
     AnimationState *endState) : _animationController(animationController), _startState(startState), _endState(endState) {
+    startState->addOutgoingTransition(this);
+    endState->addIncomingTransition(this);
 }
 
 AnimationTransition::~AnimationTransition() {
@@ -55,6 +57,14 @@ bool AnimationTransition::evaluate() {
 
 void AnimationTransition::clearConstraints() {
     constraints.clear();
+}
+
+AnimationState * AnimationTransition::getEndState() {
+    return _endState;
+}
+
+AnimationState * AnimationTransition::getStartState() {
+    return _startState;
 }
 
 bool AnimationProperty::operator==(const AnimationProperty &other) const {

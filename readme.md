@@ -15,8 +15,16 @@ Its main features are
 - [x] Unlit shader option
 - [x] Integrate IMGUI
 - [x] Draw debug grid
+- [ ] Animation Blending (planned for 18.02.2025)
+- [ ] Animation Montage (planned for 19.02.2025)
+- [ ] Collision Detection epic (planned for 26.02.2025)
+
+
+
+
+
 - [ ] Map editor
-- 
+
  
 
 

@@ -8,6 +8,7 @@
 
 class Animation;
 class AnimationBlender;
+class AnimationTransition;
 
 /**
 * Represents the nodes in the animation state machine.
@@ -22,7 +23,15 @@ class AnimationState {
     AnimationState(AnimationBlender* blender, const std::string& name);
     ~AnimationState();
 
+    void addOutgoingTransition(AnimationTransition* animationTransition);
+    void addIncomingTransition(AnimationTransition* animationTransition);
 
+    std::vector<AnimationTransition*> getOutgoingTransitions();
+    std::vector<AnimationTransition*> getIncomingTransitions();
+
+private:
+    std::vector<AnimationTransition*> _outgoingTransitions;
+    std::vector<AnimationTransition*> _incomingTransitions;
 };
 
 

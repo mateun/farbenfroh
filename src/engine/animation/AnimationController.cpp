@@ -3,8 +3,29 @@
 //
 
 #include "AnimationController.h"
+#include "AnimationState.h"
+#include "AnimationTransition.h"
 
 AnimationController::AnimationController() {
+}
+
+AnimationController::~AnimationController() {
+}
+
+void AnimationController::addAnimationState(AnimationState *animationState) {
+    _animationStates.push_back(animationState);
+}
+
+void AnimationController::update() {
+    if (_currentState == nullptr) {
+        _currentState = _animationStates[0];
+    }
+    auto outgoingTransitions = _currentState->getOutgoingTransitions();
+    for (auto transition : outgoingTransitions) {
+        if (transition->evaluate()) {
+            _currentState = transition->getEndState();
+        }
+    }
 }
 
 std::optional<AnimationProperty> AnimationController::getProperty(const std::string &key) {
@@ -18,4 +39,8 @@ std::optional<AnimationProperty> AnimationController::getProperty(const std::str
 
 void AnimationController::setProperty(const std::string key, AnimationProperty animationProperty) {
     properties[key] = animationProperty;
+}
+
+AnimationState * AnimationController::getCurrentState() {
+    return _currentState;
 }

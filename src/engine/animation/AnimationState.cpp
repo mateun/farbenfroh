@@ -12,3 +12,19 @@ AnimationState::AnimationState(AnimationBlender *blender, const std::string &nam
 
 AnimationState::~AnimationState() {
 }
+
+void AnimationState::addOutgoingTransition(AnimationTransition *animationTransition) {
+    _outgoingTransitions.push_back(animationTransition);
+}
+
+void AnimationState::addIncomingTransition(AnimationTransition *animationTransition) {
+    _incomingTransitions.push_back(animationTransition);
+}
+
+std::vector<AnimationTransition *> AnimationState::getOutgoingTransitions() {
+    return _outgoingTransitions;
+}
+
+std::vector<AnimationTransition *> AnimationState::getIncomingTransitions() {
+    return _incomingTransitions;
+}
