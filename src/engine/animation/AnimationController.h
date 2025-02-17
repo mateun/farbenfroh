@@ -5,7 +5,7 @@
 #ifndef ANIMATIONCONTROLLER_H
 #define ANIMATIONCONTROLLER_H
 
-#include <graphics.h>
+
 #include <map>
 #include <vector>
 #include <string>
@@ -52,8 +52,8 @@ private:
     std::map<std::string, AnimationProperty> properties;
     AnimationState* _currentState = nullptr;
     std::vector<AnimationState*> _animationStates;
-    AnimationPlayer* _player = nullptr;
-    Mesh * _mesh = nullptr;
+    //AnimationPlayer* _player = nullptr;
+    //Mesh * _mesh = nullptr;
 };
 
 

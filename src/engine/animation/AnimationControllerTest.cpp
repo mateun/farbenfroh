@@ -12,6 +12,7 @@
 int main(int argc, const char * argv[]) {
 
     // Properties test
+    //Mesh* mesh = new Mesh();
     auto animationController = new AnimationController();
     auto fooProp = animationController->getProperty("foo");
     if (fooProp.has_value()) {

@@ -4414,7 +4414,7 @@ void FBFont::renderText(const std::string &text, glm::vec3 position) {
 void Shader::setVec4Value(const glm::vec4 vec, const std::string& name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
     glUniform4f(loc, vec.x, vec.y, vec.z, vec.w);
-    GL_ERROR_EXIT(442, "Could not set uniform vec4");
+    GL_ERROR_EXIT(442);
 }
 
 void Shader::setFloatValue(float val, const std::string &name) {
@@ -4426,21 +4426,21 @@ void Shader::setVec3Value(glm::vec<3, float> vec, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
     if (loc == -1) throw std::runtime_error("Could not get uniform location");
     glUniform3f(loc, vec.x, vec.y, vec.z);
-    GL_ERROR_EXIT(443, "Could not set uniform vec3");
+    GL_ERROR_EXIT(443);
 }
 
 void Shader::setMat4Value(glm::mat4 mat, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
     if (loc == -1) throw std::runtime_error("Could not get uniform location");
     glUniformMatrix4fv(loc,1,  GL_FALSE, glm::value_ptr(mat));
-    GL_ERROR_EXIT(444, "Could not set uniform mat4");
+    GL_ERROR_EXIT(444);
 }
 
 void Shader::setMat4Array(const std::vector<glm::mat4> mats, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
     if (loc == -1) throw std::runtime_error("Could not get uniform location");
     glUniformMatrix4fv(loc,mats.size(),  GL_FALSE, value_ptr(mats[0]));
-    GL_ERROR_EXIT(445, "Could not set uniform mat4 array");
+    GL_ERROR_EXIT(445);
 }
 
 void Shader::initFromFiles(const std::string &vertFile, const std::string &fragFile) {

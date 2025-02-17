@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lobject.h>
+#include <Windows.h>
 #include <string>
 #include <vector>
 #include <optional>

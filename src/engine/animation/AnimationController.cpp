@@ -6,8 +6,8 @@
 #include "AnimationState.h"
 #include "AnimationTransition.h"
 
-AnimationController::AnimationController(Mesh* mesh) : _mesh(mesh) {
-    _player = new AnimationPlayer(nullptr, _mesh);
+AnimationController::AnimationController() {
+//    _player = new AnimationPlayer(nullptr, nullptr);
 }
 
 AnimationController::~AnimationController() {
@@ -20,7 +20,7 @@ void AnimationController::addAnimationState(AnimationState *animationState) {
 void AnimationController::update() {
     if (_currentState == nullptr) {
         _currentState = _animationStates[0];
-        _player->switchAnimation(_currentState->getAnimation());
+  //      _player->switchAnimation(_currentState->getAnimation());
     }
     auto outgoingTransitions = _currentState->getOutgoingTransitions();
     for (auto transition : outgoingTransitions) {
@@ -29,11 +29,12 @@ void AnimationController::update() {
         }
     }
 
-    _player->update();
+//    _player->update();
 }
 
 std::vector<glm::mat4> AnimationController::getBoneMatrices() {
-
+    //return _player->getCurrentBoneMatrices();
+    return {};
 }
 
 std::optional<AnimationProperty> AnimationController::getProperty(const std::string &key) {
