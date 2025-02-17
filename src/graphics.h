@@ -10,6 +10,7 @@
 #include "glm/detail/type_quat.hpp"
 #include "assimp/scene.h"
 #include "../src/engine/game/game_model.h"
+#include "../src/engine/animation/Animation.h"
 
 #define GL_ERROR_EXIT(code)   auto err_##code = glGetError(); \
                         if (err_##code != 0) { \
@@ -82,21 +83,9 @@ private:
     Bitmap* bitmap = nullptr;
 };
 
-struct AnimationSample {
-    std::string jointName;
-    float time;
-    glm::quat rotation;
-    glm::vec3 translation;
-    glm::vec3 scale;
-};
 
-struct Animation {
-    std::string name;
-    float duration;
-    int frames;
-    std::map<std::string,std::vector<AnimationSample*>*> samplesPerJoint;
-    double ticksPerSecond;
-};
+
+
 
 struct Joint {
     std::string name;

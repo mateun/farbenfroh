@@ -32,5 +32,12 @@ add_executable(game WIN32
 
 )
 
+add_executable(animtest
+        src/imgui-build.cpp
+        src/unity.cpp
+        src/engine/animation/AnimationControllerTest.cpp
+)
+
 target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
+target_link_libraries(animtest dsound dxgi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
 #target_link_libraries(game vulkan-1)

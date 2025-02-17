@@ -6,6 +6,8 @@
 #define ANIMATIONSTATE_H
 
 
+class Animation;
+class AnimationBlender;
 
 /**
 * Represents the nodes in the animation state machine.

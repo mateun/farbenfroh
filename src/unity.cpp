@@ -15,7 +15,9 @@
 #include "engine/animation/CharacterController.cpp"
 #include "engine/animation/AnimationBlender.cpp"
 #include "engine/animation/AnimationState.cpp"
+#include "engine/animation/AnimationController.cpp"
 #include "engine/animation/AnimationTransition.cpp"
+
 
 //#include "../games/simple_king/king_main.cpp"
 

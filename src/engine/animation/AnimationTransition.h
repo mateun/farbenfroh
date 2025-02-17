@@ -5,8 +5,11 @@
 #ifndef ANIMATIONTRANSITION_H
 #define ANIMATIONTRANSITION_H
 
+#include <vector>
+
 class AnimationController;
 class TransitionConstraint;
+class AnimationState;
 
 /**
 * This class represents the transition between 2 animation states.
@@ -19,13 +22,17 @@ public:
     AnimationTransition(AnimationController* animationController, AnimationState* startState, AnimationState* endState);
     ~AnimationTransition();
     void addConstraint(TransitionConstraint* constraint);
+    bool evaluate();
+
+    void clearConstraints();
 
 
 private:
     std::vector<TransitionConstraint*> constraints;
     AnimationState * _endState = nullptr;
     AnimationState * _startState = nullptr;
-    AnimationController * _animationController = nullptr;
+    AnimationController * _animationController = nullptr
+;
 };
 
 enum class ConstraintOperator {
@@ -40,10 +47,8 @@ enum class ConstraintOperator {
 */
 class TransitionConstraint {
 public:
-    std::string key;
-    std::string stringValue;
-    float floatValue;
-    bool boolValue;
+    std::string propertyKey;
+    AnimationProperty property;
     ConstraintOperator constraintOperator;
 
 };

@@ -5,6 +5,12 @@
 #ifndef ANIMATIONCONTROLLER_H
 #define ANIMATIONCONTROLLER_H
 
+#include <map>
+#include <string>
+#include <optional>
+#include "AnimationProperty.h"
+
+
 
 /**
 * This class is inspired by the way how modern game engines treat
@@ -16,12 +22,13 @@
 */
 class AnimationController {
 
-  public:
+public:
     AnimationController();
+	std::optional<AnimationProperty> getProperty(const std::string& key);
+    void setProperty(const std::string key, AnimationProperty animationProperty);
 
-
-
-
+private:
+  std::map<std::string, AnimationProperty> properties;
 
 };
 
