@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <GL/glew.h>
 #include <engine/input/UpdateSwitcher.h>
 #include <engine/lighting/Light.h>
 #include <glm/glm.hpp>
@@ -16,6 +17,7 @@
                         if (err_##code != 0) { \
                             exit(code); \
                         }
+
 
 extern int scaled_width, scaled_height;
 class JsonElement;
@@ -620,7 +622,7 @@ struct GridData {
     Camera* camera = nullptr;
 };
 
-glm::vec3 lightDirection{0.6, -2, -0.5};
+//glm::vec3 lightDirection{0.6, -2, -0.5};
 
 /**
 * This holds everything we need to issue a physical draw call.
@@ -677,6 +679,7 @@ void scale(glm::vec3 val);
 void textScale(glm::vec2 val);
 void panUVS(glm::vec2 pan);
 void location(glm::vec3 loc);
+void rotation(glm::vec3 rot);
 void overrideAlpha(float val);
 void instanceOffsets(std::vector<glm::vec2> offsets);
 void bindTexture(Texture* tex);
@@ -800,6 +803,7 @@ public:
 
     glm::vec3 getForwardVector();
     glm::vec3 getRightVector();
+    glm::vec3 getVelocity();
 
     SceneNodeType type;
 
@@ -810,6 +814,7 @@ public:
     Shader* shader = nullptr;
 
     glm::vec3 location = glm::vec3(0);
+    glm::vec3 velocity = glm::vec3(0);
     glm::vec3 scale = glm::vec3(1.0f);
     glm::vec3 rotation = glm::vec3(0);
     glm::vec3 forward= {0, 0, -1};   // This is normally how we face when coming from Blender

@@ -79,6 +79,18 @@ struct GLDefaultObjects {
 };
 
 GLDefaultObjects* glDefaultObjects = nullptr;
+static glm::vec3 lightDirection{0.6, -2, -0.5};
+
+AABB getMovedABBByLocation(AABB sourceAABB, glm::vec3 location) {
+    AABB updatedAABB;
+    updatedAABB.minX = location.x + sourceAABB.minX;
+    updatedAABB.minY = location.y + sourceAABB.minY;
+    updatedAABB.minZ = location.z + sourceAABB.minZ;
+    updatedAABB.maxX = location.x + sourceAABB.maxX;
+    updatedAABB.maxY = location.y + sourceAABB.maxY;
+    updatedAABB.maxZ = location.z + sourceAABB.maxZ;
+    return updatedAABB;
+}
 
 /**
 * This is just an "empty" VAO as
@@ -3954,6 +3966,10 @@ void SceneNode::yaw(float degrees) {
 
 glm::vec3 SceneNode::getRightVector() {
     return right;
+}
+
+glm::vec3 SceneNode::getVelocity() {
+    return velocity;
 }
 
 glm::vec3 SceneNode::getForwardVector() {

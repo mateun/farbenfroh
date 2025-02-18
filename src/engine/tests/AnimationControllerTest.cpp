@@ -1,19 +1,42 @@
 //
 // Created by mgrus on 17.02.2025.
 //
+#include <Windows.h>
 #include <stdexcept>
+#include <engine/game/default_app.h>
 
-#include "AnimationController.h"
-#include "AnimationTransition.h"
-#include "AnimationProperty.h"
-#include "AnimationState.h"
-#include "Animation.h"
+#include "../../graphics.h"
+#include "../src/engine/animation/AnimationController.h"
+#include "../src/engine/animation/AnimationTransition.h"
+#include "../src/engine/animation/AnimationProperty.h"
+#include "../src/engine/animation/AnimationState.h"
+#include "../src/engine/animation/Animation.h"
 
-int main(int argc, const char * argv[]) {
 
+class AnimationTest : public DefaultApp {
+    void init() override;
+    void update() override {};
+    void render() override {};
+    std::vector<std::string> getAssetFolder() override {
+        return {"../src/engine/tests/assets/"};
+    };
+    bool shouldAutoImportAssets() override {
+        return true;
+    };
+
+};
+
+
+DefaultApp* getGame() {
+    return new AnimationTest();
+}
+
+void AnimationTest::init() {
+
+    DefaultApp::init();
     // Properties test
-    //Mesh* mesh = new Mesh();
-    auto animationController = new AnimationController();
+    Mesh* mesh = getMeshByName("test_skeletal_mesh");
+    auto animationController = new AnimationController(mesh);
     auto fooProp = animationController->getProperty("foo");
     if (fooProp.has_value()) {
         throw std::runtime_error("foo property exists but should not");
@@ -78,7 +101,13 @@ int main(int argc, const char * argv[]) {
     }
 
     // TODO test actual bone matrices
+    auto boneMatrices = animationController->getBoneMatrices();
+    if (boneMatrices.empty()) {
+        throw std::runtime_error("Failed getting bone matrices");
+    }
 
 
+    // Exit with zero, means succesful test.
+    exit(0);
 
 }

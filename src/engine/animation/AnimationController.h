@@ -26,7 +26,7 @@ class AnimationPlayer;
 class AnimationController {
 
 public:
-    AnimationController();
+    AnimationController(Mesh* mesh);
     ~AnimationController();
     void addAnimationState(AnimationState* animationState);
 
@@ -52,8 +52,8 @@ private:
     std::map<std::string, AnimationProperty> properties;
     AnimationState* _currentState = nullptr;
     std::vector<AnimationState*> _animationStates;
-    //AnimationPlayer* _player = nullptr;
-    //Mesh * _mesh = nullptr;
+    AnimationPlayer* _player = nullptr;
+    Mesh * _mesh = nullptr;
 };
 
 

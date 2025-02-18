@@ -70,16 +70,7 @@ bool pointInTri(glm::vec3 point, glm::vec3 A, glm::vec3 B, glm::vec3 C);
 
 glm::quat CalculateRotation(const glm::vec3& start, const glm::vec3& dest);
 
-AABB getMovedABBByLocation(AABB sourceAABB, glm::vec3 location) {
-    AABB updatedAABB;
-    updatedAABB.minX = location.x + sourceAABB.minX;
-    updatedAABB.minY = location.y + sourceAABB.minY;
-    updatedAABB.minZ = location.z + sourceAABB.minZ;
-    updatedAABB.maxX = location.x + sourceAABB.maxX;
-    updatedAABB.maxY = location.y + sourceAABB.maxY;
-    updatedAABB.maxZ = location.z + sourceAABB.maxZ;
-    return updatedAABB;
-}
+
 
 struct AABBCollisionResult {
     bool xCollision = false;

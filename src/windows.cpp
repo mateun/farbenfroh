@@ -1155,11 +1155,14 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     }
 
 
-    // Allocate a console and redirect stdout to
-    // this new console:
+
+#ifdef _WITH_CONSOLE
+    // Allocate a dedicated console and redirect stdout.
+    // Should only be done for debugging purposes, not in the final production build.
     AllocConsole();
     FILE* fp;
     freopen_s(&fp, "CONOUT$", "w", stdout);
+#endif
 
     // Window setup
     const char g_szClassName[] = "winClass";

@@ -67,15 +67,42 @@ void TestGame1::init() {
     walkPlayer = new AnimationPlayer(getMeshByName("human4_oriented")->findAnimation("walk"), getMeshByName("human4_oriented"));
     idlePlayer->play(true);
 
+    animationController = new AnimationController(getMeshByName("human4_oriented"));
+    auto idleState = new AnimationState(getMeshByName("human4_oriented")->findAnimation("idle"), "idle");
+    auto walkState = new AnimationState(getMeshByName("human4_oriented")->findAnimation("walk"), "walk");
+    animationController->addAnimationState(idleState);
+    animationController->addAnimationState(walkState);
+    auto idleWalkTrans = new AnimationTransition(animationController, idleState, walkState);
+    auto idleWalkConstraint = new TransitionConstraint();
+    idleWalkConstraint->propertyKey = "movementSpeed";
+    idleWalkConstraint->property.floatValue = 0.5;
+    idleWalkConstraint->property.propertyType = PropertyType::FLOAT;
+    idleWalkConstraint->constraintOperator = ConstraintOperator::GREATEREQUAL;
+    idleWalkTrans->addConstraint(idleWalkConstraint);
+
 }
 
 void TestGame1::update() {
     updateSwitcher->update();
 
     // Temp. implement animation switching here
-    idlePlayer->update();
-    playerNode->boneMatrices = idlePlayer->getCurrentBoneMatrices();
+    //idlePlayer->update();
+    //playerNode->boneMatrices = idlePlayer->getCurrentBoneMatrices();
+    animationController->update();
+    playerNode->boneMatrices = animationController->getBoneMatrices();
 
+    // A little test setup:
+    // We wait for 2 seconds, then we set the animation controller property
+    // to 1.0, expecting the transition from idle to walk to trigger.
+    // (which is set to trigger when the movmentSpeed is >= 0.5)
+    static float timePassed = 0;
+    timePassed += ftSeconds;
+    if (timePassed > 2.0) {
+        AnimationProperty prop;
+        prop.propertyType = PropertyType::FLOAT;
+        prop.floatValue = 1.0f;
+        animationController->setProperty("movementSpeed", prop);
+    }
     // end temp
 
 

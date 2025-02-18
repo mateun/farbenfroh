@@ -26,6 +26,7 @@ class TestGame1 : public DefaultApp {
     AnimationPlayer * walkPlayer = nullptr;
     SceneNode * playerNode = nullptr;
     Shader * skinnedShader = nullptr;
+    AnimationController * animationController = nullptr;
 };
 
 
