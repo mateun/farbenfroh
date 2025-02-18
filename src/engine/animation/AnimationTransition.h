@@ -24,7 +24,11 @@ public:
     void addConstraint(TransitionConstraint* constraint);
     bool evaluate();
 
+    void update();
+
     void clearConstraints();
+
+    void activate();
 
     AnimationState * getEndState();
     AnimationState * getStartState();
@@ -33,7 +37,10 @@ private:
     std::vector<TransitionConstraint*> constraints;
     AnimationState * _endState = nullptr;
     AnimationState * _startState = nullptr;
-    AnimationController * _animationController = nullptr
+    AnimationController * _animationController = nullptr;
+    float _durationInSeconds = 0.3f;
+    float _elapsedTime = 0;
+    bool _isActive = false;
 ;
 };
 

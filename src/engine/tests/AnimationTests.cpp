@@ -3,6 +3,8 @@
 //
 #include <Windows.h>
 #include <stdexcept>
+#include <engine/animation/BoneMatrixCalculator.h>
+#include <engine/animation/Pose.h>
 #include <engine/game/default_app.h>
 
 #include "../../graphics.h"
@@ -105,6 +107,35 @@ void AnimationTest::init() {
     if (boneMatrices.empty()) {
         throw std::runtime_error("Failed getting bone matrices");
     }
+
+    // Pose blending
+    Joint joint1;
+    joint1.translation = {1, 0, 0};
+    joint1.rotation = glm::quat({0, 2, 0});
+    Joint joint2;
+    joint2.translation = {0, 0, 0};
+    joint2.rotation = glm::quat({2, 0, 0});
+    Pose pose1;
+    pose1.joints.push_back(&joint1);
+
+
+    Pose pose2;
+    pose2.joints.push_back((&joint2));
+
+
+    Skeleton skeleton;
+    skeleton.joints.push_back(&joint1);
+
+
+    auto bmc = BoneMatrixCalculator();
+    Pose* blendedPose = bmc.calculateBlendedPose(&pose1, &pose2, &skeleton, 0.5, 1);
+    if (blendedPose->joints.size() != 1) {
+        throw std::runtime_error("Failed calculating blended bone matrix");
+    }
+    if (blendedPose->joints[0]->translation.x != 0.5) {
+        throw new std::runtime_error("Failed calculating blended bone translation");
+    }
+
 
 
     // Exit with zero, means succesful test.

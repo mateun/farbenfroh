@@ -23,4 +23,6 @@
 #include "../animation/AnimationState.cpp"
 #include "../animation/AnimationController.cpp"
 #include "../animation/AnimationTransition.cpp"
+#include "../animation/BoneMatrixCalculator.cpp"
+#include "../animation/Pose.cpp"
 

@@ -24,14 +24,23 @@ void AnimationController::update() {
         _player->play(true);    // TODO handle looping
 
     }
-    auto outgoingTransitions = _currentState->getOutgoingTransitions();
-    for (auto transition : outgoingTransitions) {
-        if (transition->evaluate()) {
-            _currentState = transition->getEndState();
-            _player->switchAnimation(_currentState->getAnimation());
-            _player->play(true);    // TODO handle looping
+
+    // Check if we need to go through a transition.
+    // Based on the current state, we check the first transition which evaluates to true,
+    // and set it as the current transition.
+    if (!_currentTransition) {
+        auto outgoingTransitions = _currentState->getOutgoingTransitions();
+        for (auto transition : outgoingTransitions) {
+            if (transition->evaluate()) {
+                _currentTransition = transition;
+                _currentState = transition->getEndState();
+                _player->switchAnimation(_currentState->getAnimation());
+                _player->play(true);    // TODO handle looping
+            }
         }
     }
+
+
     _player->update();
 }
 

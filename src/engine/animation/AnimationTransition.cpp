@@ -55,8 +55,21 @@ bool AnimationTransition::evaluate() {
     return true;
 }
 
+void AnimationTransition::update() {
+    if (_isActive) {
+        _elapsedTime += ftSeconds;
+        if (_elapsedTime < _durationInSeconds) {
+
+        }
+    }
+}
+
 void AnimationTransition::clearConstraints() {
     constraints.clear();
+}
+
+void AnimationTransition::activate() {
+    _isActive = true;
 }
 
 AnimationState * AnimationTransition::getEndState() {

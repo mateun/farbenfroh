@@ -49,10 +49,9 @@ void AnimationPlayer::update() {
 
     static float frameTime = 0;
     if (animation && playing) {
-        // animTime += (ftSeconds * 1000.0f);
-        // frameTime += (ftSeconds * 1000.0f);
 
         animTime += ftSeconds;
+
         if (looped) {
             animTime = fmod(animTime, animation->duration);
         } else {
@@ -61,10 +60,6 @@ void AnimationPlayer::update() {
                 playing = false;
             }
         }
-
-        //printf("animTime %f\n", animTime);
-
-
 
         boneMatrices.clear();
         for (auto j: mesh->skeleton->joints) {

@@ -38,7 +38,7 @@ add_executable(game WIN32
 add_executable(animtest WIN32
         src/imgui-build.cpp
         src/engine/tests/test_units.cpp
-        src/engine/tests/AnimationControllerTest.cpp
+        src/engine/tests/AnimationTests.cpp
 )
 
 target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)

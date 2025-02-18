@@ -51,6 +51,7 @@ public:
 private:
     std::map<std::string, AnimationProperty> properties;
     AnimationState* _currentState = nullptr;
+    AnimationTransition* _currentTransition = nullptr;
     std::vector<AnimationState*> _animationStates;
     AnimationPlayer* _player = nullptr;
     Mesh * _mesh = nullptr;
