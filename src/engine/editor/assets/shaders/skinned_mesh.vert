@@ -18,6 +18,7 @@ layout(location = 24) uniform mat4 u_BoneMatrices[100]; // All our bone global t
 out vec2 fs_uvs;
 out vec3 fs_normals;
 out vec4 fragPosLightSpace;
+out vec3 fragmentViewPos;
 
 void main() {
 
@@ -63,6 +64,8 @@ void main() {
      }
 
     fs_uvs = uvs;
+
+    fragmentViewPos = (mat_view * mat_world * skinnedPosition).xyz;
 
 
 }

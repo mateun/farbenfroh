@@ -120,7 +120,14 @@ namespace editor {
         static auto gridData = createGrid(100);
         gridData->camera = getMeshViewerCamera();
         gridData->color = glm::vec4(.5, .5, 0, 1);
-        drawGrid(gridData);
+        gridData->scale = 0.25f;
+        drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height});
+
+
+        wireframeOn(3.0f);
+        gridData->scale = 1.0f;
+        drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height});
+        wireframeOff();
 
 
 
@@ -129,22 +136,19 @@ namespace editor {
         {
 
 
-            // These 2 lines are good (necessary?) for avoiding z-fighting with the following wireframe mesh
-            glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(1.0f, 1.0f);
-
 
             // Basic directional light for the render
             Light* sun = new Light();
             sun->type = LightType::Directional;
-            sun->location = {-1, 5, 2};
+            sun->location = {-1, 5, 3};
             sun->lookAtTarget = {0, 0, 0};
             sun->castsShadow = false;
 
             // Draw the filled mesh
             MeshDrawData dd;
             dd.mesh = importedMesh;
-            dd.location = {-2, 0, 2};
+            dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height};
+            dd.location = {0, 0, 0};
             dd.camera = getMeshViewerCamera();
             dd.color = {0.9, 0.9, 0.9, 1};
             dd.directionalLight = sun;
@@ -158,11 +162,11 @@ namespace editor {
             } else {
                 dd.shader = staticMeshShader;
             }
-
-            //drawMesh(dd);
+            drawMesh(dd);
 
             // Now draw the wireframe version
             wireframeOn();
+            dd.color = glm::vec4(0, 0, 1, 1);
             drawMesh(dd);
             wireframeOff();
 
@@ -171,20 +175,18 @@ namespace editor {
         // Draw the skeleton if the mesh has one
         {
             if (importedMesh->skeleton) {
-
-
                 if (importedMesh->skeleton) {
                     for (auto j: importedMesh->skeleton->joints) {
                         auto finalTransform = j->globalTransform;
                         if (currentAnimation  && !animationPlaying) {
-                            finalTransform = animationPlayer->calculateFramePoseForJoint(currentAnimationFrame, j);
+                            finalTransform = animationPlayer->calculateInterpolatedGlobalMatrixForJoint(j);;
                         }
-
 
                         MeshDrawData dd;
                         dd.mesh = assetLoader->getMesh("bone_mesh");
                         dd.color = {0.7, 0.1, .1, 1};
                         dd.camera = getMeshViewerCamera();
+                        dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height};
                         dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
                         dd.worldTransform = finalTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
@@ -196,7 +198,7 @@ namespace editor {
         }
 
         // Rest to normal viewport:
-        glViewport(0, 0, window_width, window_height);
+        glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height);
 
         // Activate main framebuffer again:
         activateFrameBuffer(nullptr);
@@ -224,25 +226,27 @@ namespace editor {
                 ImGui::TableSetupColumn("Parent");
                 ImGui::TableHeadersRow();
 
+
                 for (auto j: importedMesh->skeleton->joints) {
 
                     ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0); // First column
+
+                    ImGui::TableNextColumn();
                     ImGui::Text("%s", j->name.c_str());
 
-                    ImGui::TableSetColumnIndex(1); // Second column
+                    ImGui::TableNextColumn();
                     float x = j->localTransform[3][0]; // Translation x
                     float y = j->localTransform[3][1]; // Translation y
                     float z = j->localTransform[3][2]; // Translation z
                     ImGui::Text("%f/%f/%f", x, y, z);
 
-                    ImGui::TableSetColumnIndex(2); // Second column
+                    ImGui::TableNextColumn();
                     float ibx = j->inverseBindMatrix[3][0]; // Translation x
                     float iby = j->inverseBindMatrix[3][1]; // Translation y
                     float ibz = j->inverseBindMatrix[3][2]; // Translation z
                     ImGui::Text("%f/%f/%f", ibx, iby, ibz);
 
-                    ImGui::TableSetColumnIndex(3);
+                    ImGui::TableNextColumn();
                     if (j->parent) {
                         ImGui::Text(j->parent->name.c_str());
                     } else {
@@ -255,22 +259,29 @@ namespace editor {
                 ImGui::EndTable();
             }
 
+
             // Render current animation details:
             if (currentAnimation ) {
-                ImGui::Text("# Frames: %d", currentAnimation->frames);
-                if (ImGui::BeginTable("anim_detail_table", 5)) {
+                int count = 0;
+                std::string lastJointName = "";
 
+                ImGui::Text("# Frames: %d", currentAnimation->frames);
+                if (ImGui::BeginTable("anim_detail_table_rotation", 4)) {
+                    ImGui::TableSetupColumn("#");
                     ImGui::TableSetupColumn("Time");
                     ImGui::TableSetupColumn("Joint");
-                    ImGui::TableSetupColumn("Translation", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableSetupColumn("Rotation", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableHeadersRow();
 
-
-                    for (auto pose: currentAnimation->samplesPerJoint) {
-
-                        for (auto sample: *pose.second) {
+                    for (auto sample: currentAnimation->findSamples(SampleType::rotation)) {
                             ImGui::TableNextRow();
+
+                            if (sample->jointName != lastJointName) {
+                                count = 0;
+                            }
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%d ", count++);
+
                             ImGui::TableNextColumn();
                             ImGui::Text("%f ", sample->time);
 
@@ -278,16 +289,43 @@ namespace editor {
                             ImGui::Text("%s", sample->jointName.c_str());
 
                             ImGui::TableNextColumn();
-                            ImGui::Text("%f/%f/%f", sample->translation.x, sample->translation.y, sample->translation.z);
-
-                            ImGui::TableNextColumn();
                             ImGui::Text("%f/%f/%f", sample->rotation.x, sample->rotation.y, sample->rotation.z);
 
-                        }
+                            lastJointName = sample->jointName;
 
 
                     }
 
+                    ImGui::EndTable();
+                }
+
+                if (ImGui::BeginTable("anim_detail_table_translation", 4)) {
+                    ImGui::TableSetupColumn("#");
+                    ImGui::TableSetupColumn("Time");
+                    ImGui::TableSetupColumn("Joint");
+                    ImGui::TableSetupColumn("Translation", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableHeadersRow();
+                    for (auto sample: currentAnimation->findSamples(SampleType::translation)) {
+                        ImGui::TableNextRow();
+
+                        if (sample->jointName != lastJointName) {
+                            count = 0;
+                        }
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%d ", count++);
+
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%f ", sample->time);
+
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%s", sample->jointName.c_str());
+
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%f/%f/%f", sample->translation.x, sample->translation.y, sample->translation.z);
+
+                        lastJointName = sample->jointName;
+
+                    }
                     ImGui::EndTable();
                 }
             }
@@ -749,8 +787,8 @@ namespace editor {
 
                 std::vector<std::string> joints;
                 // Iterate over the map and collect keys
-                for (const auto &pair: anim->samplesPerJoint) {
-                    joints.push_back(pair.first);
+                for (const auto &sample: anim->findSamples(SampleType::rotation)) {
+                    joints.push_back(sample->jointName);
                 }
 
 

@@ -11,7 +11,14 @@
 #include <glm\glm.hpp>
 #include "glm/detail/type_quat.hpp"
 
+enum class SampleType {
+    translation,
+    rotation,
+    scale
+};
+
 struct AnimationSample {
+    SampleType type;
     std::string jointName;
     float time;
     glm::quat rotation;
@@ -19,12 +26,40 @@ struct AnimationSample {
     glm::vec3 scale;
 };
 
-struct Animation {
+class SampleStore {
+public:
+    std::vector<AnimationSample*> findTranslationSamples(const std::string &jointName);
+    std::vector<AnimationSample*> findRotationSamples(const std::string &jointName);
+    std::vector<AnimationSample*> findScaleSamples(const std::string &jointName);
+
+    void store(AnimationSample * sample, const std::string& jointName);
+
+    std::vector<AnimationSample *> allTranslationSamples();
+    std::vector<AnimationSample *> allRotationSamples();
+    std::vector<AnimationSample *> allScaleSamples();
+
+private:
+    std::map<std::string,std::vector<AnimationSample*>> _translationSamples;
+    std::map<std::string,std::vector<AnimationSample*>> _rotationSamples;
+    std::map<std::string,std::vector<AnimationSample*>> _scaleSamples;
+};
+
+class Animation {
+
+public:
+    Animation();
+
+    void storeSample(AnimationSample* sample, const std::string& jointName);
+    std::vector<AnimationSample*> findSamples(SampleType sampleType);
+    std::vector<AnimationSample*> findSamples(const std::string& jointName, SampleType sampleType);
+
     std::string name;
     float duration;
     int frames;
-    std::map<std::string,std::vector<AnimationSample*>*> samplesPerJoint;
+    SampleStore* sampleStore = nullptr;
     double ticksPerSecond;
 };
+
+
 
 #endif //ANIMATION_H

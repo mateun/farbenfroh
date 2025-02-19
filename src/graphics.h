@@ -18,6 +18,11 @@
                             exit(code); \
                         }
 
+#define GL_ERROR_EXIT_INFO(code, info)   auto err_##code = glGetError(); \
+                                    if (err_##code != 0) { \
+                                        printf("GL error %d: \ncontext info: %s\n", err_##code, info.c_str()); \
+                                        exit(code); \
+                                    }
 
 extern int scaled_width, scaled_height;
 class JsonElement;
@@ -206,21 +211,32 @@ struct Camera {
 
     }
 
-    glm::mat4 getProjectionMatrix() {
+    glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) {
+
+        auto w = scaled_width;
+        auto h = scaled_height;
+        if (widthHeightOverride.has_value()) {
+            w = widthHeightOverride.value().x;
+            h = widthHeightOverride.value().y;
+        }
+
+        float fov = 50;
+        if (fovOverride.has_value()) {
+            fov = fovOverride.value();
+        }
+
         if (type == CameraType::Ortho) {
-            return glm::ortho<float>(0, scaled_width, 0, scaled_height, 0.1f, 200);
-        }else if (type == CameraType::OrthoGameplay) {
+            return glm::ortho<float>(0, w, 0, h, 0.1f, 200);
+        }
+
+        if (type == CameraType::OrthoGameplay) {
             return glm::ortho<float>(-10, 10, -8, 8, 0.1f, 400);
         }
-        else {
-             // if (glDefaultObjects->currentRenderState->renderToFrameBuffer != nullptr) {
-             //     return glm::perspectiveFov<float>(glm::radians(50.0f), glDefaultObjects->currentRenderState->renderToFrameBuffer->texture->bitmap->width, glDefaultObjects->currentRenderState->renderToFrameBuffer->texture->bitmap->height, 0.1f, 1000);
-             // } else {
-                 return glm::perspectiveFov<float>(glm::radians(50.0f), scaled_width, scaled_height, 0.1f, 1000);
-             // }
-         }
-    }
 
+        if (type == CameraType::Perspective) {
+            return glm::perspectiveFov<float>(glm::radians(fov), w, h, 0.1f, 1000);
+        }
+    }
 
 };
 
@@ -644,6 +660,7 @@ struct MeshDrawData {
     float uvScale = 1;
     bool depthTest = true;
     bool skinnedDraw = false;
+    std::optional<glm::ivec2> viewPortDimensions;
 };
 
 GridData* createGrid(int lines = 100);
@@ -662,7 +679,7 @@ void drawSkybox();
 void drawMeshSimple();
 void drawMeshInstanced(int num);
 void drawParticleEffect(bool instancedRender = false);
-void drawGrid(GridData* gridData = {}, bool blurred = false);
+void drawGrid(GridData* gridData = {}, glm::ivec2 viewPortDimensions = glm::ivec2{scaled_width, scaled_height}, bool blurred = false);
 void drawBitmap(int x, int y, uint8_t* bitmapPixels);
 glm::mat4 getWorldMatrixFromGlobalState();
 Texture* createTextureFromFile(const std::string& fileName, ColorFormat colorFormat = ColorFormat::RGBA, ColorFormat internalColorFormat = ColorFormat::RGBA);
@@ -704,7 +721,7 @@ void lightingOff();
 void shadowOff();
 void shadowOn();
 [[Deprecated]]
-void wireframeOn();
+void wireframeOn(float lineWidth = 2.0f);
 void wireframeOff();
 void deferredStart();
 void deferredEnd();

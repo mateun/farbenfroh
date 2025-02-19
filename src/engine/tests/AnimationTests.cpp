@@ -136,7 +136,10 @@ void AnimationTest::init() {
         throw new std::runtime_error("Failed calculating blended bone translation");
     }
 
-
+    auto finalMatrices = bmc.calculateFinalSkinMatrices(blendedPose);
+    if (finalMatrices.size() != 1) {
+        throw std::runtime_error("Failed calculating blended bone final matrix");
+    }
 
     // Exit with zero, means succesful test.
     exit(0);

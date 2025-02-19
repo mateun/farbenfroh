@@ -9,6 +9,7 @@ layout(location = 8) uniform mat4 mat_projection;
 
 
 out vec3 fs_normals;
+out vec3 fragmentViewPos;
 
 
 void main() {
@@ -18,6 +19,8 @@ void main() {
     vec3 nn = normalize(normals.xyz);
     vec4 normals_transformed = inverse(transpose(mat_world)) * vec4(nn, 1);
     fs_normals = normalize(normals_transformed.xyz);
+
+    fragmentViewPos = (mat_view * mat_world * vec4(pos,1)).xyz;
 
 
 }

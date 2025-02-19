@@ -5,8 +5,8 @@
 #include "BoneMatrixCalculator.h"
 #include "Pose.h"
 
-int getSampleIndex(Animation* animation, const std::string& jointName, float animationTime) {
-    auto allSamples = *animation->samplesPerJoint[jointName];
+int getRotationSampleIndex(Animation* animation, const std::string& jointName, float animationTime) {
+    auto allSamples = animation->findSamples(jointName, SampleType::rotation);
     for (int i = 0; i< allSamples.size()-1; ++i) {
         if (animationTime < allSamples[i + 1]->time) {
             return i;
@@ -22,22 +22,23 @@ Pose* BoneMatrixCalculator::calculatePose(Animation *animation, Skeleton *skelet
 
     for (auto j: skeleton->joints) {
 
-            auto jointSamples = animation->samplesPerJoint[j->name];
-            if (jointSamples) {
+            // TODO adapt to separate rotation and translation samples!! See <class>AnimationPlayer</class>!
+            auto jointSamples = animation->findSamples(j->name, SampleType::rotation);
+            if (!jointSamples.empty()) {
 
-                auto fromSampleIndex = getSampleIndex(animation, j->name, animationTime);
+                auto fromSampleIndex = getRotationSampleIndex(animation, j->name, animationTime);
                 //printf("fromSampleIndex: %d\n", fromSampleIndex);
                 if (fromSampleIndex == -1) {
                     exit(8567);
                 }
                 auto toSampleIndex = fromSampleIndex + 1;
-                if (toSampleIndex >= jointSamples->size()) {
+                if (toSampleIndex >= jointSamples.size()) {
                     toSampleIndex = 0;
                 }
 
                 if (toSampleIndex > fromSampleIndex) {
-                    auto fromSample = (*jointSamples)[fromSampleIndex];
-                    auto toSample = (*jointSamples)[toSampleIndex];
+                    auto fromSample = jointSamples[fromSampleIndex];
+                    auto toSample = jointSamples[toSampleIndex];
                     float scaleFactor = ((float) animationTime - fromSample->time ) / (float) (toSample->time - fromSample->time);
                     //printf("scalefactor: %f\n", scaleFactor);
                     auto interpTranslation = glm::mix(fromSample->translation, toSample->translation, scaleFactor);

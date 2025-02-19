@@ -1907,7 +1907,7 @@ void drawMesh(const MeshDrawData &drawData) {
 
         }
         drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
-        drawData.shader->setMat4Value(drawData.camera->getProjectionMatrix(), "mat_projection");
+        drawData.shader->setMat4Value(drawData.camera->getProjectionMatrix(drawData.viewPortDimensions), "mat_projection");
 
     }
 
@@ -2145,7 +2145,7 @@ GLuint createGridVAO(int numLines) {
     return vao;
 }
 
-void drawGrid(GridData* gridData, bool blurred) {
+void drawGrid(GridData* gridData, glm::ivec2 viewPortDimensions, bool blurred) {
 
     glBindVertexArray(gridData->vao);
     bindShader(glDefaultObjects->gridShader);
@@ -2163,7 +2163,7 @@ void drawGrid(GridData* gridData, bool blurred) {
 
     glDefaultObjects->gridShader->setMat4Value(matworld, "mat_world");
     glDefaultObjects->gridShader->setMat4Value(gridData->camera->getViewMatrix(), "mat_view");
-    glDefaultObjects->gridShader->setMat4Value(gridData->camera->getProjectionMatrix(), "mat_projection");
+    glDefaultObjects->gridShader->setMat4Value(gridData->camera->getProjectionMatrix(viewPortDimensions), "mat_projection");
     glDefaultObjects->gridShader->setVec4Value(gridData->color, "singleColor");
 
     if (blurred) {
@@ -3533,23 +3533,11 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
 
     for (int c = 0; c < aiAnim->mNumChannels; c++) {
         auto channel = aiAnim->mChannels[c];
-        auto sampleList = animation->samplesPerJoint[channel->mNodeName.C_Str()];
-        if (sampleList == nullptr) {
-            sampleList = new std::vector<AnimationSample*>();
-            animation->samplesPerJoint[channel->mNodeName.C_Str()] = sampleList;
-
-        }
-
-        if (channel->mNumRotationKeys != channel->mNumRotationKeys) {
-            exit(4);
-        }
-
-        animation->frames = channel->mNumRotationKeys;
-
-
+        auto jointName = channel->mNodeName.C_Str();
 
         for (int rk = 0; rk < channel->mNumRotationKeys; rk++) {
             auto sample = new AnimationSample();
+            sample->type = SampleType::rotation;
             auto rotKey = channel->mRotationKeys[rk];
             sample->time = rotKey.mTime / aiAnim->mTicksPerSecond;
             sample->jointName = channel->mNodeName.C_Str();
@@ -3557,17 +3545,19 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
 
             auto rot = assimpQuatToGLM(rotKey.mValue);
             sample->rotation = rot;
-            sampleList->push_back(sample);
+            animation->storeSample(sample, jointName);
+
         }
 
-        for (int pk = 0; pk < aiAnim->mChannels[c]->mNumPositionKeys; pk++) {
-            auto sample = (*sampleList)[pk];
+        for (int pk = 0; pk < channel->mNumPositionKeys; pk++) {
+            auto sample = new AnimationSample();
+            sample->type = SampleType::translation;
+            sample->jointName = channel->mNodeName.C_Str();
             auto posKey = channel->mPositionKeys[pk];
             sample->time = posKey.mTime / aiAnim->mTicksPerSecond;
-
             glm::vec3 pos =  {posKey.mValue.x, posKey.mValue.y, posKey.mValue.z};
             sample->translation= pos;
-
+            animation->storeSample(sample, jointName);
         }
 
     }
@@ -3579,8 +3569,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
     Assimp::Importer importer;
     auto scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights | aiProcess_CalcTangentSpace);
     if (!scene) {
-        printf("error during assimp scene load. ");
-        exit(1);
+        throw new std::runtime_error("error during assimp scene load. ");
     }
 
     // Import animations
@@ -4219,9 +4208,11 @@ void setBoneMatrices(std::vector<glm::mat4> boneMatrices) {
 }
 
 [[Deprecated]]
-void wireframeOn() {
-    glLineWidth(3.0f);
+void wireframeOn(float lineWidth) {
+    glLineWidth(lineWidth);
+    glPolygonOffset(1, 1);
     glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    glEnable(GL_POLYGON_OFFSET_FILL);
 
 
 
@@ -4440,21 +4431,28 @@ void Shader::setFloatValue(float val, const std::string &name) {
 
 void Shader::setVec3Value(glm::vec<3, float> vec, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
+#ifdef _STRICT_SHADER_LOCATION_
     if (loc == -1) throw std::runtime_error("Could not get uniform location");
+#endif
     glUniform3f(loc, vec.x, vec.y, vec.z);
     GL_ERROR_EXIT(443);
 }
 
 void Shader::setMat4Value(glm::mat4 mat, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
+#ifdef _STRICT_SHADER_LOCATION_
     if (loc == -1) throw std::runtime_error("Could not get uniform location");
+#endif
     glUniformMatrix4fv(loc,1,  GL_FALSE, glm::value_ptr(mat));
-    GL_ERROR_EXIT(444);
+    std::string errorInfo = name + " loc: " + std::to_string(loc);
+    GL_ERROR_EXIT_INFO(444, errorInfo);
 }
 
 void Shader::setMat4Array(const std::vector<glm::mat4> mats, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
+#ifdef _STRICT_SHADER_LOCATION_
     if (loc == -1) throw std::runtime_error("Could not get uniform location");
+#endif
     glUniformMatrix4fv(loc,mats.size(),  GL_FALSE, value_ptr(mats[0]));
     GL_ERROR_EXIT(445);
 }
@@ -4519,6 +4517,7 @@ void Shader::initFromFiles(const std::string &vertFile, const std::string &fragF
         std::vector<GLchar> infoLog(maxLength);
         glGetProgramInfoLog(p, maxLength, &maxLength, &infoLog[0]);
         OutputDebugStringA(infoLog.data());
+        printf("shader linking error: %s", infoLog.data());
         glDeleteProgram(p);
         glDeleteShader(vshader);
         glDeleteShader(fshader);

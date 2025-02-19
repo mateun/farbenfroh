@@ -3,6 +3,7 @@
 //
 
 #include "AnimationPlayer.h"
+#include "Animation.h"
 #include "../../graphics.h"
 
 AnimationPlayer::AnimationPlayer(Animation *animation, Mesh* mesh) : animation(animation), mesh(mesh) {
@@ -30,19 +31,70 @@ void AnimationPlayer::setMesh(Mesh* mesh) {
     this->mesh = mesh;
 }
 
-int AnimationPlayer::getRotationIndex(const std::string& jointName) {
-    auto allSamples = *animation->samplesPerJoint[jointName];
+int AnimationPlayer::getRotationIndexForTime(const std::string& jointName, float time) {
+    auto allRotationSamples = animation->findSamples(jointName, SampleType::rotation);
+    for (int i = 0; i< allRotationSamples.size()-1; ++i) {
+        if (time < allRotationSamples[i + 1]->time) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int AnimationPlayer::getTranslationIndexForTime(const std::string& jointName, float time) {
+    auto allSamples = animation->findSamples(jointName, SampleType::translation);
     for (int i = 0; i< allSamples.size()-1; ++i) {
         if (animTime < allSamples[i + 1]->time) {
             return i;
         }
-
     }
     return -1;
 }
 
 std::vector<glm::mat4> AnimationPlayer::getCurrentBoneMatrices() {
     return boneMatrices;
+}
+
+glm::mat4 AnimationPlayer::calculateInterpolatedGlobalMatrixForJoint(Joint* j) {
+    if (!animation) {
+        return glm::mat4();
+    }
+    auto rotationSamples = animation->findSamples(j->name, SampleType::rotation);
+    auto translationSamples = animation->findSamples(j->name, SampleType::translation);
+    glm::quat interpolatedRotation;
+    auto interpolatedTranslation = glm::vec3(0);
+
+    if (!rotationSamples.empty()) {
+        auto fromRotationSampleIndex = getRotationIndexForTime(j->name, animTime);
+        auto toSampleIndex = fromRotationSampleIndex + 1;
+        if (toSampleIndex >= rotationSamples.size()) {
+            toSampleIndex = 0;
+        }
+
+        auto fromRotationSample = rotationSamples[fromRotationSampleIndex];
+        auto toRotationSample = rotationSamples[toSampleIndex];
+        float rotationBlendFactor = ((float) animTime - fromRotationSample->time ) / (float) (toRotationSample->time - fromRotationSample->time);
+        interpolatedRotation = glm::slerp(fromRotationSample->rotation, toRotationSample->rotation, rotationBlendFactor);
+    }
+
+    if (!translationSamples.empty()) {
+        auto fromTranslationSampleIndex = getTranslationIndexForTime(j->name, animTime);
+        auto toTranslationSampleIndex = fromTranslationSampleIndex + 1;
+        if (toTranslationSampleIndex >= translationSamples.size()) {
+            toTranslationSampleIndex = 0;
+        }
+        auto fromTranslationSample = translationSamples[fromTranslationSampleIndex];
+        auto toTranslationSample = translationSamples[toTranslationSampleIndex];
+        float translationBlendFactor = ((float) animTime - fromTranslationSample->time ) / (float) (toTranslationSample->time - fromTranslationSample->time);
+        interpolatedTranslation = mix(fromTranslationSample->translation, toTranslationSample->translation, translationBlendFactor);
+
+    }
+
+    j->localTransform = translate(glm::mat4(1), interpolatedTranslation) *
+                            toMat4(interpolatedRotation);
+    j->globalTransform = calculateWorldTransform(j, j->localTransform);
+
+    return j->globalTransform;
 }
 
 void AnimationPlayer::update() {
@@ -64,38 +116,18 @@ void AnimationPlayer::update() {
         boneMatrices.clear();
         for (auto j: mesh->skeleton->joints) {
             if (animation) {
-
-                auto jointSamples = animation->samplesPerJoint[j->name];
-                if (jointSamples) {
-
-                    auto fromSampleIndex = getRotationIndex(j->name);
-                    //printf("fromSampleIndex: %d\n", fromSampleIndex);
-                    if (fromSampleIndex == -1) {
-                        exit(8567);
-                    }
-                    auto toSampleIndex = fromSampleIndex + 1;
-                    if (toSampleIndex >= jointSamples->size()) {
-                        toSampleIndex = 0;
-                    }
-
-                    if (toSampleIndex > fromSampleIndex) {
-                        auto fromSample = (*jointSamples)[fromSampleIndex];
-                        auto toSample = (*jointSamples)[toSampleIndex];
-                        float scaleFactor = ((float) animTime - fromSample->time ) / (float) (toSample->time - fromSample->time);
-                        //printf("scalefactor: %f\n", scaleFactor);
-                        auto interpTranslation = glm::mix(fromSample->translation, toSample->translation, scaleFactor);
-                        auto interpRotation = glm::slerp(fromSample->rotation, toSample->rotation, scaleFactor);
-
-                        j->localTransform = glm::translate(glm::mat4(1), interpTranslation) *
-                                            glm::toMat4(interpRotation);
-                        j->globalTransform = calculateWorldTransform(j, j->localTransform);
-                        j->finalTransform = j->globalTransform * j->inverseBindMatrix;
-                    }
-                }
+                j->globalTransform = calculateInterpolatedGlobalMatrixForJoint(j);
+                j->finalTransform = j->globalTransform * j->inverseBindMatrix;
             }
             boneMatrices.push_back(j->finalTransform);
         }
     }
+}
+
+glm::mat4 AnimationPlayer::calculateInterpolatedFramePose(Joint* joint) {
+    calculateInterpolatedGlobalMatrixForJoint(joint);
+    joint->finalTransform = joint->globalTransform * joint->inverseBindMatrix;
+    return joint->finalTransform;
 }
 
 
@@ -104,11 +136,12 @@ void AnimationPlayer::update() {
 * The final transform will be returned as the result.
 */
 glm::mat4 AnimationPlayer::calculateFramePoseForJoint(int frame, Joint* joint) {
-    auto jointSamples = animation->samplesPerJoint[joint->name];
+    auto rotationJointSamples = animation->findSamples(joint->name, SampleType::rotation);
+    auto translationJointSamples = animation->findSamples(joint->name, SampleType::translation);
 
-    if (jointSamples && jointSamples->size() > frame ) {
+    if (rotationJointSamples.size() > frame ) {
 
-        auto sample = (*jointSamples)[frame];
+        auto sample = rotationJointSamples[frame];
         auto localTransform = glm::translate(glm::mat4(1), sample->translation) *
                             glm::toMat4(sample->rotation) ;
         auto globalTransform  = calculateWorldTransform(joint, localTransform);
@@ -127,13 +160,13 @@ void AnimationPlayer::calculateFramePose(int frame) {
     std::vector<glm::mat4> boneMatrices;
     for (auto j: mesh->skeleton->joints) {
         if (animation) {
-            auto jointSamples = animation->samplesPerJoint[j->name];
-            if (jointSamples &&
-                jointSamples->size() > currentFrame) {
+            auto rotationJointSamples = animation->findSamples(j->name, SampleType::rotation);
+            if (
+                rotationJointSamples.size() > currentFrame) {
 
-                auto sampleIndex = getRotationIndex(j->name);
+                auto sampleIndex = getRotationIndexForTime(j->name, animTime);
 
-                auto sample = (*jointSamples)[sampleIndex];
+                auto sample = rotationJointSamples[sampleIndex];
                 j->localTransform = glm::translate(glm::mat4(1), sample->translation) *
                                     glm::toMat4(sample->rotation) ;
                 j->globalTransform = calculateWorldTransform(j, j->localTransform);
