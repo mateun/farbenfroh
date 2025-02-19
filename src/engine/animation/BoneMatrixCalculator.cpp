@@ -5,8 +5,8 @@
 #include "BoneMatrixCalculator.h"
 #include "Pose.h"
 
-int getRotationSampleIndex(Animation* animation, const std::string& jointName, float animationTime) {
-    auto allSamples = animation->findSamples(jointName, SampleType::rotation);
+int getSampleIndex(Animation* animation, const std::string& jointName, float animationTime, SampleType sampleType) {
+    auto allSamples = animation->findSamples(jointName, sampleType);
     for (int i = 0; i< allSamples.size()-1; ++i) {
         if (animationTime < allSamples[i + 1]->time) {
             return i;
@@ -17,7 +17,60 @@ int getRotationSampleIndex(Animation* animation, const std::string& jointName, f
 }
 
 
-Pose* BoneMatrixCalculator::calculatePose(Animation *animation, Skeleton *skeleton, float animationTime) {
+
+Pose *BoneMatrixCalculator::calculatePose(Animation *animation, Skeleton *skeleton, float animTime) {
+    Pose* pose = new Pose();
+
+    for (auto j: skeleton->joints) {
+        auto rotationSamples = animation->findSamples(j->name, SampleType::rotation);
+        auto translationSamples = animation->findSamples(j->name, SampleType::translation);
+        glm::quat interpolatedRotation;
+        auto interpolatedTranslation = glm::vec3(0);
+
+        if (!rotationSamples.empty()) {
+            auto fromRotationSampleIndex = getSampleIndex(animation, j->name, animTime, SampleType::rotation);
+            auto toSampleIndex = fromRotationSampleIndex + 1;
+            if (toSampleIndex >= rotationSamples.size()) {
+                toSampleIndex = 0;
+            }
+
+            auto fromRotationSample = rotationSamples[fromRotationSampleIndex];
+            auto toRotationSample = rotationSamples[toSampleIndex];
+            float rotationBlendFactor = ((float) animTime - fromRotationSample->time ) / (float) (toRotationSample->time - fromRotationSample->time);
+            interpolatedRotation = glm::slerp(fromRotationSample->rotation, toRotationSample->rotation, rotationBlendFactor);
+        }
+
+        if (!translationSamples.empty()) {
+            auto fromTranslationSampleIndex = getSampleIndex(animation, j->name, animTime, SampleType::translation);
+            auto toTranslationSampleIndex = fromTranslationSampleIndex + 1;
+            if (toTranslationSampleIndex >= translationSamples.size()) {
+                toTranslationSampleIndex = 0;
+            }
+            auto fromTranslationSample = translationSamples[fromTranslationSampleIndex];
+            auto toTranslationSample = translationSamples[toTranslationSampleIndex];
+            float translationBlendFactor = ((float) animTime - fromTranslationSample->time ) / (float) (toTranslationSample->time - fromTranslationSample->time);
+            interpolatedTranslation = mix(fromTranslationSample->translation, toTranslationSample->translation, translationBlendFactor);
+
+        }
+
+        auto localTransform = translate(glm::mat4(1), interpolatedTranslation) *
+                                toMat4(interpolatedRotation);
+        //j->globalTransform = calculateWorldTransform(j, j->localTransform);
+        //j->finalTransform = j->globalTransform * j->inverseBindMatrix;
+        Joint* newJoint = new Joint();
+        newJoint->name = j->name;
+        newJoint->translation = interpolatedTranslation;
+        newJoint->rotation = interpolatedRotation;
+        newJoint->localTransform = localTransform;
+        pose->joints.push_back(newJoint);
+
+    }
+    return pose;
+}
+
+
+/*
+Pose* BoneMatrixCalculator::calculatePose_(Animation *animation, Skeleton *skeleton, float animationTime) {
     Pose* pose = new Pose();
 
     for (auto j: skeleton->joints) {
@@ -60,6 +113,7 @@ Pose* BoneMatrixCalculator::calculatePose(Animation *animation, Skeleton *skelet
         }
     return pose;
 }
+*/
 
 Pose* BoneMatrixCalculator::calculateBlendedPose(Pose *pose1, Pose *pose2, Skeleton* skeleton,
     float elapsedTime, float blendDuration) {

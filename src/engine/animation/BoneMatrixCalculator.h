@@ -29,6 +29,9 @@ public:
     */
     Pose* calculateBlendedPose(Pose* pose1, Pose* pose2, Skeleton* skeleton, float elapsedTime, float blendDuration);
 
+
+
+
     /**
     * Calculates the skinning matrices for each joint of the given pose:
     * final = global * inverseBind
