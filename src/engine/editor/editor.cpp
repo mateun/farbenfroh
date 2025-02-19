@@ -726,6 +726,7 @@ namespace editor {
 
     void Editor::drawAnimationTimeline() {
 
+#ifdef _IMGUI_TIMELINE
         ImGui::BeginChild("Toolbar", ImVec2(ImGui::GetIO().DisplaySize.x, 40),
                           ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
         float toolbarHeight = 40;
@@ -752,12 +753,6 @@ namespace editor {
         }
 
 
-        // Horizontal lines
-//        for (float y = fmodf(0, GRID_SZ); y < canvas_sz.y; y += GRID_SZ) {
-//            auto s = ImVec2(0 + win_pos.x, y+ win_pos.y);
-//            auto e = ImVec2( canvas_sz.x+ win_pos.x, y + win_pos.y);
-//            draw_list->AddLine(s,e, GRID_COLOR);
-//        }
 
         // Draw line numbers as text
         for (int x = 0; x < 20; x++) {
@@ -767,7 +762,7 @@ namespace editor {
 
         ImGui::EndChild();
         // Close the toolbar window
-
+#endif
 
         ImGui::Text("Animations");
         ImGui::Text("Current Active animation: %s",
@@ -824,10 +819,23 @@ namespace editor {
                     currentAnimation = nullptr;
                     currentAnimationFrame = 0;
                 }
-                // Draw samples into timeline
-//            for (auto s : anim->samples) {
-//                draw_list->AddCircle({ (s->time/2) + beginTimeLineX, sampleOffsetY + win_pos.y + (toolbarHeight)}, 8, GRID_COLOR, 4);
-//            }
+
+                ImGui::SameLine();
+                static float nextTimeStamp = 0.0f;
+                ImGui::PushItemWidth(50);
+                if (ImGui::InputFloat("##nextTimeStamp", &nextTimeStamp)) {
+                    printf("entered nextTimeStamp: %f\n", nextTimeStamp);
+                }
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                if (ImGui::Button("Jump to timestamp")) {
+                    printf("jumping to nextTimeStamp: %f\n", nextTimeStamp);
+                    animationPlayer->switchAnimation(nullptr);
+                    animationPlayer->stop();
+                    currentAnimation = nullptr;
+                    currentAnimationFrame = 0;
+                }
+
             }
         }
 
