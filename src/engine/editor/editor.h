@@ -47,6 +47,9 @@ namespace editor {
     private:
         void drawAnimationTimeline();
         void drawTopToolbar();
+
+        void drawAnimationOverview();
+
         void ShowGameEditor();
         void recurseRenderGameObjects(GameObject *parent);
         void renderMainMenu();

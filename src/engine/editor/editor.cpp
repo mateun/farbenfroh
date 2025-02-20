@@ -720,7 +720,8 @@ namespace editor {
         ImGui::End();
 
         ImGui::Begin("Animations");
-        drawAnimationTimeline();
+        drawAnimationOverview();
+        //drawAnimationTimeline();
         ImGui::End();
 
         renderMeshViewerExt();
@@ -738,6 +739,35 @@ namespace editor {
         }
         ImGui::SetWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, toolbarHeight));  // Full window width, height of 50
         ImGui::End();
+    }
+
+    void Editor::drawAnimationOverview() {
+        static auto texture = createEmptyTexture(512, 512);
+        auto pixels = texture->bitmap->pixels;
+        int offset = 0;
+        for (int y = 0; y < 512; y++) {
+            for (int x = 0; x < 512; x++) {
+                int pixelCoord = (y * 512 * 4) + (x*4);
+                pixels[pixelCoord + 0] = 25;
+                pixels[pixelCoord + 1] = 0;
+                pixels[pixelCoord + 2] = 0;
+                pixels[pixelCoord + 3] = 255;
+            }
+        }
+
+        updateTexture(512, 512, texture);
+
+
+        ImGui::Image(reinterpret_cast<ImTextureID>(texture->handle),
+                            {(float) texture->bitmap->width ,
+                             (float) texture->bitmap->height },
+                            {0, 1}, {1, 0});
+
+
+
+
+
+
     }
 
     void Editor::drawAnimationTimeline() {
@@ -805,6 +835,7 @@ namespace editor {
 
                 sampleOffsetY += 16;
                 ImGui::Text("Name: %s Duration: %f", anim->name.c_str(), anim->duration);
+
                 ImGui::SameLine();
                 if (ImGui::Button("<")) {
                     if (currentAnimationFrame > 0) {

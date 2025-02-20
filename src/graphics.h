@@ -753,6 +753,7 @@ glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera
 
 Texture* createEmptyTexture(int w, int h);
 Texture* createTextTexture(int w, int h);
+void updateTexture(int w, int h, Texture* texture);
 Mesh* loadMeshFromFile(const std::string& fileName);
 Result createShader(const std::string& vsrc, const std::string& fsrc, Shader* target);
 Result createComputeShader(const std::string& source, Shader* target);

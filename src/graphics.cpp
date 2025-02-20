@@ -4252,11 +4252,11 @@ void CameraMover::update() {
     // TODO: instead of directly using specific bindings, we could let us inject the actual
     // values for yaw, pitch etc. from the consumer.
     // Alternative: use a keybinding map injected from outside.
-    if (isKeyDown('E') || isKeyDown(VK_RIGHT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.4) {
+    if (isKeyDown('E') || getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.4) {
         yaw = -1;
     }
 
-    if (isKeyDown('Q') || isKeyDown(VK_LEFT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.4) {
+    if (isKeyDown('Q') || getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.4) {
         yaw = 1;
     }
 
