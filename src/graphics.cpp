@@ -2647,8 +2647,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 
         }
 
-        joint->localTransform = joint->modelTranslation * joint->modelRotation;
-        joint->globalTransform = parent ? (parent->globalTransform * joint->localTransform) : joint->localTransform;
+        joint->currentPoseLocalTransform = joint->modelTranslation * joint->modelRotation;
+        joint->currentPoseGlobalTransform = parent ? (parent->currentPoseGlobalTransform * joint->currentPoseLocalTransform) : joint->currentPoseLocalTransform;
 
         auto children = findByMemberName(childNode, "children");
         if (children) {
@@ -3484,10 +3484,19 @@ const aiNode* FindNodeByName(const aiNode* node, const std::string& name) {
     return nullptr; // Node not found
 }
 
+glm::mat4 calculateBindPoseWorldTransform(Joint* j, glm::mat4 currentTransform) {
+    if (j->parent) {
+        currentTransform = j->parent->bindPoseLocalTransform * currentTransform;
+        return calculateBindPoseWorldTransform(j->parent, currentTransform);
+    }
+
+    return currentTransform;
+}
+
 // Recursively multiplies the current transform with the parents transform:
 glm::mat4 calculateWorldTransform(Joint* j, glm::mat4 currentTransform) {
     if (j->parent) {
-        currentTransform = j->parent->localTransform * currentTransform;
+        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
         return calculateWorldTransform(j->parent, currentTransform);
     }
 
@@ -3498,7 +3507,7 @@ glm::mat4 calculateWorldTransform(Joint* j, glm::mat4 currentTransform) {
 // Recursively multiplies the current transform with the parents transform:
 glm::mat4 calculateWorldTransformForFrame(Joint* j, glm::mat4 currentTransform, int frame) {
     if (j->parent) {
-        currentTransform = j->parent->localTransform * currentTransform;
+        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
         return calculateWorldTransform(j->parent, currentTransform);
     }
 
@@ -3572,12 +3581,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
         throw new std::runtime_error("error during assimp scene load. ");
     }
 
-    // Import animations
-    std::vector<Animation*> animations;
-    for (int i = 0; i < scene->mNumAnimations; i++ ) {
-        auto aiAnim = scene->mAnimations[i];
-        animations.push_back(aiAnimToAnimation(aiAnim));
-    }
+    auto animations = importAnimationsInternal(scene);
 
     if (scene->mNumMeshes == 0) {
         return nullptr;
@@ -3663,9 +3667,9 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
             }
 
             joint->inverseBindMatrix = convertAiMatrixToGlm(bone->mOffsetMatrix);
-            joint->localTransform = convertAiMatrixToGlm(boneNode->mTransformation);
-            joint->globalTransform = calculateWorldTransform(joint, joint->localTransform);
-            joint->finalTransform = joint->globalTransform * joint->inverseBindMatrix ;
+            joint->bindPoseLocalTransform = convertAiMatrixToGlm(boneNode->mTransformation);
+            joint->bindPoseGlobalTransform = calculateBindPoseWorldTransform(joint, joint->bindPoseLocalTransform);
+            joint->bindPoseFinalTransform = joint->bindPoseGlobalTransform * joint->inverseBindMatrix ;
 
             // One joint can influence many vertices, but any vertex can only be influenced by
             // maximum 4 joints.

@@ -90,11 +90,11 @@ glm::mat4 AnimationPlayer::calculateInterpolatedGlobalMatrixForJoint(Joint* j) {
 
     }
 
-    j->localTransform = translate(glm::mat4(1), interpolatedTranslation) *
+    j->currentPoseLocalTransform = translate(glm::mat4(1), interpolatedTranslation) *
                             toMat4(interpolatedRotation);
-    j->globalTransform = calculateWorldTransform(j, j->localTransform);
+    j->currentPoseGlobalTransform = calculateWorldTransform(j, j->currentPoseLocalTransform);
 
-    return j->globalTransform;
+    return j->currentPoseGlobalTransform;
 }
 
 void AnimationPlayer::update() {
@@ -116,18 +116,18 @@ void AnimationPlayer::update() {
         boneMatrices.clear();
         for (auto j: mesh->skeleton->joints) {
             if (animation) {
-                j->globalTransform = calculateInterpolatedGlobalMatrixForJoint(j);
-                j->finalTransform = j->globalTransform * j->inverseBindMatrix;
+                j->currentPoseGlobalTransform = calculateInterpolatedGlobalMatrixForJoint(j);
+                j->currentPoseFinalTransform = j->currentPoseGlobalTransform * j->inverseBindMatrix;
             }
-            boneMatrices.push_back(j->finalTransform);
+            boneMatrices.push_back(j->currentPoseFinalTransform);
         }
     }
 }
 
 glm::mat4 AnimationPlayer::calculateInterpolatedFramePose(Joint* joint) {
     calculateInterpolatedGlobalMatrixForJoint(joint);
-    joint->finalTransform = joint->globalTransform * joint->inverseBindMatrix;
-    return joint->finalTransform;
+    joint->currentPoseFinalTransform = joint->currentPoseGlobalTransform * joint->inverseBindMatrix;
+    return joint->currentPoseFinalTransform;
 }
 
 
@@ -167,14 +167,14 @@ void AnimationPlayer::calculateFramePose(int frame) {
                 auto sampleIndex = getRotationIndexForTime(j->name, animTime);
 
                 auto sample = rotationJointSamples[sampleIndex];
-                j->localTransform = glm::translate(glm::mat4(1), sample->translation) *
+                j->currentPoseLocalTransform = glm::translate(glm::mat4(1), sample->translation) *
                                     glm::toMat4(sample->rotation) ;
-                j->globalTransform = calculateWorldTransform(j, j->localTransform);
-                j->finalTransform = j->globalTransform * j->inverseBindMatrix;
+                j->currentPoseGlobalTransform = calculateWorldTransform(j, j->currentPoseLocalTransform);
+                j->currentPoseFinalTransform = j->currentPoseGlobalTransform * j->inverseBindMatrix;
 
             }
         }
-        boneMatrices.push_back(j->finalTransform);
+        boneMatrices.push_back(j->currentPoseFinalTransform);
     }
     setBoneMatrices(boneMatrices);
 

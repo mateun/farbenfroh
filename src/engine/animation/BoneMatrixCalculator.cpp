@@ -53,16 +53,17 @@ Pose *BoneMatrixCalculator::calculatePose(Animation *animation, Skeleton *skelet
 
         }
 
-        auto localTransform = translate(glm::mat4(1), interpolatedTranslation) *
+        j->currentPoseLocalTransform= translate(glm::mat4(1), interpolatedTranslation) *
                                 toMat4(interpolatedRotation);
-        //j->globalTransform = calculateWorldTransform(j, j->localTransform);
+        //j->currentPoseGlobalTransform = calculateWorldTransform(j, j->currentPoseLocalTransform);
         //j->finalTransform = j->globalTransform * j->inverseBindMatrix;
-        Joint* newJoint = new Joint();
-        newJoint->name = j->name;
-        newJoint->translation = interpolatedTranslation;
-        newJoint->rotation = interpolatedRotation;
-        newJoint->localTransform = localTransform;
-        pose->joints.push_back(newJoint);
+
+        // Joint* newJoint = new Joint();
+        // newJoint->name = j->name;
+        // newJoint->translation = interpolatedTranslation;
+        // newJoint->rotation = interpolatedRotation;
+        // newJoint->currentPoseLocalTransform = localTransform;
+        pose->joints.push_back(j);
 
     }
     return pose;
@@ -132,9 +133,9 @@ Pose* BoneMatrixCalculator::calculateBlendedPose(Pose *pose1, Pose *pose2, Skele
     return nullptr;
 }
 
-static glm::mat4 calculateGlobalTransform(Joint* j, glm::mat4 currentTransform) {
+glm::mat4 BoneMatrixCalculator::calculateGlobalTransform(Joint* j, glm::mat4 currentTransform) {
     if (j->parent) {
-        currentTransform = j->parent->localTransform * currentTransform;
+        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
         return calculateGlobalTransform(j->parent, currentTransform);
     }
 
@@ -142,12 +143,21 @@ static glm::mat4 calculateGlobalTransform(Joint* j, glm::mat4 currentTransform) 
 
 }
 
+std::vector<glm::mat4> BoneMatrixCalculator::calculateGlobalMatrices(Pose *pose) {
+    std::vector<glm::mat4> matrices;
+    for (auto j: pose->joints) {
+        auto globalTransform = calculateGlobalTransform(j, j->currentPoseLocalTransform);
+        matrices.push_back(globalTransform);
+    }
+    return matrices;
+}
+
 std::vector<glm::mat4> BoneMatrixCalculator::calculateFinalSkinMatrices(Pose* pose) {
     std::vector<glm::mat4> finalMatrices;
     for (auto j: pose->joints) {
-        auto globalTransform = calculateGlobalTransform(j, j->localTransform);
-        auto finalTransform = j->globalTransform * j->inverseBindMatrix;;
-        finalMatrices.push_back(globalTransform);
+        auto globalTransform = calculateGlobalTransform(j, j->currentPoseLocalTransform);
+        auto finalTransform = globalTransform * j->inverseBindMatrix;;
+        finalMatrices.push_back(finalTransform);
     }
 
     return finalMatrices;

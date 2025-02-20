@@ -28,6 +28,7 @@ namespace editor {
         FolderAssetLoader *assetLoader = nullptr;
         FrameBuffer* skeletalMeshWindowFrameBuffer = nullptr;
         Animation* currentAnimation = nullptr;
+        float timeStamp = 0;
         int currentAnimationFrame = 0;
         bool animationLooped = false;
         bool animationPlaying = false;

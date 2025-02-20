@@ -102,10 +102,17 @@ struct Joint {
     glm::vec3 translation;
     glm::quat rotation;
     glm::vec3 scale;
-    glm::mat4 localTransform= glm::mat4(1);
-    glm::mat4 globalTransform = glm::mat4(1);
-    // This is pre-multiplied the global and inverseBind matrix:
-    glm::mat4 finalTransform = glm::mat4(1);
+
+    glm::mat4 bindPoseLocalTransform = glm::mat4(1.0f);
+    glm::mat4 bindPoseGlobalTransform = glm::mat4(1.0f);
+    glm::mat4 bindPoseFinalTransform = glm::mat4(1.0f);
+
+    glm::mat4 currentPoseLocalTransform= glm::mat4(1);
+    glm::mat4 currentPoseGlobalTransform = glm::mat4(1);
+    // This is the product of the global and inverseBind matrix.
+    // Can be used for skinned meshes to move the skeletal mesh vertex
+    // according to this transform.
+    glm::mat4 currentPoseFinalTransform = glm::mat4(1);
 
     // These are the transformations as matrices in model space
     glm::mat4 modelTranslation = glm::mat4(1);

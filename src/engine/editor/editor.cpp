@@ -3,6 +3,9 @@
 //
 
 #include "editor.h"
+
+#include <engine/animation/BoneMatrixCalculator.h>
+
 #include "graphics.h"
 
 #include "../game/game_model.h"
@@ -153,8 +156,14 @@ namespace editor {
             dd.color = {0.9, 0.9, 0.9, 1};
             dd.directionalLight = sun;
 
-
-            if (currentAnimation && animationPlaying) {
+            // Show the current pose based on the timestamp (TODO)
+            if (currentAnimation && !animationPlaying) {
+                auto startPose = BoneMatrixCalculator().calculatePose(currentAnimation, importedMesh->skeleton, timeStamp);
+                dd.skinnedDraw = true;
+                dd.shader = skinnedMeshShader;
+                dd.boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(startPose);
+            }
+            else if (currentAnimation && animationPlaying) {
                 animationPlayer->update();
                 dd.skinnedDraw = true;
                 dd.shader = skinnedMeshShader;
@@ -177,10 +186,17 @@ namespace editor {
             if (importedMesh->skeleton) {
                 if (importedMesh->skeleton) {
                     for (auto j: importedMesh->skeleton->joints) {
-                        auto finalTransform = j->globalTransform;
-                        if (currentAnimation  && !animationPlaying) {
-                            finalTransform = animationPlayer->calculateInterpolatedGlobalMatrixForJoint(j);;
-                        }
+                        auto finalTransform = j->bindPoseGlobalTransform;
+                        if (currentAnimation && !animationPlaying) {
+                            // For the bones themselves, we need just their global position.
+                            // As we render each bone separately, we do NOT want the final transform, which includes
+                            // the inverseBindMatrix.
+                            BoneMatrixCalculator().calculatePose(currentAnimation, importedMesh->skeleton, timeStamp);
+                            finalTransform = BoneMatrixCalculator().calculateGlobalTransform(j, j->currentPoseLocalTransform);
+                            //finalTransform = animationPlayer->calculateInterpolatedGlobalMatrixForJoint(j);
+                         } else if (currentAnimation && animationPlaying) {
+                             finalTransform = animationPlayer->calculateInterpolatedGlobalMatrixForJoint(j);
+                         }
 
                         MeshDrawData dd;
                         dd.mesh = assetLoader->getMesh("bone_mesh");
@@ -235,9 +251,9 @@ namespace editor {
                     ImGui::Text("%s", j->name.c_str());
 
                     ImGui::TableNextColumn();
-                    float x = j->localTransform[3][0]; // Translation x
-                    float y = j->localTransform[3][1]; // Translation y
-                    float z = j->localTransform[3][2]; // Translation z
+                    float x = j->currentPoseLocalTransform[3][0]; // Translation x
+                    float y = j->currentPoseLocalTransform[3][1]; // Translation y
+                    float z = j->currentPoseLocalTransform[3][2]; // Translation z
                     ImGui::Text("%f/%f/%f", x, y, z);
 
                     ImGui::TableNextColumn();
@@ -444,7 +460,7 @@ namespace editor {
                     // We use the worldMatrix as is instead
                     // of pulling out manually location, scale, rotation from the matrix.
                     useWorldMatrix(true);
-                    setWorldMatrix(j->globalTransform);
+                    setWorldMatrix(j->currentPoseGlobalTransform);
 
                     // Color the selected joint differently
                     if (jointCounter == selectedJoint) {
@@ -522,9 +538,9 @@ namespace editor {
                         row++;
 
                         ImGui::TableSetColumnIndex(1); // Second column
-                        float x = j->globalTransform[3][0]; // Translation x
-                        float y = j->globalTransform[3][1]; // Translation y
-                        float z = j->globalTransform[3][2]; // Translation z
+                        float x = j->currentPoseGlobalTransform[3][0]; // Translation x
+                        float y = j->currentPoseGlobalTransform[3][1]; // Translation y
+                        float z = j->currentPoseGlobalTransform[3][2]; // Translation z
                         ImGui::Text("%f/%f/%f", x, y, z);
 
                         ImGui::TableSetColumnIndex(2);
@@ -821,17 +837,18 @@ namespace editor {
                 }
 
                 ImGui::SameLine();
-                static float nextTimeStamp = 0.0f;
+
                 ImGui::PushItemWidth(50);
-                if (ImGui::InputFloat("##nextTimeStamp", &nextTimeStamp)) {
-                    printf("entered nextTimeStamp: %f\n", nextTimeStamp);
+                if (ImGui::InputFloat("##nextTimeStamp", &timeStamp)) {
+                    printf("entered nextTimeStamp: %f\n", timeStamp);
                 }
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
                 if (ImGui::Button("Jump to timestamp")) {
-                    printf("jumping to nextTimeStamp: %f\n", nextTimeStamp);
+                    printf("jumping to nextTimeStamp: %f\n", timeStamp);
                     animationPlayer->switchAnimation(nullptr);
                     animationPlayer->stop();
+                    animationPlaying= false;
                     currentAnimation = nullptr;
                     currentAnimationFrame = 0;
                 }

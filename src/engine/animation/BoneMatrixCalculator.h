@@ -30,6 +30,15 @@ public:
     Pose* calculateBlendedPose(Pose* pose1, Pose* pose2, Skeleton* skeleton, float elapsedTime, float blendDuration);
 
 
+    /**
+    * This method calculates the world position of a given joint.
+    */
+    glm::mat4 calculateGlobalTransform(Joint* j, glm::mat4 currentTransform);
+
+    /**
+    * This method calculates the world position of every joint within the given pose.
+    */
+    std::vector<glm::mat4> calculateGlobalMatrices(Pose* pose);
 
 
     /**
