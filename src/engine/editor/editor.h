@@ -43,6 +43,7 @@ namespace editor {
         AnimationPlayer* animationPlayer = nullptr;
         Shader * staticMeshShader = nullptr;
         Shader* skinnedMeshShader = nullptr;
+        Shader* gradientShader = nullptr;
 
     private:
         void drawAnimationTimeline();

@@ -254,8 +254,11 @@ bool changeResolution(int width, int height, int refreshRate, const std::string&
 
     auto dpi = GetDpiForWindow(window);
     dpiScaleFactor = static_cast<float>(dpi) / 96.0f;
-    int scaledWidth = static_cast<int>(width / dpiScaleFactor);
-    int scaledHeight = static_cast<int>(height / dpiScaleFactor);
+    scaled_width = width / dpiScaleFactor;
+    scaled_height = height / dpiScaleFactor;
+
+    window_width = width;
+    window_height = height;
 
     devMode.dmPelsWidth = width;
     devMode.dmPelsHeight = height;
@@ -275,10 +278,7 @@ bool changeResolution(int width, int height, int refreshRate, const std::string&
         ShowWindow(window, SW_MAXIMIZE);
 
         // Update our internal window size variables:
-        window_width = width;
-        window_height = height;
-        scaled_width = scaledWidth;
-        scaled_height = scaledHeight;
+
         fullscreen = true;
 
         return true;
@@ -1152,6 +1152,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         game = new editor::EditorGame();
         window_width = 1920;
         window_height= 900;
+
     }
 
 
@@ -1213,6 +1214,10 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     UpdateWindow(hwnd);
     HDC hdc = GetDC(hwnd);
     registerRawInput(hwnd);
+
+    if (editorFlag == "true") {
+        changeResolution(1920, 900, 60, "foo");
+    }
 
     // Check if this game provides its own loop, i.e. is the driver of the loop.
     // In this case  we only initialize the game and leave it to the game to take care of everything else.

@@ -720,7 +720,7 @@ void bindShadowMapCamera(Camera* camera);
 void font(Bitmap* fontBitmap);
 std::vector<std::string> getAllActiveMonitors();
 std::vector<MonitorResolution> getMonitorResolutions(const std::string& deviceName);
-bool changeResolution(int width, int height, int refreshRate, const std::string& deviceName);
+bool changeResolution(int width, int height, int refreshRate, const std::string& deviceName, bool goFullscreen = false);
 void exitFullscreen();
 void mouseVisible(bool val);
 void lightingOn();
@@ -787,6 +787,7 @@ public:
 private:
     std::vector<Animation*> importAnimationsInternal(const aiScene* scene);
 };
+
 
 /**
  * Produces a raytraced image of the given world which consists of

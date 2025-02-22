@@ -8,6 +8,9 @@
 #include "engine/game/game_model.cpp"
 
 #include "engine/algo/Bvh.cpp"
+#include "engine/rastergraphics/rastergraphics.cpp"
+#include "engine/animation/Cinematic.cpp"
+#include "engine/ui/Window.cpp"
 #include "engine/input/UpdateSwitcher.cpp"
 #include "engine/vulkan/VulkanRenderer.cpp"
 #include "engine/lighting/Light.cpp"

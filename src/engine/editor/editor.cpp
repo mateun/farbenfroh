@@ -5,6 +5,7 @@
 #include "editor.h"
 
 #include <engine/animation/BoneMatrixCalculator.h>
+#include <engine/rastergraphics/rastergraphics.h>
 
 #include "graphics.h"
 
@@ -214,7 +215,8 @@ namespace editor {
         }
 
         // Rest to normal viewport:
-        glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height);
+        //glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height);
+        glViewport(0, 0, scaled_width, scaled_height);
 
         // Activate main framebuffer again:
         activateFrameBuffer(nullptr);
@@ -720,9 +722,10 @@ namespace editor {
         ImGui::End();
 
         ImGui::Begin("Animations");
-        drawAnimationOverview();
-        //drawAnimationTimeline();
+        drawAnimationTimeline();
         ImGui::End();
+
+        drawAnimationOverview();
 
         renderMeshViewerExt();
 
@@ -742,32 +745,58 @@ namespace editor {
     }
 
     void Editor::drawAnimationOverview() {
-        static auto texture = createEmptyTexture(512, 512);
-        auto pixels = texture->bitmap->pixels;
-        int offset = 0;
-        for (int y = 0; y < 512; y++) {
-            for (int x = 0; x < 512; x++) {
-                int pixelCoord = (y * 512 * 4) + (x*4);
-                pixels[pixelCoord + 0] = 25;
-                pixels[pixelCoord + 1] = 0;
-                pixels[pixelCoord + 2] = 0;
-                pixels[pixelCoord + 3] = 255;
-            }
+
+        Camera _uiCamera;
+        _uiCamera.location = {0, 0, 1};
+        _uiCamera.lookAtTarget = {0, 0, -1};
+        _uiCamera.type = CameraType::Ortho;
+        bindTexture(nullptr);
+        bindCamera(&_uiCamera);
+        location({0, 0, -0.5});
+        scale({100, 64, 1});
+        forceShader(gradientShader);
+        drawPlane();
+
+        // static auto texture = createEmptyTexture(1024, 512);
+        // static auto pb = new PixelBuffer(texture);
+        // pb->clear({10, 10, 10, 255});
+
+        // Line tests
+        {
+
+            // Line with single points
+            // for (int x = 0; x < 512; x++) {
+            //     pb->drawPoint({x, 100}, {255, 0, 0, 255});
+            // }
+
+            // pb->drawLine({10, 10}, {100, 15}, {255, 100, 10, 255});
+            // pb->drawLine({10, 10}, {30, 80}, {210, 100, 10, 255});
+            //
+            // // Now mirrored one, right to left effectively:
+            // pb->drawLine({30, 80}, {10, 160}, {140, 100, 10, 255});
+            // pb->drawLine({130, 200}, {150, 70}, {140, 100, 10, 255});
+            // pb->drawLine({200, 10}, {100, 15}, {255, 100, 10, 255});
         }
 
-        updateTexture(512, 512, texture);
+        // Draw bg grid:
+        // int gridSize= 40;
+        // for (int i = 0; i < (1024/gridSize) + 1; i++) {
+        //     pb->drawLine({(i*gridSize), 0}, {i*gridSize, 511}, {30, 30, 30, 255});
+        // }
 
+        // Frame
+        //pb->drawRect({0, 511}, {1023, 0}, {60, 60, 60, 255});
+        // pb->drawLine({0, 0}, {0, 511}, {60, 60, 60, 255});
+        // pb->drawLine({0, 511}, {1023, 511}, {60, 60, 60, 255});
+        // pb->drawLine({1023, 511}, {1023, 0}, {60, 60, 60, 255});
+        // pb->drawLine({0, 0}, {1023, 0}, {60, 60, 60, 255});
 
-        ImGui::Image(reinterpret_cast<ImTextureID>(texture->handle),
-                            {(float) texture->bitmap->width ,
-                             (float) texture->bitmap->height },
-                            {0, 1}, {1, 0});
+        //updateTexture(1024, 512, texture);
 
-
-
-
-
-
+        // ImGui::Image(reinterpret_cast<ImTextureID>(texture->handle),
+        //                     {(float) texture->bitmap->width ,
+        //                      (float) texture->bitmap->height },
+        //                     {0, 1}, {1, 0});
     }
 
     void Editor::drawAnimationTimeline() {
@@ -929,6 +958,8 @@ namespace editor {
         staticMeshShader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
         skinnedMeshShader = new Shader();
         skinnedMeshShader->initFromFiles("../src/engine/editor/assets/shaders/skinned_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
+        gradientShader = new Shader();
+        gradientShader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
     }
 
     void EditorGame::init() {
@@ -944,6 +975,7 @@ namespace editor {
 
     void EditorGame::render() {
         editor->renderImGui();
+        renderFPS();
     }
 
     bool EditorGame::shouldStillRun() {
