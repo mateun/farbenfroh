@@ -77,8 +77,9 @@ void TestGame1::init() {
     camTrack->addKeyFrame(ChannelType::Location, 10, {-6, 3.8, 2});
     // TODO fix rotation application
     camTrack->addKeyFrame(ChannelType::Rotation, 0, {0, 0, 0});
-    //camTrack->addKeyFrame(ChannelType::Rotation, 5, {0, 1.13f, 0});
-    camTrack->addKeyFrame(ChannelType::Rotation, 10, {-0.5, -1.13f, 0});
+    //camTrack->addKeyFrame(ChannelType::Rotation, 3, {0, 0.53f, 0});
+    //camTrack->addKeyFrame(ChannelType::Rotation, 7, {0, 0.1f, 0});
+    camTrack->addKeyFrame(ChannelType::Rotation, 10, {0, -0.5, 0});
 
     characterController = new CharacterController(playerNode);
     updateSwitcher = new UpdateSwitcher({characterController, cameraMover}, VK_F10);
