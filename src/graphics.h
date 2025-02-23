@@ -174,9 +174,17 @@ struct Camera {
     CameraType type;
     glm::vec3 location;
     glm::vec3 lookAtTarget;
+    glm::vec3 _initialForward;
     GameObject* followedObject = nullptr;
     glm::vec3 followOffset;
     glm::vec3 followDirection;
+
+
+    void setInitialForward(glm::vec3 fwd) {
+        _initialForward = fwd;
+    }
+
+
 
     void follow(GameObject* gameObject, glm::vec3 offset) {
         this->followedObject = gameObject;
@@ -202,6 +210,10 @@ struct Camera {
 
     glm::mat4 getViewMatrix() {
         return lookAt((location), (lookAtTarget), glm::vec3(0, 1,0));
+    }
+
+    glm::vec3 getInitialFoward() {
+        return _initialForward;
     }
 
     glm::mat4 getLightProjectionMaatrix() {
@@ -847,6 +859,7 @@ public:
     void setLocation(glm::vec3 vec);
     void setScale(glm::vec3 _scale);
     void setRotation(glm::vec3 rotationInEulers);
+    void setOrientation(glm::vec3 eulers);
 
     glm::vec3 getLocation();
 

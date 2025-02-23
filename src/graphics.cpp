@@ -3986,9 +3986,10 @@ void SceneNode::setRotation(glm::vec3 rotationInEulers) {
     if (_type == SceneNodeType::Camera) {
         auto camera = getCamera();
         glm::qua rotQ = glm::qua(rotationInEulers);
-        glm::mat4 rotMat = glm::toMat4(rotQ);
-        auto newFwd = (normalize(rotMat * glm::vec4(camFwd(camera), 1)));
-        camera->updateLookupTarget(camera->location + glm::vec3(newFwd.x, newFwd.y, newFwd.z));
+        glm::mat3 rotMat = glm::toMat3(rotQ);
+        auto newFwd = (normalize(rotMat * camera->_initialForward));
+        camera->updateLookupTarget(camera->location + newFwd);
+
     }
 }
 
@@ -4029,6 +4030,7 @@ void SceneNode::initAsMeshNode(SceneMeshData *sceneMeshData) {
 void SceneNode::initAsCameraNode(Camera *camera) {
     this->_type = SceneNodeType::Camera;
     this->camera = camera;
+    this->setLocation(camera->location);
 }
 
 glm::vec3 SceneNode::getForwardVector() {

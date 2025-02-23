@@ -22,6 +22,7 @@ void TestGame1::init() {
     auto cam = getGameplayCamera();
     cam->updateLocation({0, 1.8, 10});
     cam->updateLookupTarget({0, 1, -2});
+    cam->setInitialForward(camFwd(cam));
     cameraMover = new CameraMover(cam);
     auto mainCamNode = new SceneNode();
     mainCamNode->initAsCameraNode(cam);
@@ -71,10 +72,13 @@ void TestGame1::init() {
     cinematic = new Cinematic(scene, 10);
     auto camTrack = cinematic->addTrack(mainCamNode, "mainCamTrack");
     camTrack->addKeyFrame(ChannelType::Location, 0, {0, 1.8, 10});
-    camTrack->addKeyFrame(ChannelType::Location, 10, {0, 1.8, 20});
+    // TODO somehow in between values do not work well
+    //camTrack->addKeyFrame(ChannelType::Location, 4, {-5, 5.8, 6});
+    camTrack->addKeyFrame(ChannelType::Location, 10, {-6, 3.8, 2});
     // TODO fix rotation application
     camTrack->addKeyFrame(ChannelType::Rotation, 0, {0, 0, 0});
-    camTrack->addKeyFrame(ChannelType::Rotation, 10, {0, 0.5, 0});
+    //camTrack->addKeyFrame(ChannelType::Rotation, 5, {0, 1.13f, 0});
+    camTrack->addKeyFrame(ChannelType::Rotation, 10, {-0.5, -1.13f, 0});
 
     characterController = new CharacterController(playerNode);
     updateSwitcher = new UpdateSwitcher({characterController, cameraMover}, VK_F10);

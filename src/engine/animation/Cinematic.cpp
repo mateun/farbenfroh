@@ -32,7 +32,8 @@ void Cinematic::play() {
 * Useful for e.g. animation interpolation.
 */
 float Cinematic::normalizedTime() {
-    return _localTime / _duration;
+    float nt =  _localTime / _duration;
+    return nt;
 }
 
 /**
@@ -49,6 +50,7 @@ void Cinematic::update() {
     if (_localTime >= _duration) {
         _isPlaying = false;
         _localTime -= _duration;
+        return;
     }
 
     for (auto track : tracks | std::ranges::views::values) {
@@ -135,18 +137,20 @@ void CineTrack::applyInterpolatedTransform(float localTime, float normalizedTime
     glm::quat interpolatedRotation;
 
     auto locationChannel = getChannel(ChannelType::Location);
-    auto rotationChannel = getChannel(ChannelType::Location);
+    auto rotationChannel = getChannel(ChannelType::Rotation);
 
     if (locationChannel) {
         interpolatedLocation = locationChannel->getInterpolatedSampleValue( localTime, normalizedTime);
+        _sceneNode->setLocation(interpolatedLocation);
     }
 
     if (rotationChannel) {
         interpolatedRotation = rotationChannel->getInterpolatedSampleValue( localTime, normalizedTime);
+        _sceneNode->setRotation(glm::eulerAngles(interpolatedRotation));
     }
 
-    _sceneNode->setLocation(interpolatedLocation);
-    _sceneNode->setRotation(glm::eulerAngles(interpolatedRotation));
+
+
 }
 
 Channel::Channel(ChannelType type) : _type(type) {
@@ -169,17 +173,21 @@ glm::vec3 Channel::getInterpolatedSampleValue(float timeAbsolute, float timeNorm
     auto allSamplesVec = std::vector(allSamples.begin(), allSamples.end());
     int index = 0;
     for (auto sample :allSamples) {
-        if (timeAbsolute >= sample.time) {
+        printf("%f %f\n", timeAbsolute, sample.time);
+        if (timeAbsolute < allSamplesVec[index+1].time) {
             fromSample = sample;
             break;
         }
+
         index++;
+
     }
 
     if (allSamples.size() > index+1) {
         toSample = allSamplesVec[index+1];
     } else {
         // TODO if we do not have a good end index
+        throw std::runtime_error("oh no, no more index!");
     }
 
     if (this->_type == ChannelType::Location) {
@@ -194,8 +202,8 @@ glm::vec3 Channel::getInterpolatedSampleValue(float timeAbsolute, float timeNorm
 
     if (this->_type == ChannelType::Rotation) {
         glm::quat fromQuat = glm::qua(fromSample.value().value);
-        glm::quat toQuat = glm::qua(fromSample.value().value);
-        auto interpRotation = glm::slerp(toQuat, fromQuat, timeNormalized);
+        glm::quat toQuat = glm::qua(toSample.value().value);
+        auto interpRotation = slerp(fromQuat, toQuat, timeNormalized);
         return eulerAngles(interpRotation);
     }
 
