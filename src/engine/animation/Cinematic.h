@@ -45,21 +45,27 @@ enum class ChannelType {
 class Cinematic {
 
   public:
-    Cinematic(Scene* scene);
+    Cinematic(Scene* scene, float duration);
     ~Cinematic();
     CineTrack* addTrack(SceneNode* node, const std::string& name);
     CineTrack* getTrack(const std::string& name);
 
     void play();
+    float normalizedTime();
     void update();
     void stop();
     void pause();
+
+    bool isActive();
+
+    void render();
 
   private:
     std::map<std::string, CineTrack*> tracks;
     Scene * _scene = nullptr;
     bool _isPlaying = false;
     float _localTime = 0.0f;
+    float _duration = 0.0f;
 };
 
 /**
@@ -70,23 +76,46 @@ class CineTrack {
 
   public:
     CineTrack(SceneNode* sceneNode);
-    void addKeyFrame(SceneNode* node);
+    void addKeyFrame(ChannelType channelType, float time, glm::vec3 value);
 
     std::vector<Channel*> getChannels();
+    Channel* getChannel(ChannelType type);
+
+    SceneNode * getNode();
+
+    void applyInterpolatedTransform(float localTime, float normalizedTime);
+
+    SceneNode * _sceneNode = nullptr;
+
+private:
+  std::map<ChannelType, Channel*> _channels;
+};
+
+struct SampleValue {
+  float time;
+  glm::vec3 value;
 };
 
 class Channel {
+  friend class CineTrack;
+
 public:
   Channel(ChannelType type);
 
-  /**
-  * This method shall interpolate between two keyframes for its own channel
-  * and apply the resulting (location/roation/scale) to the given scene node.
-  */
-  void applyTransform(SceneNode* node, float time);
+
+
 
 private:
   ChannelType _type;
+  // This value is polymorphic in a way:
+  // depending on the type it can mean different things:
+  // location, translation, scale
+  // The map goes from a discrete time value to a specific sample
+  std::map<float, SampleValue> _samples;
+
+  glm::vec3 getInterpolatedSampleValue(float timeAbsolute, float timeNormalized);
+
+  void addKeyFrame(float time, glm::vec3 vec);
 };
 
 

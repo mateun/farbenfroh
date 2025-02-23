@@ -725,7 +725,7 @@ namespace editor {
         drawAnimationTimeline();
         ImGui::End();
 
-        drawAnimationOverview();
+        //drawAnimationOverview();
 
         renderMeshViewerExt();
 

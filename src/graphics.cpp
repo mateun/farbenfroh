@@ -985,8 +985,10 @@ void drawPlaneUnlit() {
         bindShader(glDefaultObjects->currentRenderState->forcedShader);
         GL_ERROR_EXIT(44)
         // Assuming the forced shader uses a texture?!
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+        if (glDefaultObjects->currentRenderState->texture) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+        }
     } else {
         if (glDefaultObjects->currentRenderState->texture) {
             bindShader(glDefaultObjects->texturedShaderUnlit);
@@ -1085,9 +1087,10 @@ void drawPlane() {
     if (glDefaultObjects->currentRenderState->forcedShader) {
         bindShader(glDefaultObjects->currentRenderState->forcedShader);
         GL_ERROR_EXIT(44)
-        // Assuming the forced shader uses a texture?!
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+        if (glDefaultObjects->currentRenderState->texture) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
+        }
     } else {
         if (glDefaultObjects->currentRenderState->texture) {
             // Deprecated; we choose unlit here, but don't use this anymore anyway.
@@ -1100,16 +1103,17 @@ void drawPlane() {
         } else {
             bindShader(glDefaultObjects->singleColorShader);
             glUniform4fv(1, 1, (float*) &glDefaultObjects->currentRenderState->foregroundColor);
+
         }
     }
 
     if (glDefaultObjects->currentRenderState->lightingOn) {
-        glUniform1i(13, 1);
         glUniform3fv(10, 1, (float *) &lightDirection);
+        GL_ERROR_EXIT(123)
     } else {
         glUniform1i(13, 0);
     }
-    GL_ERROR_EXIT(123)
+
 
     // Tinting
     glUniform4fv(16, 1, (float*) &glDefaultObjects->currentRenderState->tint);
@@ -3942,14 +3946,11 @@ void Raytracer::render(int pixelWidth, int pixelHeight) {
 
 }
 
-SceneNode::SceneNode() {
-}
 
-SceneNode::~SceneNode() {
-}
+
 
 void SceneNode::yaw(float degrees) {
-    glm::mat4 yawMatrix = glm::rotate(glm::mat4(1.0f), rotation.y, glm::vec3(0, 1, 0));
+    glm::mat4 yawMatrix = glm::rotate(glm::mat4(1.0f), _rotation.y, glm::vec3(0, 1, 0));
 
     glm::vec4 newForward = yawMatrix * glm::vec4(forward, 1.0f);
     forward = normalize(glm::vec3{newForward.x, newForward.y, newForward.z});
@@ -3962,7 +3963,72 @@ glm::vec3 SceneNode::getRightVector() {
 }
 
 glm::vec3 SceneNode::getVelocity() {
-    return velocity;
+    return _velocity;
+}
+
+bool SceneNode::isActive() {
+    return _active;
+}
+
+void SceneNode::setLocation(glm::vec3 vec) {
+    _location = vec;
+    if (_type == SceneNodeType::Camera) {
+        camera->updateLocation(_location);
+    }
+}
+
+void SceneNode::setScale(glm::vec3 scale) {
+    _scale = scale;
+}
+
+void SceneNode::setRotation(glm::vec3 rotationInEulers) {
+    _rotation = rotationInEulers;
+    if (_type == SceneNodeType::Camera) {
+        auto camera = getCamera();
+        glm::qua rotQ = glm::qua(rotationInEulers);
+        glm::mat4 rotMat = glm::toMat4(rotQ);
+        auto newFwd = (normalize(rotMat * glm::vec4(camFwd(camera), 1)));
+        camera->updateLookupTarget(camera->location + glm::vec3(newFwd.x, newFwd.y, newFwd.z));
+    }
+}
+
+glm::vec3 SceneNode::getLocation() {
+    return _location;
+}
+
+Camera * SceneNode::getCamera() {
+    return camera;
+}
+
+void SceneNode::updateBoneMatrices(std::vector<glm::mat4> boneMatrices) {
+    _boneMatrices = boneMatrices;
+}
+
+const std::vector<glm::mat4> & SceneNode::boneMatrices() {
+    return _boneMatrices;
+}
+
+
+SceneNode::SceneNode() {
+}
+
+SceneNode::~SceneNode() {
+}
+
+void SceneNode::initAsMeshNode(SceneMeshData *sceneMeshData) {
+    this->_type = SceneNodeType::Mesh;
+    this->mesh = sceneMeshData->mesh;
+    this->texture = sceneMeshData->texture;
+    this->normalMap = sceneMeshData->normalMap;
+    this->shader = sceneMeshData->shader;
+    this->uvScale = sceneMeshData->uvScale;
+    this->skinnedMesh = sceneMeshData->skinnedMesh;
+
+}
+
+void SceneNode::initAsCameraNode(Camera *camera) {
+    this->_type = SceneNodeType::Camera;
+    this->camera = camera;
 }
 
 glm::vec3 SceneNode::getForwardVector() {
@@ -3975,17 +4041,18 @@ Scene::Scene() {
 Scene::~Scene() {
 }
 
-void Scene::setCamera(Camera* camera) {
-    gameplayCamera = camera;
-}
 
 void Scene::addNode(SceneNode *node) {
-    if (node->type == SceneNodeType::Mesh) {
+    if (node->_type == SceneNodeType::Mesh) {
         meshNodes.push_back(node);
     }
 
-    if (node->type == SceneNodeType::Text) {
+    if (node->_type == SceneNodeType::Text) {
         textNodes.push_back(node);
+    }
+
+    if (node->_type == SceneNodeType::Camera) {
+        cameraNodes.push_back(node);
     }
 }
 
@@ -3994,6 +4061,18 @@ void Scene::setDirectionalLight(Light *light) {
 }
 
 void Scene::update() {
+}
+
+/**
+* Returns the first active camera it finds.
+*/
+SceneNode* Scene::findActiveCameraNode() {
+    for (auto camNode : cameraNodes) {
+        if (camNode->isActive()) {
+            return camNode;
+        }
+    }
+    return nullptr;
 }
 
 void Scene::render() {
@@ -4022,9 +4101,9 @@ void Scene::render() {
         for (auto m : meshNodes) {
             // Build the actual render commands for each node and
             // render it into the shadow map.
-            location(m->location);
-            scale(m->scale);
-            rotation(m->rotation);
+            location(m->_location);
+            scale(m->_scale);
+            rotation(m->_rotation);
             bindMesh(m->mesh);
             drawMeshIntoShadowMap(directionalLight->shadowMapFBO);
         }
@@ -4051,9 +4130,9 @@ void Scene::render() {
         for (auto m : meshNodes) {
             // Build the actual render commands for each node and
             // render it into the shadow map.
-            location(m->location);
-            scale(m->scale);
-            rotation(m->rotation);
+            location(m->_location);
+            scale(m->_scale);
+            rotation(m->_rotation);
             bindMesh(m->mesh);
 
             // TODO
@@ -4068,27 +4147,31 @@ void Scene::render() {
     }
     activateFrameBuffer(nullptr);
 
+    auto cameraNode = findActiveCameraNode();
+    if (!cameraNode) {
+        throw std::runtime_error("Could not find active camera node.");
+    }
 
     // 2. Actual render pass
     for (auto m : meshNodes) {
         // Build the actual render commands for each node and
         // render it into the shadow map.
         MeshDrawData mdd;
-        mdd.location = m->location;
-        mdd.scale = m->scale;
-        mdd.rotationEulers = m->rotation;
+        mdd.location = m->_location;
+        mdd.scale = m->_scale;
+        mdd.rotationEulers = m->_rotation;
         mdd.mesh = m->mesh;
         mdd.texture = m->texture;
         mdd.normalMap = m->normalMap;
         mdd.shader = m->shader;
-        mdd.camera = gameplayCamera;
+        mdd.camera = cameraNode->getCamera();
         mdd.uvScale = m->uvScale;
         mdd.color = m->foregroundColor;
         mdd.directionalLight = directionalLight;
 
         if (m->skinnedMesh) {
             mdd.skinnedDraw = m->skinnedMesh;
-            mdd.boneMatrices = m->boneMatrices;
+            mdd.boneMatrices = m->boneMatrices();
         }
 
         drawMesh(mdd);

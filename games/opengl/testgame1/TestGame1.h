@@ -20,6 +20,7 @@ class TestGame1 : public DefaultApp {
     CameraMover * cameraMover = nullptr;
     Scene * scene = nullptr;
     Light * sun = nullptr;
+    Cinematic* cinematic = nullptr;
     CharacterController * characterController = nullptr;
     UpdateSwitcher* updateSwitcher = nullptr;
     AnimationPlayer * idlePlayer = nullptr;
@@ -27,6 +28,7 @@ class TestGame1 : public DefaultApp {
     SceneNode * playerNode = nullptr;
     Shader * skinnedShader = nullptr;
     AnimationController * animationController = nullptr;
+
 };
 
 

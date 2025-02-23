@@ -52,7 +52,7 @@ void CharacterController::update() {
     // Apply yaw rotation
     _characterNode->yaw(yaw + frameRotationSpeed);
 
-    glm::vec3 loc = _characterNode->location;
+    glm::vec3 loc = _characterNode->getLocation();
 
     // Forward
     loc += glm::vec3{frameMovementSpeed * _characterNode->getForwardVector().x, 0, frameMovementSpeed * _characterNode->getForwardVector().z} * dir;
@@ -61,6 +61,6 @@ void CharacterController::update() {
     // Strafing
     loc += glm::vec3{frameMovementSpeed * _characterNode->getRightVector().x * 0.33, 0, frameMovementSpeed * _characterNode->getRightVector().z * 0.33} * hdir;
 
-    _characterNode->location = loc;
+    _characterNode->setLocation(loc);
 
 }

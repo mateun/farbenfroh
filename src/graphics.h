@@ -91,9 +91,6 @@ private:
 };
 
 
-
-
-
 struct Joint {
     std::string name;
     glm::mat4 inverseBindMatrix;
@@ -820,10 +817,24 @@ enum class SceneNodeType {
     Mesh
 };
 
+struct SceneMeshData {
+    Mesh* mesh = nullptr;
+    Texture* texture = nullptr;
+    Texture* normalMap = nullptr;
+    Shader* shader = nullptr;
+    float uvScale = 1;
+    bool skinnedMesh = false;
+};
+
 class SceneNode {
+    friend class Scene;
 public:
     SceneNode();
     ~SceneNode();
+
+    void initAsMeshNode(SceneMeshData* sceneMeshData);
+    void initAsCameraNode(Camera* camera);
+    void initAsTextNode();  // TODO
 
     void yaw(float degrees);
 
@@ -831,46 +842,65 @@ public:
     glm::vec3 getRightVector();
     glm::vec3 getVelocity();
 
-    SceneNodeType type;
+    bool isActive();
+
+    void setLocation(glm::vec3 vec);
+    void setScale(glm::vec3 _scale);
+    void setRotation(glm::vec3 rotationInEulers);
+
+    glm::vec3 getLocation();
+
+    Camera * getCamera();
+
+    void updateBoneMatrices(std::vector<glm::mat4> get_bone_matrices);
+
+    const std::vector<glm::mat4>& boneMatrices();
+
+private:
 
     // These are type specific fields and can be null
     Mesh* mesh = nullptr;
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
     Shader* shader = nullptr;
+    Camera* camera = nullptr;
 
-    glm::vec3 location = glm::vec3(0);
-    glm::vec3 velocity = glm::vec3(0);
-    glm::vec3 scale = glm::vec3(1.0f);
-    glm::vec3 rotation = glm::vec3(0);
+    glm::vec3 _location = glm::vec3(0);
+    glm::vec3 _velocity = glm::vec3(0);
+    glm::vec3 _scale = glm::vec3(1.0f);
+    glm::vec3 _rotation = glm::vec3(0);
     glm::vec3 forward= {0, 0, -1};   // This is normally how we face when coming from Blender
     glm::vec3 right = {1, 0, 0}; // Based on the incoming Blender default orientation
     glm::vec4 foregroundColor = {1, 0,1, 1};
     float uvScale = 1;
     bool skinnedMesh = false;
-    std::vector<glm::mat4> boneMatrices;
-
+    std::vector<glm::mat4> _boneMatrices;
+    SceneNodeType _type;
+    bool _active = true;
 };
+
+
 
 class Scene {
 public:
     Scene();
     ~Scene();
 
-    void setCamera(Camera *camera);
-
     void addNode(SceneNode* node);
     void setDirectionalLight(Light* light);
     void update();
+
+    SceneNode* findActiveCameraNode();
+
     void render();
 
 private:
     Light* directionalLight;
     std::vector<Light*> pointLights;
-    Camera* gameplayCamera = nullptr;
     Camera* uiCamera = nullptr;
 
     std::vector<SceneNode*> meshNodes;
     std::vector<SceneNode*> textNodes;
+    std::vector<SceneNode*> cameraNodes;
 
 };

@@ -16,49 +16,65 @@ void TestGame1::init() {
     skinnedShader = new Shader();
     skinnedShader->initFromFiles("../games/opengl/testgame1/assets/shaders/skinned.vert", "../games/opengl/testgame1/assets/shaders/mech.frag");
 
+    scene = new Scene();
+
+
     auto cam = getGameplayCamera();
-    cam->updateLocation({0, 2.8, 10});
+    cam->updateLocation({0, 1.8, 10});
     cam->updateLookupTarget({0, 1, -2});
     cameraMover = new CameraMover(cam);
+    auto mainCamNode = new SceneNode();
+    mainCamNode->initAsCameraNode(cam);
+    scene->addNode(mainCamNode);
 
-    scene = new Scene();
+
     auto mechNode = new SceneNode();
-    mechNode->location = glm::vec3(0, 0, -5);
-    mechNode->mesh = getMeshByName("mech");
-    mechNode->texture = getTextureByName("mech_albedo");
-    mechNode->normalMap = getTextureByName("mech_normal");
-    mechNode->type = SceneNodeType::Mesh;
-    mechNode->uvScale= 1;
-    mechNode->shader = mechShader;
+    SceneMeshData smd;
+    smd.mesh =  getMeshByName("mech");
+    smd.texture = getTextureByName("mech_albedo");
+    smd.normalMap = getTextureByName("mech_normal");
+    smd.shader = mechShader;
+    mechNode->initAsMeshNode(&smd);
+    mechNode->setLocation(glm::vec3(0, 0, -5));
     scene->addNode(mechNode);
 
     playerNode = new SceneNode();
-    playerNode->location = glm::vec3(-2, 0, 2);
-    playerNode->mesh = getMeshByName("human4_oriented");
-    playerNode->texture = getTextureByName("debug_texture");
-    playerNode->normalMap = getTextureByName("mech_normal");
-    playerNode->shader = skinnedShader;
-    playerNode->skinnedMesh = true;
-    playerNode->type = SceneNodeType::Mesh;
+    smd.mesh = getMeshByName("human4_oriented");
+    smd.texture = getTextureByName("debug_texture");
+    smd.normalMap = getTextureByName("mech_normal");
+    smd.shader = skinnedShader;
+    smd.skinnedMesh = true;
+
+    playerNode->setLocation({-2, 0, 2});
+    playerNode->initAsMeshNode(&smd);
     scene->addNode(playerNode);
 
     auto groundNode = new SceneNode();
-    groundNode->location = glm::vec3(0, 0, 0);
-    groundNode->mesh = getMeshByName("ground_plane");
-    groundNode->texture = getTextureByName("ground_albedo");
-    groundNode->normalMap = getTextureByName("debug_normal");
-    groundNode->type = SceneNodeType::Mesh;
-    groundNode->uvScale = 205;
-    groundNode->scale = glm::vec3(20, 0.5, 20);
-    groundNode->shader = mechShader;
+    groundNode->setLocation (glm::vec3(0, 0, 0));
+    groundNode->setScale(glm::vec3(20, 0.5, 20));
+    smd.mesh = getMeshByName("ground_plane");
+    smd.texture = getTextureByName("ground_albedo");
+    smd.normalMap = getTextureByName("debug_normal");
+    smd.uvScale = 205;
+    smd.shader = mechShader;
+    smd.skinnedMesh = false;
+    groundNode->initAsMeshNode(&smd);
     scene->addNode(groundNode);
 
+    // TODO also put lights back into more generic node mode.
     sun = new Light();
     sun->location = {3, 3,8 };
     sun->lookAtTarget = {0,0, 0};
     sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
     scene->setDirectionalLight(sun);
-    scene->setCamera(cam);
+
+    cinematic = new Cinematic(scene, 10);
+    auto camTrack = cinematic->addTrack(mainCamNode, "mainCamTrack");
+    camTrack->addKeyFrame(ChannelType::Location, 0, {0, 1.8, 10});
+    camTrack->addKeyFrame(ChannelType::Location, 10, {0, 1.8, 20});
+    // TODO fix rotation application
+    camTrack->addKeyFrame(ChannelType::Rotation, 0, {0, 0, 0});
+    camTrack->addKeyFrame(ChannelType::Rotation, 10, {0, 0.5, 0});
 
     characterController = new CharacterController(playerNode);
     updateSwitcher = new UpdateSwitcher({characterController, cameraMover}, VK_F10);
@@ -83,13 +99,27 @@ void TestGame1::init() {
 }
 
 void TestGame1::update() {
+
+    // Check for cinematic activation:
+    {
+        if (keyPressed('C')) {
+            if (!cinematic->isActive()) {
+                cinematic->play();
+            }
+        }
+        if (cinematic->isActive()) {
+            cinematic->update();
+            return;
+        }
+    }
+
     updateSwitcher->update();
 
     // Temp. implement animation switching here
     //idlePlayer->update();
     //playerNode->boneMatrices = idlePlayer->getCurrentBoneMatrices();
     animationController->update();
-    playerNode->boneMatrices = animationController->getBoneMatrices();
+    playerNode->updateBoneMatrices(animationController->getBoneMatrices());
 
     // A little test setup:
     // We wait for 2 seconds, then we set the animation controller property
@@ -109,6 +139,10 @@ void TestGame1::update() {
 }
 
 void TestGame1::render() {
+    if (cinematic->isActive()) {
+        cinematic->render();
+        return;
+    }
 
     scene->render();
 
