@@ -1962,11 +1962,38 @@ void drawMesh(const MeshDrawData &drawData) {
 
 }
 
+void drawMeshIntoShadowMap(const MeshDrawData& drawData) {
+    glBindVertexArray(drawData.mesh->vao);
 
-void drawMesh(Mesh *mesh, glm::vec4 singleColor, Light *directionalList, const std::vector<Light *> &pointLights) {
+    bindShader(drawData.shader);
+
+
+    auto fbo = drawData.directionalLights[0]->shadowMapFBO->texture->bitmap;
+    glViewport(0, 0, fbo->width, fbo->height);
+
+    {
+        using namespace glm;
+
+        // Object to world transformation
+        mat4 mattrans = translate(mat4(1), drawData.location);
+        mat4 matscale = glm::scale(mat4(1), drawData.scale);
+        mat4 matrotX = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.x), {1, 0, 0} );
+        mat4 matrotY = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.y), {0, 1, 0} );
+        mat4 matrotZ = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.z), {0, 0, 1} );
+        mat4 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
+
+        drawData.shader->setMat4Value(matworld, "mat_world");
+        drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
+        drawData.shader->setMat4Value(drawData.camera->getProjectionMatrixForShadowMap(), "mat_projection");
+    }
+    glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices,
+                   drawData.mesh->indexDataType, nullptr);
+
+    glViewport(0, 0, scaled_width, scaled_height);
+    glBindVertexArray(0);
 }
 
-
+[[Deprecated("use the method with the MeshDrawData instead")]]
 void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO) {
     glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
 
@@ -4158,18 +4185,29 @@ void Scene::render() {
             lightCam.lookAtTarget = l->light->lookAtTarget;
             lightCam.type = CameraType::Ortho;
 
-            bindShadowMapCamera(&lightCam);
             glBindFramebuffer(GL_FRAMEBUFFER, l->light->shadowMapFBO->handle);
             glClear(GL_DEPTH_BUFFER_BIT);
 
             for (auto m : meshNodes) {
-                // Build the actual render commands for each node and
-                // render it into the shadow map.
-                location(m->_location);
-                scale(m->_scale);
-                rotation(m->_rotation);
-                bindMesh(m->mesh);
-                drawMeshIntoShadowMap(l->light->shadowMapFBO);
+
+                // New way
+                {
+                    MeshDrawData dd;
+                    dd.camera = &lightCam;
+                    dd.location = m->_location;
+                    dd.scale = m->_scale;
+                    dd.shader = m->shader;
+                    dd.rotationEulers = m->_rotation;
+                    dd.mesh = m->mesh;
+                    dd.viewPortDimensions = {l->light->shadowMapFBO->texture->bitmap->width, l->light->shadowMapFBO->texture->bitmap->height};
+                    dd.directionalLights.push_back(l->light);
+                    if (m->skinnedMesh) {
+                         dd.skinnedDraw = m->skinnedMesh;
+                         dd.boneMatrices = m->boneMatrices();
+                    }
+                    drawMeshIntoShadowMap(dd);
+                }
+
             }
         }
 

@@ -109,6 +109,8 @@ vec4 calculatePointLights(vec4 albedo, vec3 normal) {
         diffuse *= att;
         vec4 accumuCol = vec4(albedo.xyz * diffuse, albedo.w);
         accumuCol.rgb *= pointLightData[i].diffuseColor;
+        // TODO need a cubemap which the host renders into to represent omnidirectinal point light
+        // shadows
 //        if (isInShadowForPointLight(i)) {
 //            accumuCol.rgb *= 0.3;
 //        }

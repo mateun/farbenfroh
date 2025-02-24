@@ -229,6 +229,13 @@ struct Camera {
 
     }
 
+    glm::mat4 getProjectionMatrixForShadowMap() {
+        if (type == CameraType::Ortho) {
+            return glm::ortho<float>(-28, 28, -28, 28, 1.0f, 43.0f);
+        }
+
+    }
+
     glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) {
 
         auto w = scaled_width;
