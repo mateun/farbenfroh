@@ -1864,18 +1864,43 @@ void drawMesh(const MeshDrawData &drawData) {
         GL_ERROR_EXIT(981);
     }
 
-    // Set all light data
-    int lightIndex = 0;
-    for (auto directionalLight : drawData.directionalLights) {
+    // Lighting related:
+    {
+        // Directional
+        int lightIndex = 0;
+        for (auto directionalLight : drawData.directionalLights) {
 
-        drawData.shader->setVec3Value(directionalLight->lookAtTarget - directionalLight->location, "directionalLightData[" + std::to_string(lightIndex) + "].direction");
-        drawData.shader->setVec3Value(directionalLight->color, "directionalLightData[" + std::to_string(lightIndex) + "].diffuseColor");
-        drawData.shader->setMat4Value(directionalLight->getViewProjectionMatrix(), "directionalLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
-        directionalLight->bindShadowMap(lightIndex+1);
-        lightIndex++;
-        GL_ERROR_EXIT(982)
+            drawData.shader->setVec3Value(directionalLight->lookAtTarget - directionalLight->location, "directionalLightData[" + std::to_string(lightIndex) + "].direction");
+            drawData.shader->setVec3Value(directionalLight->color, "directionalLightData[" + std::to_string(lightIndex) + "].diffuseColor");
+            drawData.shader->setMat4Value(directionalLight->getViewProjectionMatrix(), "directionalLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
+            directionalLight->bindShadowMap(lightIndex+1);
+            lightIndex++;
+            GL_ERROR_EXIT(982)
+        }
+        drawData.shader->setIntValue(drawData.directionalLights.size(), "numDirectionalLights");
+
+        // Point
+        lightIndex = 0;
+        for (auto l : drawData.pointLights) {
+            drawData.shader->setVec3Value(l->location, "pointLightData[" + std::to_string(lightIndex) + "].position");
+            drawData.shader->setFloatValue(l->pointLightData.constant, "pointLightData[" + std::to_string(lightIndex) + "].constant");
+            drawData.shader->setFloatValue(l->pointLightData.linear, "pointLightData[" + std::to_string(lightIndex) + "].linear");
+            drawData.shader->setFloatValue(l->pointLightData.quadratic, "pointLightData[" + std::to_string(lightIndex) + "].quadratic");
+            drawData.shader->setVec3Value(l->color, "pointLightData[" + std::to_string(lightIndex) + "].diffuseColor");
+            drawData.shader->setMat4Value(l->getViewProjectionMatrix(), "pointLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
+            l->bindShadowMap(lightIndex+3);
+            lightIndex++;
+            GL_ERROR_EXIT(982)
+        }
+        drawData.shader->setIntValue(drawData.pointLights.size(), "numPointLights");
+
+
+        // TODO Spot
+
 
     }
+
+
 
     drawData.shader->setFloatValue(drawData.uvScale, "uvScale");
 
@@ -4010,14 +4035,28 @@ const std::vector<glm::mat4> & SceneNode::boneMatrices() {
     return _boneMatrices;
 }
 
-std::vector<Light *> Scene::getDirectionalLights() {
+std::vector<Light *> Scene::getLightsOfType(LightType type) {
     std::vector<Light*> ls;
-    for (auto ln : directionalLightNodes) {
-        ls.push_back(ln->light);
+    if (type == LightType::Directional) {
+        for (auto ln : directionalLightNodes) {
+            ls.push_back(ln->light);
+        }
     }
+    else if (type == LightType::Point) {
+        for (auto ln : pointLightNodes) {
+            ls.push_back(ln->light);
+        }
+    }
+    else if (type == LightType::Spot) {
+        for (auto ln : spotLightNodes) {
+            ls.push_back(ln->light);
+        }
+    }
+
     return ls;
 
 }
+
 
 
 SceneNode::SceneNode() {
@@ -4194,7 +4233,9 @@ void Scene::render() {
         mdd.camera = cameraNode->getCamera();
         mdd.uvScale = m->uvScale;
         mdd.color = m->foregroundColor;
-        mdd.directionalLights = getDirectionalLights();
+        mdd.directionalLights = getLightsOfType(LightType::Directional);
+        mdd.pointLights = getLightsOfType(LightType::Point);
+        mdd.spotLights = getLightsOfType(LightType::Spot);
 
         if (m->skinnedMesh) {
             mdd.skinnedDraw = m->skinnedMesh;
@@ -4543,6 +4584,7 @@ void Shader::setFloatValue(float val, const std::string &name) {
     glUniform1f(loc, val);
 }
 
+
 void Shader::setVec3Value(glm::vec<3, float> vec, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
 #ifdef _STRICT_SHADER_LOCATION_
@@ -4570,6 +4612,17 @@ void Shader::setMat4Array(const std::vector<glm::mat4> mats, const std::string &
     glUniformMatrix4fv(loc,mats.size(),  GL_FALSE, value_ptr(mats[0]));
     GL_ERROR_EXIT(445);
 }
+
+void Shader::setIntValue(int val, const std::string &name) {
+    auto loc = glGetUniformLocation(this->handle, name.c_str());
+#ifdef _STRICT_SHADER_LOCATION_
+    if (loc == -1) throw std::runtime_error("Could not get uniform for int value: " + name);
+#endif
+    glUniform1i(loc, val);
+    GL_ERROR_EXIT(445);
+
+}
+
 
 void Shader::initFromFiles(const std::string &vertFile, const std::string &fragFile) {
     auto vertSource = readFile(vertFile);

@@ -57,6 +57,8 @@ struct Shader {
     void setMat4Value(glm::mat4 mat, const std::string& str);
     void setMat4Array(const std::vector<glm::mat4> mats, const std::string& name);
 
+    void setIntValue(int val, const std::string &name);
+
     void initFromFiles(const std::string& vertexShader, const std::string& fragmentShader);
 
 
@@ -908,7 +910,7 @@ public:
     void update();
 
     SceneNode* findActiveCameraNode();
-    std::vector<Light*> getDirectionalLights();
+    std::vector<Light *> getLightsOfType(LightType type);
 
     void render();
 

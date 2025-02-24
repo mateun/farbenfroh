@@ -17,18 +17,32 @@ uniform float uvScale = 1;
 uniform float uvPanX = 0;
 uniform float uvPanY = 0;
 
-const int NUM_DIR_LIGHTS=2;
+const int MAX_DIR_LIGHTS=2;
 struct DirectionalLightData {
     vec3 direction;
     vec3 diffuseColor;
     mat4 mat_view_proj;
 };
-uniform DirectionalLightData directionalLightData[NUM_DIR_LIGHTS];
+uniform DirectionalLightData directionalLightData[MAX_DIR_LIGHTS];
+uniform int numDirectionalLights = 0;
+
+struct PointLightData {
+    vec3 position;
+    float constant;
+    float linear;
+    float quadratic;
+    vec3 diffuseColor;
+    mat4 mat_view_proj;
+};
+const int MAX_POINT_LIGHTS = 6;
+uniform PointLightData pointLightData[MAX_POINT_LIGHTS];
+uniform int numPointLights = 0;
 
 out vec2 fs_uvs;
 out vec3 fs_normals;
 out vec3 fsFogCameraPos;
-out vec4 fragPosLightSpace[NUM_DIR_LIGHTS];
+out vec4 fragPosLightSpace[MAX_DIR_LIGHTS];
+out vec4 fragPosPointLightSpace[MAX_POINT_LIGHTS];
 
 out mat3 tbn;
 out vec3 tangentFragPos;
@@ -84,8 +98,12 @@ void main() {
     tangentFragPos = tbn * vec3(mat_world * skinnedPosition);
 
     fsFogCameraPos = (mat_view * mat_world * skinnedPosition).xyz;
-    for (int i = 0; i< NUM_DIR_LIGHTS; i++) {
+    for (int i = 0; i< numDirectionalLights; i++) {
         fragPosLightSpace[i] =  directionalLightData[i].mat_view_proj * mat_world * skinnedPosition;
+    }
+
+    for (int i = 0; i< numPointLights; i++) {
+        fragPosPointLightSpace[i] =  pointLightData[i].mat_view_proj * mat_world * skinnedPosition;
     }
 
 }

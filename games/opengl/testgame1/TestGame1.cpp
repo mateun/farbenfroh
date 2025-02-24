@@ -45,7 +45,6 @@ void TestGame1::init() {
     smd.normalMap = getTextureByName("mech_normal");
     smd.shader = skinnedShader;
     smd.skinnedMesh = true;
-
     playerNode->setLocation({-2, 0, 2});
     playerNode->initAsMeshNode(&smd);
     scene->addNode(playerNode);
@@ -65,6 +64,7 @@ void TestGame1::init() {
     // TODO also put lights back into more generic node mode.
     sun = new Light();
     sun->type = LightType::Directional;
+    sun->color = glm::vec3(0.5, .1, .1);
     sun->location = {3, 3,8 };
     sun->lookAtTarget = {0,0, 0};
     sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
@@ -74,12 +74,32 @@ void TestGame1::init() {
 
     auto sun2 = new Light();
     sun2->type = LightType::Directional;
+    sun2->color = glm::vec3(0.1, .1, .9);
     sun2->location = {-3, 2,6 };
     sun2->lookAtTarget = {0,0, 0};
     sun2->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
     auto sunNode2 = new SceneNode();
     sunNode2->initAsLightNode(sun2);
     scene->addNode(sunNode2);
+
+    // Some pointlights
+    auto pointLight1 = new Light();
+    pointLight1->type = LightType::Point;
+    pointLight1->color = glm::vec3(0.1, 0.1, -2);
+    pointLight1->location = {0, 4.5,0};
+    pointLight1->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+    auto plNode1 = new SceneNode();
+    plNode1->initAsLightNode(pointLight1);
+    scene->addNode(plNode1);
+
+    auto pointLight2 = new Light();
+    pointLight2->type = LightType::Point;
+    pointLight2->color = glm::vec3(0.9, 0.9, 0);
+    pointLight2->location = {-11.5, 4.5,1};
+    pointLight2->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+    auto plNode2 = new SceneNode();
+    plNode2->initAsLightNode(pointLight2);
+    scene->addNode(plNode2);
 
     cinematic = new Cinematic(scene, 10);
     auto camTrack = cinematic->addTrack(mainCamNode, "mainCamTrack");
