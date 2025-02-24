@@ -672,7 +672,9 @@ struct MeshDrawData {
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
     glm::vec4 color = {1, 0, 1, 1}; // Nice pink if we have no texture set.
-    Light* directionalLight = nullptr;
+    std::vector<Light*> directionalLights;
+    std::vector<Light*> pointLights;
+    std::vector<Light*> spotLights;
     float uvScale = 1;
     bool depthTest = true;
     bool skinnedDraw = false;
@@ -846,6 +848,7 @@ public:
 
     void initAsMeshNode(SceneMeshData* sceneMeshData);
     void initAsCameraNode(Camera* camera);
+    void initAsLightNode(Light* light);
     void initAsTextNode();  // TODO
 
     void yaw(float degrees);
@@ -869,6 +872,8 @@ public:
 
     const std::vector<glm::mat4>& boneMatrices();
 
+
+
 private:
 
     // These are type specific fields and can be null
@@ -877,6 +882,7 @@ private:
     Texture* normalMap = nullptr;
     Shader* shader = nullptr;
     Camera* camera = nullptr;
+    Light* light = nullptr;
 
     glm::vec3 _location = glm::vec3(0);
     glm::vec3 _velocity = glm::vec3(0);
@@ -893,27 +899,27 @@ private:
 };
 
 
-
 class Scene {
 public:
     Scene();
     ~Scene();
 
     void addNode(SceneNode* node);
-    void setDirectionalLight(Light* light);
     void update();
 
     SceneNode* findActiveCameraNode();
+    std::vector<Light*> getDirectionalLights();
 
     void render();
 
 private:
-    Light* directionalLight;
     std::vector<Light*> pointLights;
     Camera* uiCamera = nullptr;
 
     std::vector<SceneNode*> meshNodes;
     std::vector<SceneNode*> textNodes;
     std::vector<SceneNode*> cameraNodes;
-
+    std::vector<SceneNode*> directionalLightNodes;
+    std::vector<SceneNode*> pointLightNodes;
+    std::vector<SceneNode*> spotLightNodes;
 };

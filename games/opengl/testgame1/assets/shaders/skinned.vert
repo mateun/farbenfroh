@@ -17,17 +17,18 @@ uniform float uvScale = 1;
 uniform float uvPanX = 0;
 uniform float uvPanY = 0;
 
+const int NUM_DIR_LIGHTS=2;
 struct DirectionalLightData {
     vec3 direction;
     vec3 diffuseColor;
     mat4 mat_view_proj;
 };
-uniform DirectionalLightData directionalLightData;
+uniform DirectionalLightData directionalLightData[NUM_DIR_LIGHTS];
 
 out vec2 fs_uvs;
 out vec3 fs_normals;
 out vec3 fsFogCameraPos;
-out vec4 fragPosLightSpace;
+out vec4 fragPosLightSpace[NUM_DIR_LIGHTS];
 
 out mat3 tbn;
 out vec3 tangentFragPos;
@@ -83,7 +84,9 @@ void main() {
     tangentFragPos = tbn * vec3(mat_world * skinnedPosition);
 
     fsFogCameraPos = (mat_view * mat_world * skinnedPosition).xyz;
-    fragPosLightSpace =  directionalLightData.mat_view_proj * mat_world * skinnedPosition;
+    for (int i = 0; i< NUM_DIR_LIGHTS; i++) {
+        fragPosLightSpace[i] =  directionalLightData[i].mat_view_proj * mat_world * skinnedPosition;
+    }
 
 }
 

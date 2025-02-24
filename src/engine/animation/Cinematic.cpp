@@ -190,20 +190,24 @@ glm::vec3 Channel::getInterpolatedSampleValue(float timeAbsolute, float timeNorm
         throw std::runtime_error("oh no, no more index!");
     }
 
+    float diffTime = toSample->time - fromSample->time;
+    float timePart = timeAbsolute - fromSample->time;
+    float blendFactor = timePart / diffTime;
+
     if (this->_type == ChannelType::Location) {
-        auto val =  glm::mix(fromSample.value().value, toSample.value().value, timeNormalized);
+        auto val =  glm::mix(fromSample.value().value, toSample.value().value, blendFactor);
         return val;
     }
 
     if (this->_type == ChannelType::Scale) {
-        auto ival = glm::mix(fromSample.value().value, toSample.value().value, timeNormalized);
+        auto ival = glm::mix(fromSample.value().value, toSample.value().value, blendFactor);
         return ival;
     }
 
     if (this->_type == ChannelType::Rotation) {
         glm::quat fromQuat = glm::qua(fromSample.value().value);
         glm::quat toQuat = glm::qua(toSample.value().value);
-        auto interpRotation = slerp(fromQuat, toQuat, timeNormalized);
+        auto interpRotation = slerp(fromQuat, toQuat, blendFactor);
         return eulerAngles(interpRotation);
     }
 

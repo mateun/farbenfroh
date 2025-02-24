@@ -155,7 +155,7 @@ namespace editor {
             dd.location = {0, 0, 0};
             dd.camera = getMeshViewerCamera();
             dd.color = {0.9, 0.9, 0.9, 1};
-            dd.directionalLight = sun;
+            dd.directionalLights.push_back(sun);
 
             // Show the current pose based on the timestamp (TODO)
             if (currentAnimation && !animationPlaying) {

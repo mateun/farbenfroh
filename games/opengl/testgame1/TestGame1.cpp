@@ -64,22 +64,33 @@ void TestGame1::init() {
 
     // TODO also put lights back into more generic node mode.
     sun = new Light();
+    sun->type = LightType::Directional;
     sun->location = {3, 3,8 };
     sun->lookAtTarget = {0,0, 0};
     sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
-    scene->setDirectionalLight(sun);
+    auto sunNode = new SceneNode();
+    sunNode->initAsLightNode(sun);
+    scene->addNode(sunNode);
+
+    auto sun2 = new Light();
+    sun2->type = LightType::Directional;
+    sun2->location = {-3, 2,6 };
+    sun2->lookAtTarget = {0,0, 0};
+    sun2->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+    auto sunNode2 = new SceneNode();
+    sunNode2->initAsLightNode(sun2);
+    scene->addNode(sunNode2);
 
     cinematic = new Cinematic(scene, 10);
     auto camTrack = cinematic->addTrack(mainCamNode, "mainCamTrack");
     camTrack->addKeyFrame(ChannelType::Location, 0, {0, 1.8, 10});
-    // TODO somehow in between values do not work well
-    //camTrack->addKeyFrame(ChannelType::Location, 4, {-5, 5.8, 6});
-    camTrack->addKeyFrame(ChannelType::Location, 10, {-6, 3.8, 2});
+    camTrack->addKeyFrame(ChannelType::Location, 5, {-8, 0.8, -2});
+    camTrack->addKeyFrame(ChannelType::Location, 10, {-8, 0.8, -2});
     // TODO fix rotation application
     camTrack->addKeyFrame(ChannelType::Rotation, 0, {0, 0, 0});
-    //camTrack->addKeyFrame(ChannelType::Rotation, 3, {0, 0.53f, 0});
-    //camTrack->addKeyFrame(ChannelType::Rotation, 7, {0, 0.1f, 0});
-    camTrack->addKeyFrame(ChannelType::Rotation, 10, {0, -0.5, 0});
+    camTrack->addKeyFrame(ChannelType::Rotation, 7, {0, -1.83f, 0});
+    camTrack->addKeyFrame(ChannelType::Rotation, 8, {0, -1.83f, 0});
+    camTrack->addKeyFrame(ChannelType::Rotation, 10, {0.2, -1.83f, 0});
 
     characterController = new CharacterController(playerNode);
     updateSwitcher = new UpdateSwitcher({characterController, cameraMover}, VK_F10);
