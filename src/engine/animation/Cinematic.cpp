@@ -24,6 +24,7 @@ CineTrack * Cinematic::getTrack(const std::string &name) {
 
 void Cinematic::play() {
     _isPlaying = true;
+    _hasFinished = false;
 }
 
 /**
@@ -50,6 +51,7 @@ void Cinematic::update() {
     if (_localTime >= _duration) {
         _isPlaying = false;
         _localTime -= _duration;
+        _hasFinished = true;
         return;
     }
 
@@ -74,6 +76,14 @@ void Cinematic::pause() {
 
 bool Cinematic::isActive() {
     return _isPlaying;
+}
+
+/**
+* To be "over", the cinematic must have been played and
+* has been playing until its end duration.
+*/
+bool Cinematic::isOver() {
+    return _hasFinished;
 }
 
 /**

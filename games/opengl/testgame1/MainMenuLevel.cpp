@@ -46,9 +46,15 @@ void MainMenuLevel::update() {
                 mechFlyCinematic->play();
             }
         }
+
         if (mechFlyCinematic->isActive()) {
             mechFlyCinematic->update();
             return;
+        }
+
+        if (mechFlyCinematic->isOver()) {
+          game->switchLevel("gameplay");
+          return;
         }
     }
 
@@ -76,7 +82,7 @@ void MainMenuLevel::update() {
 }
 
 void MainMenuLevel::init() {
-   mechShader = new Shader();
+    mechShader = new Shader();
     mechShader->initFromFiles("../games/opengl/testgame1/assets/shaders/mech.vert", "../games/opengl/testgame1/assets/shaders/mech.frag");
     skinnedShader = new Shader();
     skinnedShader->initFromFiles("../games/opengl/testgame1/assets/shaders/skinned.vert", "../games/opengl/testgame1/assets/shaders/mech.frag");
@@ -179,14 +185,14 @@ void MainMenuLevel::init() {
     camTrack->addKeyFrame(ChannelType::Rotation, 8, {0, -1.83f, 0}, AngleUnit::RAD);
     camTrack->addKeyFrame(ChannelType::Rotation, 10, {0.2, -1.83f, 0}, AngleUnit::RAD);
 
-    mechFlyCinematic = new Cinematic(scene, 10);
+    mechFlyCinematic = new Cinematic(scene, 4);
     auto mechTrack = mechFlyCinematic->addTrack(mechNode, "mechTrack");
     mechTrack->addKeyFrame(ChannelType::Location, 0, {0, 0, -5});
-    mechTrack->addKeyFrame(ChannelType::Location, 7, {0, 4, -5});
-    mechTrack->addKeyFrame(ChannelType::Location, 10, {0, 10, -8});
+    mechTrack->addKeyFrame(ChannelType::Location, 1, {0, 4, -5});
+    mechTrack->addKeyFrame(ChannelType::Location, 4, {0, 10, -8});
     mechTrack->addKeyFrame(ChannelType::Rotation, 0, {0, 0, 0}, AngleUnit::DEGREES);
-    mechTrack->addKeyFrame(ChannelType::Rotation, 4, {0, 45, 0}, AngleUnit::DEGREES);
-    mechTrack->addKeyFrame(ChannelType::Rotation, 10, {0, -60, 0}, AngleUnit::DEGREES);
+    mechTrack->addKeyFrame(ChannelType::Rotation, 3, {0, 45, 0}, AngleUnit::DEGREES);
+    mechTrack->addKeyFrame(ChannelType::Rotation, 4, {0, -60, 0}, AngleUnit::DEGREES);
 
 
     characterController = new CharacterController(playerNode);

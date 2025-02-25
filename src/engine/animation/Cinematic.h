@@ -57,6 +57,7 @@ class Cinematic {
     void pause();
 
     bool isActive();
+    bool isOver();
 
     void render();
 
@@ -64,6 +65,7 @@ class Cinematic {
     std::map<std::string, CineTrack*> tracks;
     Scene * _scene = nullptr;
     bool _isPlaying = false;
+    bool _hasFinished = false;
     float _localTime = 0.0f;
     float _duration = 0.0f;
 };

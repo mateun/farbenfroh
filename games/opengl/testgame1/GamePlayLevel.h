@@ -15,6 +15,11 @@ public:
   void update() override;
   void init() override;
 
+  Scene * scene = nullptr;
+  SceneNode * playerNode = nullptr;
+  AnimationPlayer * idlePlayer = nullptr;
+  AnimationPlayer * walkPlayer = nullptr;
+  AnimationController * animationController = nullptr;
 };
 
 
