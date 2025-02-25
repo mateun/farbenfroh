@@ -5,13 +5,32 @@
 #ifndef SIMPLE_KING_DEFAULT_GAME_H
 #define SIMPLE_KING_DEFAULT_GAME_H
 #include <map>
-#include <Xinput.h>
 #include "../../graphics.h"
 #include "FolderAssetLoader.h"
-#include "input.h"
-
 
 class Mesh;
+class DefaultApp;
+
+/**
+* Every game is only taking place within one level at any time.
+* A game may have different levels to which it moves back and forth.
+*
+*/
+class GameLevel {
+
+public:
+    GameLevel(DefaultApp* game);
+    virtual void update() = 0;
+    virtual void render() = 0;
+    virtual void init() = 0;
+
+protected:
+    DefaultApp* game = nullptr;
+
+
+};
+
+
 class DefaultApp {
 
 public:
@@ -19,13 +38,17 @@ public:
 
     DefaultApp();
 
-    virtual void update() = 0;
+    virtual void update();
 
     virtual void init();
 
     virtual void render();
 
+    virtual float getFrametimeInSeconds();
+
     virtual bool shouldStillRun();
+
+    virtual bool useGameLevels();
 
     virtual bool shouldAutoImportAssets();
 
@@ -58,9 +81,17 @@ public:
 
     virtual void stopGame() ;
 
+    void registerGameLevel(const std::string& name, GameLevel *level);
+
+    // Switches the current level to the new one
+    void switchLevel(const std::string& name);
+
+
+
 protected:
     HWND hwnd;
     int64_t performanceFrequency = 0;
+
 
 private:
     Camera *_gameplayCamera = nullptr;
@@ -72,6 +103,9 @@ private:
     gru::SpriteBatch *_uiSpriteBatch = nullptr;
     FolderAssetLoader *folderAssetLoader = nullptr;
     Sound* currentMusic = nullptr;
+    std::map<std::string, GameLevel*> levels;
+    bool useLevels = false;
+    GameLevel* _currentLevel;
 
 
 

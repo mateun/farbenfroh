@@ -218,6 +218,10 @@ struct Camera {
         return _initialForward;
     }
 
+    glm::vec3 getForward() {
+        return normalize(lookAtTarget - location);
+    }
+
     glm::mat4 getLightProjectionMaatrix() {
         // Directional light
         if (type == CameraType::Ortho) {
@@ -712,6 +716,7 @@ glm::mat4 getWorldMatrixFromGlobalState();
 Texture* createTextureFromFile(const std::string& fileName, ColorFormat colorFormat = ColorFormat::RGBA, ColorFormat internalColorFormat = ColorFormat::RGBA);
 Texture* createTextureFromBitmap(Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
 Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType = "png");
+FrameBuffer* createShadowMapFramebufferObject(glm::vec2 size);
 void beginBatch();
 void endBatch();
 void foregroundColor(glm::vec4 col);
@@ -783,6 +788,8 @@ void updateAndDrawText(const char *text, Texture *pTexture, int screenPosX, int 
 
 // createFrameBuffer creates a color framebuffer incl. depthbuffer
 FrameBuffer* createFrameBuffer(int width, int height);
+
+bool keyPressed(int key);
 
 void activateFrameBuffer(FrameBuffer* fb);
 

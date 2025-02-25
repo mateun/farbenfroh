@@ -70,6 +70,8 @@
 
 // Opengl/Testgame1
 #include "../games/opengl/testgame1/TestGame1.cpp"
+#include "../games/opengl/testgame1/MainMenuLevel.cpp"
+#include "../games/opengl/testgame1/GamePlayLevel.cpp"
 
 //#include "../src/engine/editor/shadergraph/ShaderGraph.cpp"
 

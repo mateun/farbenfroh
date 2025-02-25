@@ -49,8 +49,18 @@ Camera *DefaultApp::getUICamera() {
 
 }
 
+GameLevel::GameLevel(DefaultApp *game) : game(game) {
+
+}
+
 DefaultApp::DefaultApp()  {
 
+}
+
+void DefaultApp::update() {
+    if (useGameLevels()) {
+        _currentLevel->update();
+    }
 }
 
 void DefaultApp::init() {
@@ -108,6 +118,10 @@ bool DefaultApp::shouldStillRun() {
     return true;
 }
 
+bool DefaultApp::useGameLevels() {
+    return false;
+}
+
 std::string DefaultApp::getName() {
     return "GenericGame";
 }
@@ -117,11 +131,21 @@ std::string DefaultApp::getVersion() {
 }
 
 void DefaultApp::render() {
+    if (useGameLevels()) {
+        _currentLevel->render();
+        return;
+    }
+
+    // TODO is this default rendering even useful ?!
     bindCamera(getGameplayCamera());
     lightingOn();
 
     static auto gd = createGrid(100);
     drawGrid(gd);
+}
+
+float DefaultApp::getFrametimeInSeconds() {
+    return ftSeconds;
 }
 
 Camera *DefaultApp::getShadowMapCamera() {
@@ -143,6 +167,16 @@ void DefaultApp::setCurrentMusic(Sound *music) {
 
 void DefaultApp::stopGame() {
     // noop
+}
+
+void DefaultApp::registerGameLevel(const std::string &name, GameLevel *level) {
+    levels[name] = level;
+}
+
+void DefaultApp::switchLevel(const std::string &name) {
+    auto oldLevel = _currentLevel;
+    _currentLevel = levels[name];
+    _currentLevel->init();
 }
 
 

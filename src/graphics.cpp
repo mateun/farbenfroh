@@ -26,7 +26,7 @@
 
 
 GLuint createShadowMapFramebuffer();
-FrameBuffer* createShadowMapFramebufferObject(glm::vec2 size);
+
 
 void prepareShadowMapTransformationMatrices();
 void prepareShadowMapTransformationMatrices(DrawCall& dc);
