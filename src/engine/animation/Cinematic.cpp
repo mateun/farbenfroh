@@ -90,6 +90,7 @@ bool Cinematic::isActive() {
 * If there is no track for the given object, we just render the static version
 * of the SceneNode as is.
 */
+[[Deprecated("Question: not needed as the scene incl. camera(s) gets manipulated during update anyway?!")]]
 void Cinematic::render() {
 
     auto camNode = _scene->findActiveCameraNode();
@@ -107,10 +108,10 @@ void Cinematic::render() {
 CineTrack::CineTrack(SceneNode *sceneNode) : _sceneNode(sceneNode){
 }
 
-void CineTrack::addKeyFrame(ChannelType channelType, float time, glm::vec3 value) {
+void CineTrack::addKeyFrame(ChannelType channelType, float time, glm::vec3 value, AngleUnit angleUnit) {
     auto channel = _channels[channelType];
     if (!channel) {
-        channel = new Channel(channelType);
+        channel = new Channel(channelType, angleUnit);
         _channels[channelType] = channel;
     }
     channel->addKeyFrame(time, value);
@@ -145,15 +146,15 @@ void CineTrack::applyInterpolatedTransform(float localTime, float normalizedTime
     }
 
     if (rotationChannel) {
-        interpolatedRotation = rotationChannel->getInterpolatedSampleValue( localTime, normalizedTime);
-        _sceneNode->setRotation(glm::eulerAngles(interpolatedRotation));
+        auto interpRot = rotationChannel->getInterpolatedSampleValue( localTime, normalizedTime);
+        _sceneNode->setRotation(interpRot, rotationChannel->_angleUnit);
     }
 
 
 
 }
 
-Channel::Channel(ChannelType type) : _type(type) {
+Channel::Channel(ChannelType type, AngleUnit angleUnit) : _type(type), _angleUnit(angleUnit) {
 }
 
 void Channel::addKeyFrame(float time, glm::vec3 value) {
@@ -205,10 +206,13 @@ glm::vec3 Channel::getInterpolatedSampleValue(float timeAbsolute, float timeNorm
     }
 
     if (this->_type == ChannelType::Rotation) {
-        glm::quat fromQuat = glm::qua(fromSample.value().value);
-        glm::quat toQuat = glm::qua(toSample.value().value);
+        auto fromVal = _angleUnit == AngleUnit::RAD ? fromSample.value().value : radians(fromSample.value().value);
+        auto toVal = _angleUnit == AngleUnit::RAD ? toSample.value().value : radians(toSample.value().value);
+        glm::quat fromQuat = glm::qua(fromVal);
+        glm::quat toQuat = glm::qua(toVal);
         auto interpRotation = slerp(fromQuat, toQuat, blendFactor);
-        return eulerAngles(interpRotation);
+
+        return _angleUnit == AngleUnit::RAD ? eulerAngles(interpRotation) : degrees(eulerAngles(interpRotation));
     }
 
 }

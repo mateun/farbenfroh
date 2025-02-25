@@ -29,7 +29,7 @@ void TestGame1::init() {
     scene->addNode(mainCamNode);
 
 
-    auto mechNode = new SceneNode();
+    auto mechNode = new SceneNode("mech");
     SceneMeshData smd;
     smd.mesh =  getMeshByName("mech");
     smd.texture = getTextureByName("mech_albedo");
@@ -39,7 +39,8 @@ void TestGame1::init() {
     mechNode->setLocation(glm::vec3(0, 0, -5));
     scene->addNode(mechNode);
 
-    playerNode = new SceneNode();
+    playerNode = new SceneNode("player");
+    //playerNode->disable();
     smd.mesh = getMeshByName("human4_oriented");
     smd.texture = getTextureByName("debug_texture");
     smd.normalMap = getTextureByName("mech_normal");
@@ -49,7 +50,8 @@ void TestGame1::init() {
     playerNode->initAsMeshNode(&smd);
     scene->addNode(playerNode);
 
-    auto groundNode = new SceneNode();
+    auto groundNode = new SceneNode("ground");
+    //groundNode->disable();
     groundNode->setLocation (glm::vec3(0, 0, 0));
     groundNode->setScale(glm::vec3(20, 0.5, 20));
     smd.mesh = getMeshByName("ground_plane");
@@ -101,16 +103,26 @@ void TestGame1::init() {
     plNode2->initAsLightNode(pointLight2);
     scene->addNode(plNode2);
 
-    cinematic = new Cinematic(scene, 10);
-    auto camTrack = cinematic->addTrack(mainCamNode, "mainCamTrack");
+    cameraCinematic = new Cinematic(scene, 10);
+    auto camTrack = cameraCinematic->addTrack(mainCamNode, "mainCamTrack");
     camTrack->addKeyFrame(ChannelType::Location, 0, {0, 1.8, 10});
     camTrack->addKeyFrame(ChannelType::Location, 5, {-8, 0.8, -2});
     camTrack->addKeyFrame(ChannelType::Location, 10, {-8, 0.8, -2});
     // TODO fix rotation application
-    camTrack->addKeyFrame(ChannelType::Rotation, 0, {0, 0, 0});
-    camTrack->addKeyFrame(ChannelType::Rotation, 7, {0, -1.83f, 0});
-    camTrack->addKeyFrame(ChannelType::Rotation, 8, {0, -1.83f, 0});
-    camTrack->addKeyFrame(ChannelType::Rotation, 10, {0.2, -1.83f, 0});
+    camTrack->addKeyFrame(ChannelType::Rotation, 0, {0, 0, 0}, AngleUnit::RAD);
+    camTrack->addKeyFrame(ChannelType::Rotation, 7, {0, -1.83f, 0}, AngleUnit::RAD);
+    camTrack->addKeyFrame(ChannelType::Rotation, 8, {0, -1.83f, 0}, AngleUnit::RAD);
+    camTrack->addKeyFrame(ChannelType::Rotation, 10, {0.2, -1.83f, 0}, AngleUnit::RAD);
+
+    mechFlyCinematic = new Cinematic(scene, 10);
+    auto mechTrack = mechFlyCinematic->addTrack(mechNode, "mechTrack");
+    mechTrack->addKeyFrame(ChannelType::Location, 0, {0, 0, -5});
+    mechTrack->addKeyFrame(ChannelType::Location, 7, {0, 4, -5});
+    mechTrack->addKeyFrame(ChannelType::Location, 10, {0, 10, -8});
+    mechTrack->addKeyFrame(ChannelType::Rotation, 0, {0, 0, 0}, AngleUnit::DEGREES);
+    mechTrack->addKeyFrame(ChannelType::Rotation, 4, {0, 45, 0}, AngleUnit::DEGREES);
+    mechTrack->addKeyFrame(ChannelType::Rotation, 10, {0, -60, 0}, AngleUnit::DEGREES);
+
 
     characterController = new CharacterController(playerNode);
     updateSwitcher = new UpdateSwitcher({characterController, cameraMover}, VK_F10);
@@ -139,12 +151,22 @@ void TestGame1::update() {
     // Check for cinematic activation:
     {
         if (keyPressed('C')) {
-            if (!cinematic->isActive()) {
-                cinematic->play();
+            if (!cameraCinematic->isActive()) {
+                cameraCinematic->play();
             }
         }
-        if (cinematic->isActive()) {
-            cinematic->update();
+        if (cameraCinematic->isActive()) {
+            cameraCinematic->update();
+            return;
+        }
+
+        if (keyPressed('M')) {
+            if (!mechFlyCinematic->isActive()) {
+                mechFlyCinematic->play();
+            }
+        }
+        if (mechFlyCinematic->isActive()) {
+            mechFlyCinematic->update();
             return;
         }
     }
@@ -175,41 +197,12 @@ void TestGame1::update() {
 }
 
 void TestGame1::render() {
-    if (cinematic->isActive()) {
-        cinematic->render();
-        return;
-    }
+
+    // TODO check for any cinematics to render? Not sure, if this is really necessary..
+    // the cinematics apply all changes on the scene diretly anyway (which might be good or not in its own right..)
 
     scene->render();
 
-    // MeshDrawData dd;
-    // dd.mesh = getMeshByName("human4_oriented");
-    // dd.location = {-1, 1, -4};
-    // dd.texture = getTextureByName("mech_albedo");
-    // dd.normalMap = getTextureByName("mech_normal");
-    // dd.uvScale = 1;
-    // dd.directionalLight = sun;
-    // dd.camera = getGameplayCamera();
-    // dd.shader = skinnedShader;
-    // dd.skinnedDraw = true;
-    // dd.boneMatrices = idlePlayer->getCurrentBoneMatrices();
-    // drawMesh(dd);
-    //
-    // dd.location = {-3, 0, -4};
-    // dd.rotationEulers = {0, 180, 0};
-    // drawMesh(dd);
-    //
-    // dd.location = {4, 0, -7.3};
-    // drawMesh(dd);
-    //
-    //
-    // dd.skinnedDraw = false;
-    // dd.mesh = getMeshByName("ground_plane");
-    // dd.texture = getTextureByName("ground_albedo");
-    // dd.normalMap = getTextureByName("debug_normal");
-    // dd.scale = {5, 1, 5};
-    // dd.uvScale = 45;
-    // drawMesh(dd);
     renderFPS();
 }
 

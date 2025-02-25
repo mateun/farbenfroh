@@ -833,6 +833,11 @@ private:
 
 };
 
+enum class AngleUnit {
+    RAD,
+    DEGREES,
+};
+
 enum class SceneNodeType {
     Light,
     Camera,
@@ -852,13 +857,15 @@ struct SceneMeshData {
 class SceneNode {
     friend class Scene;
 public:
-    SceneNode();
+    SceneNode(const std::string& nodeId = "undefined");
     ~SceneNode();
 
     void initAsMeshNode(SceneMeshData* sceneMeshData);
     void initAsCameraNode(Camera* camera);
     void initAsLightNode(Light* light);
     void initAsTextNode();  // TODO
+
+    std::string getId();
 
     void yaw(float degrees);
 
@@ -870,7 +877,7 @@ public:
 
     void setLocation(glm::vec3 vec);
     void setScale(glm::vec3 _scale);
-    void setRotation(glm::vec3 rotationInEulers);
+    void setRotation(glm::vec3 rotationInEulers, AngleUnit angleUnit = AngleUnit::DEGREES);
     void setOrientation(glm::vec3 eulers);
 
     glm::vec3 getLocation();
@@ -881,11 +888,12 @@ public:
 
     const std::vector<glm::mat4>& boneMatrices();
 
-
+    void disable();
 
 private:
 
     // These are type specific fields and can be null
+    std::string id;
     Mesh* mesh = nullptr;
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
@@ -896,7 +904,7 @@ private:
     glm::vec3 _location = glm::vec3(0);
     glm::vec3 _velocity = glm::vec3(0);
     glm::vec3 _scale = glm::vec3(1.0f);
-    glm::vec3 _rotation = glm::vec3(0);
+    glm::vec3 _rotationInDeg = glm::vec3(0);
     glm::vec3 forward= {0, 0, -1};   // This is normally how we face when coming from Blender
     glm::vec3 right = {1, 0, 0}; // Based on the incoming Blender default orientation
     glm::vec4 foregroundColor = {1, 0,1, 1};

@@ -4000,10 +4000,12 @@ void Raytracer::render(int pixelWidth, int pixelHeight) {
 }
 
 
-
+std::string SceneNode::getId() {
+    return id;
+}
 
 void SceneNode::yaw(float degrees) {
-    glm::mat4 yawMatrix = glm::rotate(glm::mat4(1.0f), _rotation.y, glm::vec3(0, 1, 0));
+    glm::mat4 yawMatrix = glm::rotate(glm::mat4(1.0f), _rotationInDeg.y, glm::vec3(0, 1, 0));
 
     glm::vec4 newForward = yawMatrix * glm::vec4(forward, 1.0f);
     forward = normalize(glm::vec3{newForward.x, newForward.y, newForward.z});
@@ -4034,8 +4036,13 @@ void SceneNode::setScale(glm::vec3 scale) {
     _scale = scale;
 }
 
-void SceneNode::setRotation(glm::vec3 rotationInEulers) {
-    _rotation = rotationInEulers;
+void SceneNode::setRotation(glm::vec3 rotationInEulers, AngleUnit unit) {
+    if (unit == AngleUnit::RAD) {
+        _rotationInDeg = degrees(rotationInEulers);
+    } else {
+        _rotationInDeg = rotationInEulers;
+    }
+
     if (_type == SceneNodeType::Camera) {
         auto camera = getCamera();
         glm::qua rotQ = glm::qua(rotationInEulers);
@@ -4062,6 +4069,10 @@ const std::vector<glm::mat4> & SceneNode::boneMatrices() {
     return _boneMatrices;
 }
 
+void SceneNode::disable() {
+    _active = false;
+}
+
 std::vector<Light *> Scene::getLightsOfType(LightType type) {
     std::vector<Light*> ls;
     if (type == LightType::Directional) {
@@ -4086,7 +4097,7 @@ std::vector<Light *> Scene::getLightsOfType(LightType type) {
 
 
 
-SceneNode::SceneNode() {
+SceneNode::SceneNode(const std::string &nodeId) : id(nodeId){
 }
 
 SceneNode::~SceneNode() {
@@ -4189,6 +4200,9 @@ void Scene::render() {
             glClear(GL_DEPTH_BUFFER_BIT);
 
             for (auto m : meshNodes) {
+                if (!m->isActive()) {
+                    continue;
+                }
 
                 // New way
                 {
@@ -4197,7 +4211,7 @@ void Scene::render() {
                     dd.location = m->_location;
                     dd.scale = m->_scale;
                     dd.shader = m->shader;
-                    dd.rotationEulers = m->_rotation;
+                    dd.rotationEulers = m->_rotationInDeg;
                     dd.mesh = m->mesh;
                     dd.viewPortDimensions = {l->light->shadowMapFBO->texture->bitmap->width, l->light->shadowMapFBO->texture->bitmap->height};
                     dd.directionalLights.push_back(l->light);
@@ -4232,11 +4246,14 @@ void Scene::render() {
         glClear(GL_DEPTH_BUFFER_BIT);
 
         for (auto m : meshNodes) {
+            if (!m->isActive()) {
+                continue;
+            }
             // Build the actual render commands for each node and
             // render it into the shadow map.
             location(m->_location);
             scale(m->_scale);
-            rotation(m->_rotation);
+            rotation(m->_rotationInDeg);
             bindMesh(m->mesh);
 
             // TODO
@@ -4258,12 +4275,17 @@ void Scene::render() {
 
     // 2. Actual render pass
     for (auto m : meshNodes) {
+
+        if (!m->isActive()) {
+            continue;
+        }
+
         // Build the actual render commands for each node and
         // render it into the shadow map.
         MeshDrawData mdd;
         mdd.location = m->_location;
         mdd.scale = m->_scale;
-        mdd.rotationEulers = m->_rotation;
+        mdd.rotationEulers = m->_rotationInDeg;
         mdd.mesh = m->mesh;
         mdd.texture = m->texture;
         mdd.normalMap = m->normalMap;

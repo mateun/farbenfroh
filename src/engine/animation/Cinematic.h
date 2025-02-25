@@ -76,7 +76,7 @@ class CineTrack {
 
   public:
     CineTrack(SceneNode* sceneNode);
-    void addKeyFrame(ChannelType channelType, float time, glm::vec3 value);
+    void addKeyFrame(ChannelType channelType, float time, glm::vec3 value, AngleUnit angleUnit = AngleUnit::DEGREES);
 
     std::vector<Channel*> getChannels();
     Channel* getChannel(ChannelType type);
@@ -100,10 +100,7 @@ class Channel {
   friend class CineTrack;
 
 public:
-  Channel(ChannelType type);
-
-
-
+  Channel(ChannelType type, AngleUnit unit = AngleUnit::DEGREES);
 
 private:
   ChannelType _type;
@@ -116,6 +113,8 @@ private:
   glm::vec3 getInterpolatedSampleValue(float timeAbsolute, float timeNormalized);
 
   void addKeyFrame(float time, glm::vec3 vec);
+
+  AngleUnit _angleUnit;
 };
 
 
