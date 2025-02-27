@@ -10,6 +10,7 @@ GamePlayLevel::GamePlayLevel(DefaultApp *game) : GameLevel(game) {
 
 void GamePlayLevel::render() {
     scene->render();
+    game->renderFPS();
 
 }
 
@@ -60,9 +61,9 @@ void GamePlayLevel::init() {
 
     auto groundNode = new SceneNode("ground");
     //groundNode->disable();
-    groundNode->setLocation (glm::vec3(0, 0, 0));
-    groundNode->setScale(glm::vec3(20, 0.5, 20));
-    smd.mesh = game->getMeshByName("ground_plane");
+    groundNode->setLocation (glm::vec3(0, -1, 0));
+    groundNode->setScale(glm::vec3(.5, .5, .5));
+    smd.mesh = game->getMeshByName("cube_ground");
     smd.texture = game->getTextureByName("ground_albedo");
     smd.normalMap = game->getTextureByName("debug_normal");
     smd.uvScale = 205;

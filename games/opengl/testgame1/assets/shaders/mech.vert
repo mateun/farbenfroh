@@ -37,6 +37,7 @@ uniform int numPointLights = 0;
 out vec2 fs_uvs;
 out vec3 fs_normals;
 out vec3 fsFogCameraPos;
+out vec3 fsWorldPos;
 out vec4 fragPosLightSpace[MAX_DIR_LIGHTS];
 out vec4 fragPosPointLightSpace[MAX_POINT_LIGHTS];
 
@@ -68,6 +69,8 @@ void main() {
     tangentFragPos = tbn * vec3(mat_world * vec4(pos, 1.0));
 
     fsFogCameraPos = (mat_view * mat_world * vec4(pos,1)).xyz;
+    fsWorldPos = gl_Position.xyz;
+
     for (int i = 0; i< numDirectionalLights; i++) {
         fragPosLightSpace[i] =  directionalLightData[i].mat_view_proj * mat_world * vec4(pos, 1);
     }

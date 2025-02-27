@@ -777,6 +777,7 @@ GLuint createQuadVAO(PlanePivot pivot = PlanePivot::center);
 glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera);
 
 Texture* createEmptyTexture(int w, int h);
+Texture* createEmptyFloatTexture(int w, int h);
 Texture* createTextTexture(int w, int h);
 void updateTexture(int w, int h, Texture* texture);
 Mesh* loadMeshFromFile(const std::string& fileName);
@@ -786,8 +787,11 @@ Mesh* parseGLTF(JsonElement* gltfJson);
 void prepareTransformationMatrices(glm::mat4 matworld, Camera* camera, Camera* shadowMapCamera, bool shadows);
 void updateAndDrawText(const char *text, Texture *pTexture, int screenPosX, int screenPosY, int screenPosZ = -0.7);
 
-// createFrameBuffer creates a color framebuffer incl. depthbuffer
+// Creates a color framebuffer incl. depthbuffer
 FrameBuffer* createFrameBuffer(int width, int height);
+
+// Creates a color framebuffer based on the given texture and a default depthtexture.
+FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorTexture);
 
 bool keyPressed(int key);
 
@@ -946,4 +950,8 @@ private:
     std::vector<SceneNode*> directionalLightNodes;
     std::vector<SceneNode*> pointLightNodes;
     std::vector<SceneNode*> spotLightNodes;
+
+    Texture* rayTraceWorldPosTexture = nullptr;
+    FrameBuffer* raytracedShadowPositionFBO = nullptr;
+    Shader * worldPosShader = nullptr;
 };

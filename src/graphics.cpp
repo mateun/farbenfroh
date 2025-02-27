@@ -3070,6 +3070,38 @@ Texture* createEmptyTexture(int w, int h) {
     return createTextTexture(w, h);
 }
 
+Texture * createEmptyFloatTexture(int w, int h) {
+    auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 32);
+    auto bm = new Bitmap();
+    bm->width = w;
+    bm->height = h;
+    bm->pixels = pixels;
+    GLuint handle;
+
+    glGenTextures(1, &handle);
+    glBindTexture(GL_TEXTURE_2D, handle);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // glTexImage2D(GL_TEXTURE_2D,
+    //              0,
+    //              GL_RGB32F,
+    //              bm->width, bm->height,
+    //              0,
+    //              GL_RGBA,
+    //              GL_UNSIGNED_BYTE, bm->pixels);
+
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB32F, w, h);
+
+    auto target = new Texture();
+    target->handle = handle;
+    return target;
+
+}
+
 Texture* createTextTexture(int w, int h) {
 
     auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 32);
@@ -4132,6 +4164,10 @@ glm::vec3 SceneNode::getForwardVector() {
 }
 
 Scene::Scene() {
+    rayTraceWorldPosTexture = createEmptyFloatTexture(scaled_width, scaled_height);
+    raytracedShadowPositionFBO =  createFrameBufferWithTexture(scaled_width, scaled_height, rayTraceWorldPosTexture);
+    worldPosShader = new Shader();
+    worldPosShader->initFromFiles("../assets/shaders/world_pos.vert", "../assets/shaders/world_pos.frag");
 }
 
 Scene::~Scene() {
@@ -4184,6 +4220,73 @@ void Scene::render() {
     // These need to be used to for the shadowpass.
     // So we need to render all meshes into the shadowmap.
     // We need to this for every light and every mesh.
+
+    // Experimental: raytraced shadowing.
+    // First render all world positions into a framebuffer.
+    // We use this later to raycast to any light and write the
+    // information into another dedicated shadow texture.
+    // Both textures are already in final camera render space,
+    // so there is no loss in shadow quality.
+    {
+        auto cameraNode = findActiveCameraNode();
+        glBindFramebuffer(GL_FRAMEBUFFER, raytracedShadowPositionFBO->handle);
+        glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+        for (auto m : meshNodes) {
+            if (!m->isActive()) {
+                continue;
+            }
+            // Build the actual render commands for each node and
+            // render it into the shadow map.
+            MeshDrawData mdd;
+            mdd.location = m->_location;
+            mdd.scale = m->_scale;
+            mdd.rotationEulers = m->_rotationInDeg;
+            mdd.mesh = m->mesh;
+            //mdd.texture = m->texture;
+            //mdd.normalMap = m->normalMap;
+            mdd.shader = worldPosShader;
+            mdd.camera = cameraNode->getCamera();
+            //mdd.uvScale = m->uvScale;
+            //mdd.color = m->foregroundColor;
+            //mdd.directionalLights = getLightsOfType(LightType::Directional);
+            //mdd.pointLights = getLightsOfType(LightType::Point);
+            //mdd.spotLights = getLightsOfType(LightType::Spot);
+
+            if (m->skinnedMesh) {
+                mdd.skinnedDraw = m->skinnedMesh;
+                mdd.boneMatrices = m->boneMatrices();
+            }
+
+            drawMesh(mdd);
+
+        }
+    }
+
+    // Debug the created texture:
+#ifdef _DEBUG_RAYTRACING
+    float* data = new float[scaled_width * scaled_height * 3];
+    glReadPixels(0, 0, scaled_width, scaled_height, GL_RGB, GL_FLOAT, data);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    GL_ERROR_EXIT(12999)
+    // 'data' now holds the framebuffer's pixel data
+
+    for (int x = 0; x < scaled_width; x++) {
+        for (int y = 0; y < scaled_height; y++) {
+            int offset = (x*3) + (y*scaled_width *3);
+            float posx = data[offset];
+            float posy = data[offset+1];
+            float posz = data[offset+2];
+
+            if (posx != 0) {
+                printf("found posx for %d/%d\n", x, y);
+            }
+        }
+    }
+#endif
+
+    // End experimental
 
     // First, our directional lights
     {
@@ -4346,13 +4449,10 @@ glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera
     return ss;
 }
 
-FrameBuffer *createFrameBuffer(int width, int height) {
+FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorTexture) {
     GLuint fbo;
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    // Step 2: Create the color attachment texture
-    auto colorTexture = createEmptyTexture(width, height);
 
     // Attach the texture to the framebuffer's color attachment point
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture->handle, 0);
@@ -4382,6 +4482,10 @@ FrameBuffer *createFrameBuffer(int width, int height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     return new FrameBuffer { fbo, colorTexture };
+}
+
+FrameBuffer *createFrameBuffer(int width, int height) {
+    return createFrameBufferWithTexture(width, height, createEmptyTexture(width, height));
 
 }
 

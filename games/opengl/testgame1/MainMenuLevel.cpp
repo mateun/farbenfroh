@@ -24,8 +24,7 @@ void MainMenuLevel::render() {
 
     scene->render();
 
-    // Would need the game for this.
-    //renderFPS();
+    game->renderFPS();
 }
 
 void MainMenuLevel::update() {

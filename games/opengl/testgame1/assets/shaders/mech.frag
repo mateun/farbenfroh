@@ -34,6 +34,7 @@ in vec3 fs_normals;
 in vec4 fragPosLightSpace[MAX_DIR_LIGHTS];
 in vec4 fragPosPointLightSpace[MAX_POINT_LIGHTS];
 in vec3 fsFogCameraPos;
+in vec3 fsWorldPos;
 in vec2 fs_uvs;
 in vec3 viewPos;
 in mat3 tbn;
@@ -122,11 +123,20 @@ vec4 calculatePointLights(vec4 albedo, vec3 normal) {
 
 }
 
+vec4 fog(vec4 c) {
+    float z = length(fsFogCameraPos);
+    float de = 0.025 * smoothstep(0, 6, 10 - fsWorldPos.y);
+    float di = 0.045 * smoothstep(0, 40, 30 - fsWorldPos.y);
+    float extinction = exp(-z * de);
+    float inscattering = exp(-z * di);
+
+    vec4 fogColor = vec4(0.6, 0.6, 0.5, 1);
+    return c * extinction + fogColor * (1 - inscattering);
+
+}
+
 void main() {
-
     color = vec4(0, 0, 0, 0);
-
-
     vec4 albedo = texture(diffuseTexture, fs_uvs);
 
     //Extract normal from map
@@ -137,12 +147,11 @@ void main() {
     //color = calculateDirectionalLightWithoutNormalMap(albedo);
     color += calculatePointLights(albedo, normal);
 
+    //color.a *= overrideAlpha;
+    //color *= tint;
 
+    color = fog(color);
 
-    color.a *= overrideAlpha;
-    color *= tint;
-
-    // TODO fog
 
     //color = vec4(1, 0,1, 1);
 
