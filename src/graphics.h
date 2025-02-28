@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <engine/algo/Bvh.h>
 #include <GL/glew.h>
 #include <engine/input/UpdateSwitcher.h>
 #include <engine/lighting/Light.h>
@@ -136,6 +137,18 @@ struct FrameBuffer {
 };
 
 /**
+* A centroid represents the original 3 points,
+* and the average value.
+*/
+struct Centroid {
+    glm::vec3 a;
+    glm::vec3 b;
+    glm::vec3 c;
+    glm::vec3 value;
+};
+
+
+/**
  * A 3D mesh which can be rendered anywhere
  * in the world.
  * Bind it and then it can be rendered.
@@ -152,6 +165,7 @@ struct Mesh {
     Skeleton* skeleton = nullptr;
 
     std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> positionsSortedByIndex;
     std::vector<uint32_t> indices;
     std::vector<glm::vec3> tangents;
     std::vector<glm::vec3> normals;
@@ -163,6 +177,10 @@ struct Mesh {
 
     bool rayCollides(Ray ray, glm::vec4& color);
     Animation* findAnimation(const std::string& name);
+
+    std::vector<Centroid*> calculateCentroids();
+
+    std::vector<Centroid*> centroids;
 };
 
 enum class CameraType {
@@ -892,6 +910,7 @@ public:
     void setOrientation(glm::vec3 eulers);
 
     glm::vec3 getLocation();
+    glm::vec3 getScale();
 
     Camera * getCamera();
 

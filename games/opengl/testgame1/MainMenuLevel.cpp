@@ -24,6 +24,9 @@ void MainMenuLevel::render() {
 
     scene->render();
 
+    mechBvh->render(game->getGameplayCamera());
+    //playerBvh->render(game->getGameplayCamera());
+
     game->renderFPS();
 }
 
@@ -101,13 +104,15 @@ void MainMenuLevel::init() {
 
     auto mechNode = new SceneNode("mech");
     SceneMeshData smd;
-    smd.mesh =  game->getMeshByName("mech");
+    smd.mesh =  game->getMeshByName("cube_mech2");
     smd.texture = game->getTextureByName("mech_albedo");
     smd.normalMap = game->getTextureByName("mech_normal");
     smd.shader = mechShader;
     mechNode->initAsMeshNode(&smd);
     mechNode->setLocation(glm::vec3(0, 0, -5));
+    mechNode->setScale(glm::vec3(1, 1, 1));
     scene->addNode(mechNode);
+    mechBvh = new gru::Bvh(smd.mesh->calculateCentroids(), {0, 0, -5}, mechNode->getScale());
 
     playerNode = new SceneNode("player");
     //playerNode->disable();
@@ -119,6 +124,7 @@ void MainMenuLevel::init() {
     playerNode->setLocation({-2, 0, 2});
     playerNode->initAsMeshNode(&smd);
     scene->addNode(playerNode);
+    //playerBvh = new gru::Bvh(game->getMeshByName("human4_oriented")->calculateCentroids(), {-2, 0, 2}, playerNode->getScale());
 
     auto groundNode = new SceneNode("ground");
     //groundNode->disable();
@@ -213,4 +219,6 @@ void MainMenuLevel::init() {
     idleWalkConstraint->property.propertyType = PropertyType::FLOAT;
     idleWalkConstraint->constraintOperator = ConstraintOperator::GREATEREQUAL;
     idleWalkTrans->addConstraint(idleWalkConstraint);
+
+
 }

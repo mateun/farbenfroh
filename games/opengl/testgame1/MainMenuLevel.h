@@ -31,8 +31,8 @@ private:
   Shader * skinnedShader = nullptr;
   AnimationController * animationController = nullptr;
   Cinematic * mechFlyCinematic = nullptr;
-
-
+  gru::Bvh * playerBvh = nullptr;
+  gru::Bvh * mechBvh = nullptr;
 };
 
 

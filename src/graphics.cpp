@@ -3678,6 +3678,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
 
     auto mesh = scene->mMeshes[0];
     std::vector<glm::vec3> posMasterList;
+    std::vector<glm::vec3> posIndexSortedMasterList;
     std::vector<glm::vec2> uvMasterList;
     std::vector<glm::vec3> tangentMasterList;
     std::vector<glm::vec3> normalMasterList;
@@ -3852,6 +3853,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
         aiFace face = mesh->mFaces[i];
         for (unsigned int j = 0; j < face.mNumIndices; j++) {
             indicesFlat.push_back(face.mIndices[j]);
+            posIndexSortedMasterList.push_back(posMasterList[face.mIndices[j]]);
         }
     }
 
@@ -3962,6 +3964,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
     mymesh->instanceTintVBO = instanceTintVBO;
     mymesh->indexDataType = GL_UNSIGNED_INT;
     mymesh->positions = posMasterList;
+    mymesh->positionsSortedByIndex = posIndexSortedMasterList;
     mymesh->indices = indicesFlat;
     mymesh->normals = normalMasterList;
     mymesh->tangents = tangentMasterList;
@@ -3970,6 +3973,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
     mymesh->fileName = std::filesystem::path(filePath).filename().string();
     mymesh->skeleton = skeleton;
     mymesh->animations = animations;
+    mymesh->centroids = mymesh->calculateCentroids();
 
     return mymesh;
 
@@ -4087,6 +4091,10 @@ void SceneNode::setRotation(glm::vec3 rotationInEulers, AngleUnit unit) {
 
 glm::vec3 SceneNode::getLocation() {
     return _location;
+}
+
+glm::vec3 SceneNode::getScale() {
+    return _scale;
 }
 
 Camera * SceneNode::getCamera() {
@@ -4439,6 +4447,21 @@ Animation * Mesh::findAnimation(const std::string &name) {
         }
     }
     return nullptr;
+}
+
+std::vector<Centroid *> Mesh::calculateCentroids() {
+    if (centroids.empty()) {
+        for (int i = 0; i < indices.size(); i += 3) {
+            auto a = positions[indices[i]];
+            auto b = positions[indices[i+1]];
+            auto c = positions[indices[i+2]];
+            auto centroidValue = (a + b + c) / 3.0f;
+            auto centroid = new Centroid{a, b, c, centroidValue};
+            centroids.push_back(centroid);
+        }
+    }
+
+    return centroids;
 }
 
 glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera) {
