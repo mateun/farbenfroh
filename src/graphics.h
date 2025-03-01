@@ -256,6 +256,9 @@ struct Camera {
             return glm::ortho<float>(-28, 28, -28, 28, 1.0f, 43.0f);
         }
 
+        return glm::mat4(1.0f);
+
+
     }
 
     glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) {
@@ -283,7 +286,10 @@ struct Camera {
         if (type == CameraType::Perspective) {
             return glm::perspectiveFov<float>(glm::radians(fov), w, h, 0.1f, 1000);
         }
+
+        return glm::mat4(1.0f);
     }
+
 
 };
 

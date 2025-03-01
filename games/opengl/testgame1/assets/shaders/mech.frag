@@ -125,12 +125,12 @@ vec4 calculatePointLights(vec4 albedo, vec3 normal) {
 
 vec4 fog(vec4 c) {
     float z = length(fsFogCameraPos);
-    float de = 0.025 * smoothstep(0, 6, 10 - fsWorldPos.y);
-    float di = 0.045 * smoothstep(0, 40, 30 - fsWorldPos.y);
+    float de = 0.025 * smoothstep(0, 6, 5 - fsWorldPos.y);
+    float di = 0.045 * smoothstep(0, 40, 15 - fsWorldPos.y);
     float extinction = exp(-z * de);
     float inscattering = exp(-z * di);
 
-    vec4 fogColor = vec4(0.6, 0.6, 0.5, 1);
+    vec4 fogColor = vec4(0.9, 0.9, 0.9, 1);
     return c * extinction + fogColor * (1 - inscattering);
 
 }
@@ -150,7 +150,7 @@ void main() {
     //color.a *= overrideAlpha;
     //color *= tint;
 
-    color = fog(color);
+    //color = fog(color);
 
 
     //color = vec4(1, 0,1, 1);

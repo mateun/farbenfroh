@@ -69,6 +69,7 @@ std::vector<AnimationSample *> Animation::findSamples(SampleType sampleType) {
   if (sampleType == SampleType::scale) {
     return sampleStore->allScaleSamples();
   }
+  return {};
 }
 
 std::vector<AnimationSample*> Animation::findSamples(const std::string &jointName, SampleType sampleType) {

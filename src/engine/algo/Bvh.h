@@ -29,7 +29,7 @@ namespace gru {
 
         // Create a BVH from a mesh.
         // The meshes triangles are split into the different bounding volumes.
-        Bvh(std::vector<Centroid*> centroids, glm::vec3 location, glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f));
+        Bvh(std::vector<Centroid*> centroids, glm::vec3 location, glm::vec3 locationOffset, glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f), const std::string& kind = "undef", SplitAxis axis = SplitAxis::NONE);
 
 
         // Visualize the BVH with transparent cubes.
@@ -43,24 +43,28 @@ namespace gru {
         Shader *getShader();
 
         // World location of the mesh
-        glm::vec3 location;
+        glm::vec3 location = glm::vec3(0.0f);
+
+        // Offset to the world location for this given BVH AABB
+        glm::vec3 visualizationLocationOffset= glm::vec3(0.0f);
 
         // Scale applied to this instance
-        glm::vec3 scale;
+        glm::vec3 scale = glm::vec3(1.0f);
 
         // A cube mesh used for visualization
         Mesh* cubeMesh = nullptr;
 
-
-
+        // Shader for the debug cube rendering.
         Shader * unitCubeShader = nullptr;
 
+        // AABB dimensions
         glm::vec3 outmostMin =  {1000, 1000, 1000};
         glm::vec3 outmostMax =  {0, 0, 0};
 
         Bvh* left = nullptr;
         Bvh* right = nullptr;
         std::vector<Centroid *> centroids;
+
     };
 
 } // gru

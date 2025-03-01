@@ -224,5 +224,6 @@ glm::vec3 Channel::getInterpolatedSampleValue(float timeAbsolute, float timeNorm
 
         return _angleUnit == AngleUnit::RAD ? eulerAngles(interpRotation) : degrees(eulerAngles(interpRotation));
     }
+    return {0.0f, 0.0f, 0.0f};
 
 }

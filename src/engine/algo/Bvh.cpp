@@ -7,7 +7,7 @@
 
 namespace gru {
 
-    Bvh::Bvh(std::vector<Centroid*> centroids, glm::vec3 location, glm::vec3 scale) : location(location), scale(scale), centroids(centroids) {
+    Bvh::Bvh(std::vector<Centroid*> centroids, glm::vec3 location, glm::vec3 locationOffset, glm::vec3 scale, const std::string& kind, SplitAxis splitAxis) : visualizationLocationOffset(locationOffset), location(location), scale(scale), centroids(centroids) {
 
 
         // No further splitting
@@ -17,6 +17,10 @@ namespace gru {
 
         // Calculate the AABB of the passed in centroids.
         for (auto centroid : centroids) {
+                // if (centroid->value.x < outmostMin.x) {
+                //     outmostMin.x = centroid->value.x;
+                // }
+
                 if (centroid->a.x < outmostMin.x) {
                     outmostMin.x = centroid->a.x;
                 }
@@ -27,6 +31,10 @@ namespace gru {
                     outmostMin.x = centroid->c.x;
                 }
 
+            // if (centroid->value.y < outmostMin.y) {
+            //     outmostMin.y = centroid->value.y;
+            // }
+
                 if (centroid->a.y < outmostMin.y) {
                     outmostMin.y = centroid->a.y;
                 }
@@ -36,6 +44,10 @@ namespace gru {
                 if (centroid->c.y < outmostMin.y) {
                     outmostMin.y = centroid->c.y;
                 }
+
+            // if (centroid->value.z < outmostMin.z) {
+            //     outmostMin.z = centroid->value.z;
+            // }
                 if (centroid->a.z < outmostMin.z) {
                     outmostMin.z = centroid->a.z;
                 }
@@ -46,6 +58,10 @@ namespace gru {
                     outmostMin.z = centroid->c.z;
                 }
 
+            // if (centroid->value.x > outmostMax.x) {
+            //     outmostMax.x = centroid->value.x;
+            // }
+
                 if (centroid->a.x > outmostMax.x) {
                     outmostMax.x = centroid->a.x;
                 }
@@ -55,6 +71,11 @@ namespace gru {
                 if (centroid->c.x > outmostMax.x) {
                     outmostMax.x = centroid->c.x;
                 }
+
+                // if (centroid->value.y > outmostMax.y) {
+                //     outmostMax.y = centroid->value.y;
+                // }
+
                 if (centroid->a.y > outmostMax.y) {
                     outmostMax.y = centroid->a.y;
                 }
@@ -64,6 +85,11 @@ namespace gru {
                 if (centroid->c.y > outmostMax.y) {
                     outmostMax.y = centroid->c.y;
                 }
+
+            // if (centroid->value.z > outmostMax.z) {
+            //     outmostMax.z = centroid->value.z;
+            // }
+
                 if (centroid->a.z > outmostMax.z) {
                     outmostMax.z = centroid->a.z;
                 }
@@ -75,7 +101,23 @@ namespace gru {
                 }
             }
 
-        printf("aab defined: %f %f %f", outmostMax.x, outmostMax.y, outmostMax.z);
+        printf("AABB defined for BVH %s: (%f/%f/%f) - (%f %f %f). Offset: %f/%f/%f", kind.c_str(), outmostMin.x, outmostMin.y, outmostMin.z, outmostMax.x, outmostMax.y, outmostMax.z, locationOffset.x, locationOffset.y, locationOffset.z);
+
+        // Calculate corrected visualization offset based on our split axis
+        // already found AABB:
+
+        if (splitAxis == SplitAxis::X) {
+            this->visualizationLocationOffset.x = outmostMin.x;
+        }
+
+        if (splitAxis == SplitAxis::Y) {
+            this->visualizationLocationOffset.y = outmostMin.y;
+        }
+        if (splitAxis == SplitAxis::Z) {
+            this->visualizationLocationOffset.z = outmostMin.z;
+        }
+
+        printf("\t locationOffset corrected: %f/%f/%f: ", visualizationLocationOffset.x, visualizationLocationOffset.y, visualizationLocationOffset.z);
 
         // Next we split - into two groups, for a binary tree.
         // To find the splitting axis, we decide for the biggest dimension based on our AABB.
@@ -93,7 +135,7 @@ namespace gru {
             }
         }
 
-
+        // X Axis split
         if (index == 0) {
             // split by x
             std::ranges::sort(centroids.begin(), centroids.end(), [](const Centroid* a, const Centroid* b) {
@@ -112,14 +154,15 @@ namespace gru {
                 rights.push_back(centroids[i]);
             }
             if (lefts.size() > 5) {
-                left = new Bvh(lefts, location, scale);
+                left = new Bvh(lefts, location, {0,0,0}, scale, "left", SplitAxis::X);
             }
 
             if (rights.size() > 5) {
-                right = new Bvh(rights, location  + glm::vec3(medianElement->value.x, 0, 0), scale);
+                right = new Bvh(rights, location, glm::vec3(medianElement->value.x, 0, 0), scale, "right", SplitAxis::X);
             }
 
         }
+        // Y Axis Split
         else if (index == 1) {
             // split by y
 
@@ -139,13 +182,14 @@ namespace gru {
                 rights.push_back(centroids[i]);
             }
             if (lefts.size() > 5) {
-                left = new Bvh(lefts, location, scale);
+                left = new Bvh(lefts, location, {0,0,0}, scale, "left", SplitAxis::Y);
             }
             if (rights.size() > 5) {
-                right = new Bvh(rights, location + glm::vec3(0, medianElement->value.y, 0), scale);
+                right = new Bvh(rights, location, glm::vec3(0, medianElement->value.y, 0), scale, "right", SplitAxis::Y);
             }
 
         }
+        // Z Axis split
         else if (index == 2) {
             // split by z
             std::ranges::sort(centroids.begin(), centroids.end(), [](const Centroid* a, const Centroid* b) {
@@ -164,10 +208,10 @@ namespace gru {
                 rights.push_back(centroids[i]);
             }
             if (lefts.size() > 5) {
-                left = new Bvh(lefts, location , scale);
+                left = new Bvh(lefts, location , {0,0,0}, scale, "left", SplitAxis::Z);
             }
             if (rights.size() > 5) {
-                right = new Bvh(rights, location + glm::vec3(0, 0, medianElement->value.z), scale);
+                right = new Bvh(rights, location, glm::vec3(0, 0, medianElement->value.z), scale, "right", SplitAxis::Z);
             }
         }
 
@@ -191,7 +235,7 @@ namespace gru {
 
     void Bvh::render(Camera *camera, int level, const std::string& kind) {
 
-        if (level > 4) {
+        if (level > 3) {
             return;
         }
 
@@ -203,24 +247,26 @@ namespace gru {
         // We need to calculate an offset to add to our AABB.
         // The model might not be symmetrical, but our unit cube is.
         // So we need to offset it by the actual asymmetry on all axes.
-        glm::vec3 absDiff = (glm::abs(outmostMax) - glm::abs(outmostMin)) / 2.0f;
-        mdd.location = location + glm::vec3(absDiff.x, absDiff.y, absDiff.z);
-        //mdd.location = location + glm::vec3(0, 1, 0);
+        glm::vec3 absDiff = (glm::abs(outmostMax) - glm::abs(outmostMin));
+        mdd.location = location + (absDiff/2.0f) + (visualizationLocationOffset);
 
-        mdd.scale = (outmostMax - outmostMin) * scale * (1 + level * 0.05f);
+        mdd.scale = (outmostMax - outmostMin) * scale * (1 - level * 0.01f);
         if (kind == "top") {
             mdd.color = glm::vec4(1, 0, 1, 1);
-            wireframeOn(4);
+            wireframeOn(1);
         } else if (kind == "left") {
-            mdd.color = glm::vec4((float)level / 5.0, 0, 0, 1);
-            wireframeOn(3);
+            mdd.color = glm::vec4(0.95, 0, 0, 1);
+            wireframeOn(1);
         } else if (kind == "right") {
-            wireframeOn(2);
-            mdd.color = glm::vec4(0, (float)level/5.0, 0, 1);
+            wireframeOn(1);
+            mdd.color = glm::vec4(0, 0.95, 0, 1);
         }
 
-
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
         drawMesh(mdd);
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
         wireframeOff();
         if (left) {
             left->render(camera, level+1, "left");
@@ -228,6 +274,5 @@ namespace gru {
         if (right) {
             right->render(camera, level+1, "right");
         }
-
     }
 } // gru

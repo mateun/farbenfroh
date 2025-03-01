@@ -104,7 +104,7 @@ void MainMenuLevel::init() {
 
     auto mechNode = new SceneNode("mech");
     SceneMeshData smd;
-    smd.mesh =  game->getMeshByName("cube_mech2");
+    smd.mesh =  game->getMeshByName("mech");
     smd.texture = game->getTextureByName("mech_albedo");
     smd.normalMap = game->getTextureByName("mech_normal");
     smd.shader = mechShader;
@@ -112,7 +112,17 @@ void MainMenuLevel::init() {
     mechNode->setLocation(glm::vec3(0, 0, -5));
     mechNode->setScale(glm::vec3(1, 1, 1));
     scene->addNode(mechNode);
-    mechBvh = new gru::Bvh(smd.mesh->calculateCentroids(), {0, 0, -5}, mechNode->getScale());
+    mechBvh = new gru::Bvh(smd.mesh->calculateCentroids(), {0, 0, -5}, {0,0,0}, mechNode->getScale());
+
+    auto measurePlaneNode = new SceneNode("measure_plane");
+    smd.mesh =  game->getMeshByName("measure_plane");
+    smd.texture = game->getTextureByName("measure_plane_diffuse");
+    //smd.normalMap = game->getTextureByName("mech_normal");
+    smd.shader = mechShader;
+    measurePlaneNode->initAsMeshNode(&smd);
+    measurePlaneNode->setLocation(glm::vec3(1.8, 0, -5));
+    measurePlaneNode->setScale(glm::vec3(1, 1, 1));
+    scene->addNode(measurePlaneNode);
 
     playerNode = new SceneNode("player");
     //playerNode->disable();
@@ -163,8 +173,8 @@ void MainMenuLevel::init() {
     // Some pointlights
     auto pointLight1 = new Light();
     pointLight1->type = LightType::Point;
-    pointLight1->color = glm::vec3(0.1, 0.1, -2);
-    pointLight1->location = {0, 4.5,0};
+    pointLight1->color = glm::vec3(0.7, 0.7, 0.7);
+    pointLight1->location = {0, 8,-5};
     pointLight1->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
     auto plNode1 = new SceneNode();
     plNode1->initAsLightNode(pointLight1);
@@ -172,8 +182,8 @@ void MainMenuLevel::init() {
 
     auto pointLight2 = new Light();
     pointLight2->type = LightType::Point;
-    pointLight2->color = glm::vec3(0.9, 0.9, 0);
-    pointLight2->location = {-11.5, 4.5,1};
+    pointLight2->color = glm::vec3(1, 1, 1);
+    pointLight2->location = {1.8, 2.5,-2};
     pointLight2->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
     auto plNode2 = new SceneNode();
     plNode2->initAsLightNode(pointLight2);

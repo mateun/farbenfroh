@@ -228,7 +228,7 @@ namespace editor {
             ImGui::TableNextColumn();
             // Now we are finished rendering our 3D scene into our framebuffer.
             // Next we present the texture of the FBO as an image in ImGUI.
-            ImGui::Image(reinterpret_cast<ImTextureID>(skeletalMeshWindowFrameBuffer->texture->handle),
+            ImGui::Image((ImTextureID)(intptr_t)(skeletalMeshWindowFrameBuffer->texture->handle),
                              {(float) skeletalMeshWindowFrameBuffer->texture->bitmap->width / 2,
                               (float) skeletalMeshWindowFrameBuffer->texture->bitmap->height / 2},
                              {0, 1}, {1, 0});
@@ -497,7 +497,7 @@ namespace editor {
 
             // Left column
             ImGui::TableNextColumn();
-            ImGui::Image(reinterpret_cast<ImTextureID>(skeletalMeshWindowFrameBuffer->texture->handle),
+            ImGui::Image((ImTextureID)(intptr_t)(skeletalMeshWindowFrameBuffer->texture->handle),
                          {(float) skeletalMeshWindowFrameBuffer->texture->bitmap->width / 2,
                           (float) skeletalMeshWindowFrameBuffer->texture->bitmap->height / 2},
                          {0, 1}, {1, 0});
@@ -737,7 +737,7 @@ namespace editor {
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
         ImGui::SetWindowPos(ImVec2(0, 30));     // Position at the top
         float toolbarHeight = 40;
-        if (ImGui::ImageButton((void *) assetLoader->getTexture("button_play")->handle, {16, 16})) {
+        if (ImGui::ImageButton((ImTextureID)(intptr_t) assetLoader->getTexture("button_play")->handle, {16, 16})) {
             printf("play button pressed\n");
         }
         ImGui::SetWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, toolbarHeight));  // Full window width, height of 50

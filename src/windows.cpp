@@ -96,7 +96,7 @@ void mouseVisible(bool val) {
     useMouse = val;
 }
 
-UINT GetDpiForWindow(HWND hWnd) {
+UINT GetDpi(HWND hWnd) {
     UINT dpi = 96; // Default DPI is 96 (100%)
     HMODULE hUser32 = LoadLibrary(TEXT("User32.dll"));
     if (hUser32) {
@@ -286,7 +286,7 @@ bool changeResolution(int width, int height, int refreshRate, const std::string&
     }
     // TODO: currently nothing done if none fullscreen change. then we assume we are developing
     //  and just stay with the bordered window.
-
+    return true;
 
 }
 

@@ -93,6 +93,7 @@ bool AnimationProperty::operator==(const AnimationProperty &other) const {
     if (other.propertyType == PropertyType::STRING) {
         return other.stringValue == stringValue;
     }
+    return false;
 }
 
 bool AnimationProperty::operator>=(const AnimationProperty &other) const {
@@ -108,6 +109,7 @@ bool AnimationProperty::operator>=(const AnimationProperty &other) const {
     if (other.propertyType == PropertyType::STRING) {
         return stringValue >= other.stringValue;
     }
+    return false;
 }
 
 bool AnimationProperty::operator<=(const AnimationProperty &other) const {
@@ -123,6 +125,7 @@ bool AnimationProperty::operator<=(const AnimationProperty &other) const {
     if (other.propertyType == PropertyType::STRING) {
         return stringValue <= other.stringValue;
     }
+    return false;
 }
 
 
