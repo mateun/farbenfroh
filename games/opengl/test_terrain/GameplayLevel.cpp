@@ -48,6 +48,7 @@ namespace ttg {
         roadNode->setLocation({0, 0.001, -1});
         roadNode->initAsMeshNode(&smd);
 
+
         auto sunNode = new SceneNode("sun");
         auto sun = new Light();
         sun->type = LightType::Directional;
@@ -83,6 +84,7 @@ namespace ttg {
         scene->addNode(terrainNode);
         scene->addNode(roadNode);
         scene->addNode(sunNode);
+        scene->addNode(tankNode);
         //scene->addNode(plNode1);
         //scene->addNode(plNode2);
 
