@@ -5,10 +5,10 @@
 #ifndef SHADERGRAPH_H
 #define SHADERGRAPH_H
 
-#include "../../game/default_app.h"
+#include "../../game/default_game.h"
 
 
-class ShaderGraph : public DefaultApp {
+class ShaderGraph : public DefaultGame {
 
     void init() override;
     void update() override;

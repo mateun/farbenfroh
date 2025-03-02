@@ -6,7 +6,7 @@
 #define SOFTWARERENDEREDGAME_H
 #include <vector>
 #include <string>
-#include "../src/engine/game/default_app.h"
+#include "../src/engine/game/default_game.h"
 
 class SoftwareRenderedGame : public DefaultGame {
 

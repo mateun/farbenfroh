@@ -5,7 +5,7 @@
 #ifndef SHMUP_H
 #define SHMUP_H
 
-#include "../../../src/engine/game/default_app.h"
+#include "../../../src/engine/game/default_game.h"
 
 
 

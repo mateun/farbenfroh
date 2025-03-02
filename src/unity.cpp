@@ -41,7 +41,7 @@
 //#include "../games/multithread-king/physics.cpp"
 
 // Default Game
-#include "engine/game/default_app.cpp"
+#include "engine/game/default_game.cpp"
 #include "engine/game/FolderAssetLoader.cpp"
 
 // Physics
@@ -69,9 +69,13 @@
 //#include "../games/opengl/server_viz/ServerViz.cpp"
 
 // Opengl/Testgame1
-#include "../games/opengl/testgame1/TestGame1.cpp"
-#include "../games/opengl/testgame1/MainMenuLevel.cpp"
-#include "../games/opengl/testgame1/GamePlayLevel.cpp"
+// #include "../games/opengl/testgame1/TestGame1.cpp"
+// #include "../games/opengl/testgame1/MainMenuLevel.cpp"
+// #include "../games/opengl/testgame1/GamePlayLevel.cpp"
+
+// Opengl/TerrainTest
+#include "../games/opengl/test_terrain/TestTerrainGame.cpp"
+#include "../games/opengl/test_terrain/GameplayLevel.cpp"
 
 //#include "../src/engine/editor/shadergraph/ShaderGraph.cpp"
 

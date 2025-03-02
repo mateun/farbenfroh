@@ -53,6 +53,7 @@ struct Shader {
     GLuint handle;
 
     void setFloatValue(float uv_scale, const std::string& name);
+    void setVec2Value(glm::vec<2, float> vec, const std::string &name);
     void setVec3Value(glm::vec<3, float> vec, const std::string& name);
     void setVec4Value(const glm::vec4 vec, const std::string& name);
     void setMat4Value(glm::mat4 mat, const std::string& str);
@@ -712,6 +713,7 @@ struct MeshDrawData {
     std::vector<Light*> directionalLights;
     std::vector<Light*> pointLights;
     std::vector<Light*> spotLights;
+    glm::vec2 uvScale2 = {1, 1};
     float uvScale = 1;
     bool depthTest = true;
     bool skinnedDraw = false;
@@ -885,6 +887,7 @@ struct SceneMeshData {
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
     Shader* shader = nullptr;
+    glm::vec2 uvScale2 = {1, 1};
     float uvScale = 1;
     bool skinnedMesh = false;
 };
@@ -945,6 +948,7 @@ private:
     glm::vec3 right = {1, 0, 0}; // Based on the incoming Blender default orientation
     glm::vec4 foregroundColor = {1, 0,1, 1};
     float uvScale = 1;
+    glm::vec2 uvScale2 = {1, 1};
     bool skinnedMesh = false;
     std::vector<glm::mat4> _boneMatrices;
     SceneNodeType _type;

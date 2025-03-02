@@ -5,12 +5,12 @@
 #include "ShaderGraph.h"
 
 
-DefaultApp* getGame() {
+DefaultGame* getGame() {
     return new ShaderGraph();
 }
 
 void ShaderGraph::init() {
-    DefaultApp::init();
+    DefaultGame::init();
     quadVAO = createQuadVAO();
     nodeShader = new Shader();
     auto nodeVert = readFile("../src/engine/editor/shadergraph/shaders/node.vert");

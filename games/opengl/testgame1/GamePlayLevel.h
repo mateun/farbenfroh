@@ -5,12 +5,12 @@
 #ifndef GAMEPLAY_H
 #define GAMEPLAY_H
 
-class DefaultApp;
+class DefaultGame;
 
 class GamePlayLevel : public GameLevel {
 
 public:
-  GamePlayLevel(DefaultApp* game);
+  GamePlayLevel(DefaultGame* game);
   void render() override;
   void update() override;
   void init() override;

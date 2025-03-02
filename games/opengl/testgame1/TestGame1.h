@@ -5,7 +5,7 @@
 #ifndef TESTGAME1_H
 #define TESTGAME1_H
 
-#include "../src/engine/game/default_app.h"
+#include "../src/engine/game/default_game.h"
 
 class MainMenuLevel;
 class GamePlayLevel;
@@ -26,7 +26,7 @@ enum class TestGame1State {
 };
 
 
-class TestGame1 : public DefaultApp {
+class TestGame1 : public DefaultGame {
 
 public:
     void init() override;

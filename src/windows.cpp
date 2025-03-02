@@ -17,7 +17,7 @@
 #include "../extlibs/imgui/imgui.h"
 #include "../extlibs/imgui/imgui_impl_win32.h"
 #include "../extlibs/imgui/imgui_impl_opengl3.h"
-#include "engine/game/default_app.h"
+#include "engine/game/default_game.h"
 #include "engine/editor/editor.h"
 #include "engine/game/input.h"
 
@@ -29,7 +29,7 @@
 
 // This is called by the framework to receive the actual game from the user.
 // All API methods will then be called on this game instance.
-extern DefaultApp* getGame();
+extern DefaultGame* getGame();
 
 // This is implemented by the actual game itself.
 // Gets called from within the windows messagepump loop.
@@ -697,7 +697,7 @@ bool processOSMessages() {
 }
 
 
-void mainLoop(HWND hwnd, DefaultApp* game, VulkanRenderer* vulkanRenderer) {
+void mainLoop(HWND hwnd, DefaultGame* game, VulkanRenderer* vulkanRenderer) {
 	LARGE_INTEGER startticks;
 	LARGE_INTEGER endticks;
 

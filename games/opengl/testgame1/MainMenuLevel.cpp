@@ -11,9 +11,9 @@
 #include "../../../src/engine/animation/AnimationTransition.h"
 #include "../../../src/engine/animation/Cinematic.h"
 #include "../../../src/engine/animation/CharacterController.h"
-#include "../../../src/engine/game/default_app.h"
+#include "../../../src/engine/game/default_game.h"
 
-MainMenuLevel::MainMenuLevel(DefaultApp* game) : GameLevel(game) {
+MainMenuLevel::MainMenuLevel(DefaultGame* game) : GameLevel(game) {
 
 }
 

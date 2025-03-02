@@ -3,9 +3,9 @@
 //
 
 #include "GamePlayLevel.h"
-#include "../../../src/engine/game/default_app.h"
+#include "../../../src/engine/game/default_game.h"
 
-GamePlayLevel::GamePlayLevel(DefaultApp *game) : GameLevel(game) {
+GamePlayLevel::GamePlayLevel(DefaultGame *game) : GameLevel(game) {
 }
 
 void GamePlayLevel::render() {

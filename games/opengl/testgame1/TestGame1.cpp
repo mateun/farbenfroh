@@ -6,12 +6,12 @@
 #include "MainMenuLevel.h"
 #include "GamePlayLevel.h"
 
-DefaultApp* getGame() {
+DefaultGame* getGame() {
     return new TestGame1();
 }
 
 void TestGame1::init() {
-    DefaultApp::init();
+    DefaultGame::init();
     // registerGameLevel("engine_splash", new MainMenuLevel());
     // registerGameLevel("game_splash", new MainMenuLevel());
     registerGameLevel("main_menu", new MainMenuLevel(this));
@@ -22,12 +22,12 @@ void TestGame1::init() {
 }
 
 void TestGame1::update() {
-    DefaultApp::update();
+    DefaultGame::update();
 
 }
 
 void TestGame1::render() {
-    DefaultApp::render();
+    DefaultGame::render();
 
 }
 

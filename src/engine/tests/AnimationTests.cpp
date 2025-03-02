@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <engine/animation/BoneMatrixCalculator.h>
 #include <engine/animation/Pose.h>
-#include <engine/game/default_app.h>
+#include <engine/game/default_game.h>
 
 #include "../../graphics.h"
 #include "../src/engine/animation/AnimationController.h"
@@ -15,7 +15,7 @@
 #include "../src/engine/animation/Animation.h"
 
 
-class AnimationTest : public DefaultApp {
+class AnimationTest : public DefaultGame {
     void init() override;
     void update() override {};
     void render() override {};
@@ -29,13 +29,13 @@ class AnimationTest : public DefaultApp {
 };
 
 
-DefaultApp* getGame() {
+DefaultGame* getGame() {
     return new AnimationTest();
 }
 
 void AnimationTest::init() {
 
-    DefaultApp::init();
+    DefaultGame::init();
     // Properties test
     Mesh* mesh = getMeshByName("test_skeletal_mesh");
     auto animationController = new AnimationController(mesh);

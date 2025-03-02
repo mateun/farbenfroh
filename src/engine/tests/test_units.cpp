@@ -9,7 +9,7 @@
 #include "../sound/sound.cpp"
 #include "../math/math3d.cpp"
 #include "../game/game_model.cpp"
-#include "../game/default_app.cpp"
+#include "../game/default_game.cpp"
 #include "../game/FolderAssetLoader.cpp"
 #include "../editor/editor.cpp"
 #include "../animation/AnimationPlayer.cpp"

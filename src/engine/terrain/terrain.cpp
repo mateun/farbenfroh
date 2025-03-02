@@ -31,6 +31,10 @@ Terrain::Terrain(int horizontalCells, int verticalCells, glm::mat4* rotation, fl
     GLuint vboNormals;
     std::vector<float> normals;
 
+    GLuint vboTangents;
+
+    std::vector<float> tangents;
+
 
     int posCounter = 0;
     int indexCounter = 0;
@@ -147,7 +151,6 @@ Terrain::Terrain(int horizontalCells, int verticalCells, glm::mat4* rotation, fl
             normals.push_back(normTL.y);
             normals.push_back(normTL.z);
 
-
             normals.push_back(normTR.x);
             normals.push_back(normTR.y);
             normals.push_back(normTR.z);
@@ -160,6 +163,27 @@ Terrain::Terrain(int horizontalCells, int verticalCells, glm::mat4* rotation, fl
             normals.push_back(normBR.y);
             normals.push_back(normBR.z);
             normalCounter += 12;
+
+            // Create tangents as well
+            // TODO calculate for real
+            glm::vec3 tangentTemp = {1, 1, 0};
+
+            tangents.push_back(tangentTemp.x);
+            tangents.push_back(tangentTemp.y);
+            tangents.push_back(tangentTemp.z);
+
+            tangents.push_back(tangentTemp.x);
+            tangents.push_back(tangentTemp.y);
+            tangents.push_back(tangentTemp.z);
+
+            tangents.push_back(tangentTemp.x);
+            tangents.push_back(tangentTemp.y);
+            tangents.push_back(tangentTemp.z);
+
+            tangents.push_back(tangentTemp.x);
+            tangents.push_back(tangentTemp.y);
+            tangents.push_back(tangentTemp.z);
+
         }
     }
 
@@ -187,6 +211,12 @@ Terrain::Terrain(int horizontalCells, int verticalCells, glm::mat4* rotation, fl
     glBufferData(GL_ARRAY_BUFFER, normals.size() * 4, normals.data(), GL_DYNAMIC_DRAW);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(2);
+
+    glGenBuffers(1, &vboTangents);
+    glBindBuffer(GL_ARRAY_BUFFER, vboTangents);
+    glBufferData(GL_ARRAY_BUFFER, tangents.size() * 4, tangents.data(), GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(12, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(12);
 
     unsigned int instanceVBO;
     glGenBuffers(1, &instanceVBO);
@@ -228,6 +258,10 @@ void Terrain::render() {
     bindMesh(terrainMesh);
     drawMesh();
 
+}
+
+Mesh * Terrain::getMesh() {
+    return terrainMesh;
 }
 
 void Terrain::applyRotationMatrix(glm::vec3& vertex) {

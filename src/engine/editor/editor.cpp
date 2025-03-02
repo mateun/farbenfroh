@@ -963,7 +963,7 @@ namespace editor {
     }
 
     void EditorGame::init() {
-        DefaultApp::init();
+        DefaultGame::init();
 
         editor = new Editor();
     }

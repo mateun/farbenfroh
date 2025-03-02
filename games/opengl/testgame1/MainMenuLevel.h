@@ -4,14 +4,14 @@
 
 #ifndef MAINMENUSCENE_H
 #define MAINMENUSCENE_H
-#include "../../../src/engine/game/default_app.h"
+#include "../../../src/engine/game/default_game.h"
 
-class DefaultApp;
+class DefaultGame;
 
 class MainMenuLevel : public GameLevel  {
 
 public:
-  MainMenuLevel(DefaultApp* game);
+  MainMenuLevel(DefaultGame* game);
   void render() override;
   void update() override;
   void init() override;

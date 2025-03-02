@@ -29,10 +29,12 @@ public:
         BottomRight
     };
 
+    Mesh* getMesh();
+
 private:
     float getHeightValueAt(float x, float y, CellType cellType);
 
-private:
+
     GLuint vao;
     glm::mat4* rotationMatrix = nullptr;
     float sphereMapRadius = 0;

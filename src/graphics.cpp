@@ -1468,8 +1468,8 @@ Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFor
     GLuint handle;
     glGenTextures(1, &handle);
     glBindTexture(GL_TEXTURE_2D, handle);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexImage2D(GL_TEXTURE_2D,
@@ -1901,7 +1901,7 @@ void drawMesh(const MeshDrawData &drawData) {
     }
 
 
-
+    drawData.shader->setVec2Value(drawData.uvScale2, "uvScale2");
     drawData.shader->setFloatValue(drawData.uvScale, "uvScale");
 
     GL_ERROR_EXIT(983);
@@ -3640,7 +3640,6 @@ Animation* aiAnimToAnimation(aiAnimation* aiAnim) {
             sample->time = rotKey.mTime / aiAnim->mTicksPerSecond;
             sample->jointName = channel->mNodeName.C_Str();
 
-
             auto rot = assimpQuatToGLM(rotKey.mValue);
             sample->rotation = rot;
             animation->storeSample(sample, jointName);
@@ -4150,6 +4149,7 @@ void SceneNode::initAsMeshNode(SceneMeshData *sceneMeshData) {
     this->normalMap = sceneMeshData->normalMap;
     this->shader = sceneMeshData->shader;
     this->uvScale = sceneMeshData->uvScale;
+    this->uvScale2 = sceneMeshData->uvScale2;
     this->skinnedMesh = sceneMeshData->skinnedMesh;
 
 }
@@ -4403,6 +4403,7 @@ void Scene::render() {
         mdd.shader = m->shader;
         mdd.camera = cameraNode->getCamera();
         mdd.uvScale = m->uvScale;
+        mdd.uvScale2 = m->uvScale2;
         mdd.color = m->foregroundColor;
         mdd.directionalLights = getLightsOfType(LightType::Directional);
         mdd.pointLights = getLightsOfType(LightType::Point);
@@ -4770,6 +4771,16 @@ void Shader::setFloatValue(float val, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
     glUniform1f(loc, val);
 }
+
+void Shader::setVec2Value(glm::vec<2, float> vec, const std::string &name) {
+    auto loc = glGetUniformLocation(this->handle, name.c_str());
+#ifdef _STRICT_SHADER_LOCATION_
+    if (loc == -1) throw std::runtime_error("Could not get uniform location");
+#endif
+    glUniform2f(loc, vec.x, vec.y);
+    GL_ERROR_EXIT(443);
+}
+
 
 
 void Shader::setVec3Value(glm::vec<3, float> vec, const std::string &name) {
