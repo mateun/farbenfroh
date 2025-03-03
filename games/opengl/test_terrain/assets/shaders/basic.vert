@@ -11,8 +11,7 @@ uniform mat4 mat_projection;
 
 uniform vec2 uvScale2 = {1, 1};
 uniform float uvScale = 1;
-uniform float uvPanX = 0;
-uniform float uvPanY = 0;
+uniform vec2 uvPan = {0,0};
 
 const int MAX_DIR_LIGHTS=2;
 struct DirectionalLightData {
@@ -81,10 +80,9 @@ void main() {
         fragPosPointLightSpace[i] =  pointLightData[i].mat_view_proj * mat_world * vec4(pos, 1);
     }
 
-
 }
 
 void uvPanning() {
-    fs_uvs.x += uvPanX;
-    fs_uvs.y += uvPanY;
+    fs_uvs += uvPan;
+
 }

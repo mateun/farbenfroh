@@ -18,14 +18,16 @@ void FolderAssetLoader::load(const std::string &assetFolder) {
                 // Decide on file type which importer to trigger
                 auto extension = entry.path().extension().string();
                 if (extension == ".png" ||
-                    extension == ".bmp") {
+                    extension == ".bmp" ||
+                    extension == ".jpg" ) {
                     auto texture = createTextureFromFile(entry.path().string(), ColorFormat::RGBA);
                     _textureMap[entry.path().filename().stem().string()] = texture;
                 }
                 else if (extension == ".fbx" ||
                          extension == ".FBX" ||
                          extension == ".obj" ||
-                         extension == ".glb") {
+                         extension == ".glb" ||
+                         extension == ".gltf") {
                     auto mesh = MeshImporter().importMesh(entry.path().string());
                     _meshMap[entry.path().filename().stem().string()] = mesh;
                 } else if (extension == ".wav") {auto sound = loadSoundFileExt(entry.path().string(), getWindow());

@@ -47,16 +47,28 @@ bool isInShadowForPointLight(int lightIndex) {
     projCoords = projCoords * 0.5 + 0.5;
     float closestDepth = texture(shadowMapsPoint[lightIndex], projCoords.xy).r;
     float currentDepth = projCoords.z;
-    return currentDepth > (closestDepth + 0.004) ;
+    return (currentDepth - 0.004) > closestDepth;
 }
 
+vec4 shadowDistanceAsColor(int lightIndex) {
+    vec3 projCoords = fragPosLightSpace[lightIndex].xyz / fragPosLightSpace[lightIndex].w;
+    projCoords = projCoords * 0.5 + 0.5;
+    float closestDepth = texture(shadowMapsDir[lightIndex], projCoords.xy).r;
+    float currentDepth = projCoords.z;
+    return vec4 (currentDepth * 2.25 , currentDepth * 2.25, currentDepth * 2.25, 1);
+
+}
 
 bool isInShadow(int lightIndex) {
     vec3 projCoords = fragPosLightSpace[lightIndex].xyz / fragPosLightSpace[lightIndex].w;
     projCoords = projCoords * 0.5 + 0.5;
     float closestDepth = texture(shadowMapsDir[lightIndex], projCoords.xy).r;
     float currentDepth = projCoords.z;
-    return currentDepth > (closestDepth + 0.004) ;
+    // The smaller the depth range is (so, the less distance we have to span from near to far)
+    // the smaller this bias must be.
+    // The necessary bias must be smaller at least than the depth value you sample in renderdoc in the depth buffer
+    // (as rendered by the shadowmap camera).
+    return (currentDepth - 0.004) > closestDepth;
 }
 
 vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
@@ -64,12 +76,15 @@ vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
     for (int i = 0; i < numDirectionalLights; i++) {
         vec3 tangentlightDir = normalize(tbn * -directionalLightData[i].direction) ;
 
-        float diffuse = max(dot(normalize(normal), tangentlightDir), 0.3);
+        float diffuse = max(dot(normalize(normal), tangentlightDir), 0.2);
         col += vec4(albedo.xyz * diffuse, albedo.w);
-        col.rgb *= directionalLightData[i].diffuseColor;
-        if (isInShadow(i)) {
-            col.rgb *= 0.3;
-        }
+
+//        col.rgb *= directionalLightData[i].diffuseColor;
+//        if (isInShadow(i)) {
+//            col.rgb *= 0.3;
+//        }
+
+        col = shadowDistanceAsColor(i);
     }
 
     return col;

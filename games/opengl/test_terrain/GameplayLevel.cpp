@@ -36,7 +36,7 @@ namespace ttg {
         smd.normalMap = game->getTextureByName("ground_normal");
         smd.uvScale2 = {100, 100};
         smd.uvScale = 1;
-        terrainNode->initAsMeshNode(&smd);
+        terrainNode->initAsMeshNode(smd);
 
         auto roadNode = new SceneNode("road");
         smd.mesh = game->getMeshByName("road_plane");
@@ -44,16 +44,67 @@ namespace ttg {
         smd.normalMap = game->getTextureByName("asphalt_normal");
         smd.uvScale2 = {1, 5};
         smd.uvScale = 1;
+        smd.uvPan = {0, 0};
         roadNode->setScale({1, 1, 5});
         roadNode->setLocation({0, 0.001, -1});
-        roadNode->initAsMeshNode(&smd);
+        roadNode->initAsMeshNode(smd);
 
+        auto roadNode2 = new SceneNode("road2");
+        smd.mesh = game->getMeshByName("road_plane_bent");
+        smd.texture = game->getTextureByName("asphalt_albedo");
+        smd.normalMap = game->getTextureByName("asphalt_normal");
+        smd.uvScale2 = {1, 5};
+        smd.uvScale = 1;
+        smd.uvPan = {0, 0.4};
+        roadNode2->setScale({1, 1, 5});
+        roadNode2->setLocation({1.01, 0.001, -1});
+        roadNode2->initAsMeshNode(smd);
+
+        auto roadBarrier = new SceneNode("roadBarrier");
+        smd.mesh = game->getMeshByName("road_barrier");
+        smd.texture = game->getTextureByName("road_barrier_albedo");
+        smd.normalMap = game->getTextureByName("road_barrier_normal");
+        smd.uvScale2 = {1, 1};
+        smd.uvScale = 1;
+        smd.uvPan = {0, 0};
+        roadBarrier->setScale({0.5, 0.5, 0.5});
+        roadBarrier->setLocation({0.3, 0.0, -4});
+        roadBarrier->initAsMeshNode(smd);
+
+        auto roadBarrier2 = new SceneNode("roadBarrier2");
+        roadBarrier2->setRotation({0, 28, 0});
+        roadBarrier2->setScale({0.5, 0.5, 0.5});
+        roadBarrier2->setLocation({1.6, 0.0, -4});
+        roadBarrier2->initAsMeshNode(smd);
+
+        auto shrub = new SceneNode("shrub");
+        smd.mesh = game->getMeshByName("shrub");
+        smd.texture = game->getTextureByName("shrub_albedo");
+        smd.normalMap = game->getTextureByName("shrub_normal");
+        smd.uvScale2 = {1, 1};
+        smd.uvScale = 1;
+        smd.uvPan = {0, 0};
+        shrub->setRotation({0, 18, 0});
+        shrub->setScale({1, 1, 1});
+        shrub->setLocation({-0.8, 0.0, -2});
+        shrub->initAsMeshNode(smd);
+
+        auto hydrantdNode = new SceneNode("hydrant");
+        smd.mesh = game->getMeshByName("fire_hydrant_1k");
+        smd.texture = game->getTextureByName("hydrant_albedo");
+        smd.normalMap = game->getTextureByName("hydrant_normal");
+        smd.uvScale2 = {1, 1};
+        smd.uvScale = 1;
+        smd.uvPan = {0, 0};
+        hydrantdNode->setScale({1, 1, 1});
+        hydrantdNode->setLocation({0, 0.0, 0});
+        hydrantdNode->initAsMeshNode(smd);
 
         auto sunNode = new SceneNode("sun");
         auto sun = new Light();
         sun->type = LightType::Directional;
-        sun->color = glm::vec4(1, 1, 1, 1);
-        sun->location = glm::vec3(-3, 10, 5);
+        sun->color = glm::vec4(1, 1, 0.2, 1);
+        sun->location = glm::vec3(1, 2, 0);
         sun->lookAtTarget = glm::vec3(0, 0, 0);
         sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
         sunNode->initAsLightNode(sun);
@@ -77,14 +128,20 @@ namespace ttg {
 
         auto cameraNode = new SceneNode("camera");
         cameraNode->initAsCameraNode(game->getGameplayCamera());
+        auto cam = cameraNode->getCamera();
+        cam->updateLocation({0, 4, 2});
         cameraMover = new CameraMover(cameraNode->getCamera());
 
         scene = new Scene();
         scene->addNode(cameraNode);
         scene->addNode(terrainNode);
+        scene->addNode(hydrantdNode);
         scene->addNode(roadNode);
+        scene->addNode(roadNode2);
+        scene->addNode(roadBarrier);
+        scene->addNode(roadBarrier2);
+        scene->addNode(shrub);
         scene->addNode(sunNode);
-        scene->addNode(tankNode);
         //scene->addNode(plNode1);
         //scene->addNode(plNode2);
 

@@ -186,20 +186,20 @@ Texture* createShadowMapTexture(int width, int height) {
     auto target = new Texture();
     glGenTextures(1, &target->handle);
     glBindTexture(GL_TEXTURE_2D, target->handle);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32,
-         width, height);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+     glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32, width, height);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
     // These are good settings for a shadow map, to avoid
     // repeating shadows outside of the light frustum.
     // It may not be ideal for non-shadow-map purposes.
-    // float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    // glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+     float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
 
     err = glGetError();
@@ -1901,6 +1901,7 @@ void drawMesh(const MeshDrawData &drawData) {
     }
 
 
+    drawData.shader->setVec2Value(drawData.uvPan, "uvPan");
     drawData.shader->setVec2Value(drawData.uvScale2, "uvScale2");
     drawData.shader->setFloatValue(drawData.uvScale, "uvScale");
 
@@ -1967,10 +1968,7 @@ void drawMeshIntoShadowMap(const MeshDrawData& drawData) {
 
     bindShader(drawData.shader);
 
-
-    auto fbo = drawData.directionalLights[0]->shadowMapFBO->texture->bitmap;
-    glViewport(0, 0, fbo->width, fbo->height);
-
+    glViewport(0, 0, drawData.viewPortDimensions.value().x, drawData.viewPortDimensions.value().y);
     {
         using namespace glm;
 
@@ -1983,8 +1981,8 @@ void drawMeshIntoShadowMap(const MeshDrawData& drawData) {
         mat4 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
 
         drawData.shader->setMat4Value(matworld, "mat_world");
-        drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
-        drawData.shader->setMat4Value(drawData.camera->getProjectionMatrixForShadowMap(), "mat_projection");
+        drawData.shader->setMat4Value(drawData.shadowMapCamera->getViewMatrix(), "mat_view");
+        drawData.shader->setMat4Value(drawData.shadowMapCamera->getProjectionMatrixForShadowMap(drawData.camera), "mat_projection");
     }
     glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices,
                    drawData.mesh->indexDataType, nullptr);
@@ -4142,15 +4140,17 @@ SceneNode::SceneNode(const std::string &nodeId) : id(nodeId){
 SceneNode::~SceneNode() {
 }
 
-void SceneNode::initAsMeshNode(SceneMeshData *sceneMeshData) {
+void SceneNode::initAsMeshNode(const SceneMeshData& sceneMeshData) {
     this->_type = SceneNodeType::Mesh;
-    this->mesh = sceneMeshData->mesh;
-    this->texture = sceneMeshData->texture;
-    this->normalMap = sceneMeshData->normalMap;
-    this->shader = sceneMeshData->shader;
-    this->uvScale = sceneMeshData->uvScale;
-    this->uvScale2 = sceneMeshData->uvScale2;
-    this->skinnedMesh = sceneMeshData->skinnedMesh;
+    this->mesh = sceneMeshData.mesh;
+    this->texture = sceneMeshData.texture;
+    this->normalMap = sceneMeshData.normalMap;
+    this->shader = sceneMeshData.shader;
+    this->uvScale = sceneMeshData.uvScale;
+    this->uvScale2 = sceneMeshData.uvScale2;
+    this->uvPan = sceneMeshData.uvPan;
+    this->skinnedMesh = sceneMeshData.skinnedMesh;
+
 
 }
 
@@ -4229,6 +4229,8 @@ void Scene::render() {
     // So we need to render all meshes into the shadowmap.
     // We need to this for every light and every mesh.
 
+
+#ifdef _DEBUG_RAYTRACING
     // Experimental: raytraced shadowing.
     // First render all world positions into a framebuffer.
     // We use this later to raycast to any light and write the
@@ -4272,7 +4274,7 @@ void Scene::render() {
     }
 
     // Debug the created texture:
-#ifdef _DEBUG_RAYTRACING
+
     float* data = new float[scaled_width * scaled_height * 3];
     glReadPixels(0, 0, scaled_width, scaled_height, GL_RGB, GL_FLOAT, data);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -4296,6 +4298,11 @@ void Scene::render() {
 
     // End experimental
 
+    auto cameraNode = findActiveCameraNode();
+    if (!cameraNode) {
+        throw std::runtime_error("Could not find active camera node.");
+    }
+
     // First, our directional lights
     {
 
@@ -4318,7 +4325,8 @@ void Scene::render() {
                 // New way
                 {
                     MeshDrawData dd;
-                    dd.camera = &lightCam;
+                    dd.shadowMapCamera = &lightCam;
+                    dd.camera = cameraNode->getCamera();
                     dd.location = m->_location;
                     dd.scale = m->_scale;
                     dd.shader = m->shader;
@@ -4379,10 +4387,7 @@ void Scene::render() {
     }
     activateFrameBuffer(nullptr);
 
-    auto cameraNode = findActiveCameraNode();
-    if (!cameraNode) {
-        throw std::runtime_error("Could not find active camera node.");
-    }
+
 
     // 2. Actual render pass
     for (auto m : meshNodes) {
@@ -4402,6 +4407,7 @@ void Scene::render() {
         mdd.normalMap = m->normalMap;
         mdd.shader = m->shader;
         mdd.camera = cameraNode->getCamera();
+        mdd.uvPan = m->uvPan;
         mdd.uvScale = m->uvScale;
         mdd.uvScale2 = m->uvScale2;
         mdd.color = m->foregroundColor;
