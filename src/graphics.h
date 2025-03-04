@@ -191,7 +191,14 @@ enum class CameraType {
 };
 
 
-struct Camera {
+class Camera {
+
+public:
+
+    Camera();
+
+    std::vector<glm::vec3> getFrustumWorldCorners();
+
     CameraType type;
     glm::vec3 location;
     glm::vec3 lookAtTarget;
@@ -199,208 +206,58 @@ struct Camera {
     GameObject* followedObject = nullptr;
     glm::vec3 followOffset;
     glm::vec3 followDirection;
+    float nearPlane = 0.1f;
+    float farPlane = 500.0f;
+    GLuint positionBuffer = 0;
+    GLuint shadowPositionBuffer = 0;
+    Shader* frustumShader = nullptr;
 
 
-    void setInitialForward(glm::vec3 fwd) {
-        _initialForward = fwd;
-    }
+    void setInitialForward(glm::vec3 fwd);
 
 
+    void follow(GameObject* gameObject, glm::vec3 offset);
 
-    void follow(GameObject* gameObject, glm::vec3 offset) {
-        this->followedObject = gameObject;
-        this->followOffset = offset;
-        this->followDirection = glm::normalize(gameObject->location - location);
-    }
+    void updateFollow();
 
-    void updateFollow() {
-        if (followedObject) {
-            updateLocation(followedObject->location + followOffset);
-            this->followDirection = glm::normalize(followedObject->location - location);
-            updateLookupTarget(followedObject->location);
-        }
-    }
+    void updateLocation(glm::vec3 loc);
 
-    void updateLocation(glm::vec3 loc) {
-       location = loc;
-    }
+    void updateLookupTarget(glm::vec3 t);
 
-    void updateLookupTarget(glm::vec3 t) {
-        lookAtTarget = t;
-    }
+    glm::mat4 getViewMatrix();
 
-    glm::mat4 getViewMatrix() {
-        return lookAt((location), (lookAtTarget), glm::vec3(0, 1,0));
-    }
+    glm::vec3 getInitialFoward();
 
-    glm::vec3 getInitialFoward() {
-        return _initialForward;
-    }
+    glm::vec3 getForward();
 
-    glm::vec3 getForward() {
-        return normalize(lookAtTarget - location);
-    }
-
-    glm::mat4 getLightProjectionMaatrix() {
-        // Directional light
-        if (type == CameraType::Ortho) {
-            return glm::ortho<float>(0, scaled_width, 0, scaled_height, 0.1f, 200);
-        }
-
-        // Assume perspective
-        return glm::ortho<float>(-10, 10, -8, 8, 0.1f, 400);
-
-    }
-
-    float findMin(const std::vector<glm::vec3>& positions, const std::string& coord) {
-        float min = (float)MAXINT;
-        for (auto p : positions) {
-            if (coord == "x") {
-                if (p.x < min) {
-                    min = p.x;
-                }
-            } else if (coord == "y") {
-                if (p.y < min) {
-                    min = p.y;
-                }
-            }
-            else if (coord == "z") {
-                if (p.z < min) {
-                    min = p.z;
-                }
-            }
-
-        }
-
-        return min;
-    }
-
-    float findMax(const std::vector<glm::vec3>& positions, const std::string& coord) {
-        float m = -(float)MAXINT;
-        for (auto p : positions) {
-            if (coord == "x") {
-                if (p.x > m) {
-                    m = p.x;
-                }
-            } else if (coord == "y") {
-                if (p.y > m) {
-                    m = p.y;
-                }
-            }
-            else if (coord == "z") {
-                if (p.z > m) {
-                    m = p.z;
-                }
-            }
-        }
-
-        return m;
-    }
-
-    glm::vec4 ndcToWorld(glm::vec4 ndc, Camera* viewCamera) {
-        auto temp = inverse( viewCamera->getProjectionMatrix()* viewCamera->getViewMatrix()) * ndc;
-        return temp;
-    }
-
-    glm::vec4 ndcToShadowMap(glm::vec4 ndc, Camera* viewCamera) {
-        auto temp = getViewMatrix() * inverse( viewCamera->getProjectionMatrix()* viewCamera->getViewMatrix()) * ndc;
-        temp /= temp.w;
-        return temp;
-    }
-
-    glm::mat4 getProjectionMatrixForShadowMap(Camera* viewCamera = nullptr) {
-        // Some default values for our frustum:
-        float left = -8;
-        float right = 8;
-        float bottom = -8;
-        float top = 8;
-        float n = 0.01f;
-        float f = 10.0f;
-
-        // Temp:
-        //viewCamera = nullptr;
-
-        // These values may be overriden by tightly fitting the shadow frustum to our camera frustum:
-        // TODO remove the "NOT", only for debugging!
-        if (!viewCamera) {
-            // View frustum from NDC into world coordinates
-            auto leftTopNearWorld = ndcToWorld(glm::vec4{-1,1,1, 1}, viewCamera);
-            auto rightTopNearWorld = ndcToWorld(glm::vec4{1,1,1, 1}, viewCamera);
-            auto leftBottomNearWorld = ndcToWorld(glm::vec4{-1,-1,1, 1}, viewCamera);
-            auto rightBottomNearWorld = ndcToWorld(glm::vec4{1,-1,1, 1}, viewCamera);
-
-            auto leftTopFarWorld = ndcToWorld(glm::vec4{-1,1,-1, 1}, viewCamera);
-            auto rightTopFarWorld = ndcToWorld(glm::vec4{1,1,-1, 1}, viewCamera);
-            auto leftBottomFarWorld = ndcToWorld(glm::vec4{-1,-1,-1, 1}, viewCamera);
-            auto rightBottomFarWorld = ndcToWorld(glm::vec4{1,-1,-1, 1}, viewCamera);
-
-            // From world into shadow camera view coordinates.
-            auto ltnView = getViewMatrix() * leftTopNearWorld;
-            auto rtnView = getViewMatrix() * rightTopNearWorld;
-            auto lbnView = getViewMatrix() * leftBottomNearWorld;
-            auto rbnView = getViewMatrix() * rightBottomNearWorld;
-            auto ltfView = getViewMatrix() * leftTopFarWorld;
-            auto rtfView = getViewMatrix() * rightTopFarWorld;
-            auto lbfView = getViewMatrix() * leftBottomFarWorld;
-            auto rbfView = getViewMatrix() * rightBottomFarWorld;
-
-            ltnView = ndcToShadowMap({-1,   1,  -1, 1}, viewCamera);
-            rtnView = ndcToShadowMap({ 1,   1,  -1, 1 }, viewCamera);
-            lbnView = ndcToShadowMap({-1,   -1, -1, 1 }, viewCamera);
-            rbnView = ndcToShadowMap({ 1,   -1, -1, 1 }, viewCamera);
-            ltfView = ndcToShadowMap({-1,   1,  1, 1 }, viewCamera);
-            rtfView = ndcToShadowMap({ 1,   1,  1, 1 }, viewCamera);
-            lbfView = ndcToShadowMap({-1,   -1, 1, 1 }, viewCamera);
-            rbfView = ndcToShadowMap({ 1,   -1, 1, 1 }, viewCamera);
-
-            // The we take the min x, y to have the correct dimensions.
-            left = findMin({ltnView, rtnView, lbnView, rbnView, ltfView, rtfView, lbfView, rbfView}, "x");
-            right = findMax({ltnView, rtnView, lbnView, rbnView, ltfView, rtfView, lbfView, rbfView}, "x");
-            bottom = findMin({ltnView, rtnView, lbnView, rbnView, ltfView, rtfView, lbfView, rbfView}, "y");
-            top = findMax({ltnView, rtnView, lbnView, rbnView, ltfView, rtfView, lbfView, rbfView}, "y");
-            n = findMin({ltnView, rtnView, lbnView, rbnView, ltfView, rtfView, lbfView, rbfView}, "z");
-            f = findMax({ltnView, rtnView, lbnView, rbnView, ltfView, rtfView, lbfView, rbfView}, "z");
-            return glm::ortho<float>(left, right, bottom, top, -f, -n);
-        }
-
-        return glm::ortho<float>(left, right, bottom, top, n, f);
-
-        //return glm::ortho<float>(-28, 28, -28, 28, 1.0f, 43.0f);
+    glm::mat4 getLightProjectionMatrix();
 
 
 
-    }
 
-    glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) {
+    static glm::vec4 ndcToWorldForOtherCamera(glm::vec4 ndc, Camera* viewCamera);
 
-        auto w = scaled_width;
-        auto h = scaled_height;
-        if (widthHeightOverride.has_value()) {
-            w = widthHeightOverride.value().x;
-            h = widthHeightOverride.value().y;
-        }
+    // glm::vec4 ndcToShadowMap(glm::vec4 ndc, Camera* viewCamera) {
+    //     auto temp = getViewMatrix() * inverse( viewCamera->getProjectionMatrix()* viewCamera->getViewMatrix()) * ndc;
+    //     temp /= temp.w;
+    //     return temp;
+    // }
 
-        float fov = 50;
-        if (fovOverride.has_value()) {
-            fov = fovOverride.value();
-        }
+    static std::pair<glm::mat4, glm::mat4> getLightSpaceMaticesForShadowMap(Camera* viewCamera = nullptr, glm::vec3 lightDir = {1, -1, 0});
 
-        if (type == CameraType::Ortho) {
-            return glm::ortho<float>(0, w, 0, h, 0.1f, 200);
-        }
+    glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) const;
 
-        if (type == CameraType::OrthoGameplay) {
-            return glm::ortho<float>(-10, 10, -8, 8, 0.1f, 400);
-        }
-
-        if (type == CameraType::Perspective) {
-            return glm::perspectiveFov<float>(glm::radians(fov), w, h, 0.1f, 20);
-        }
-
-        return glm::mat4(1.0f);
-    }
+    void updateNearFar(float nearPlane, float farPlane);
 
 
+private:
+    // Can be used to debug draw the cameras frustum in world space,
+    // e.g. for shadow mapping debugging.
+    GLuint worldFrustumVAO = 0;
+
+    // Holds the positions of the shadow camera frustum, mainly for debug
+    // drawing.
+    GLuint shadowCamFrustumVAO = 0;
 };
 
 /**
@@ -1049,6 +906,7 @@ public:
     const std::vector<glm::mat4>& boneMatrices();
 
     void disable();
+    void enable();
 
 private:
 
@@ -1086,6 +944,7 @@ public:
     void addNode(SceneNode* node);
     void update();
 
+    void activateDebugFlyCam(bool value);
     SceneNode* findActiveCameraNode();
     std::vector<Light *> getLightsOfType(LightType type);
 
@@ -1094,6 +953,9 @@ public:
 private:
     std::vector<Light*> pointLights;
     Camera* uiCamera = nullptr;
+    Camera* debugFlyCam = nullptr;
+    CameraMover * flyCamMover = nullptr;
+    bool debugFlyCamActive = false;
 
     std::vector<SceneNode*> meshNodes;
     std::vector<SceneNode*> textNodes;
@@ -1105,4 +967,5 @@ private:
     Texture* rayTraceWorldPosTexture = nullptr;
     FrameBuffer* raytracedShadowPositionFBO = nullptr;
     Shader * worldPosShader = nullptr;
+    Shader * shadowMapShader = nullptr;
 };

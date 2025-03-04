@@ -79,12 +79,12 @@ vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
         float diffuse = max(dot(normalize(normal), tangentlightDir), 0.2);
         col += vec4(albedo.xyz * diffuse, albedo.w);
 
-//        col.rgb *= directionalLightData[i].diffuseColor;
-//        if (isInShadow(i)) {
-//            col.rgb *= 0.3;
-//        }
+        col.rgb *= directionalLightData[i].diffuseColor;
+        if (isInShadow(i)) {
+            col.rgb *= 0.3;
+        }
 
-        col = shadowDistanceAsColor(i);
+//        col = shadowDistanceAsColor(i);
     }
 
     return col;

@@ -33,13 +33,38 @@ public:
 
   // Stays zero if we do not cast shadows from this light
   FrameBuffer* shadowMapFBO = nullptr;
+  glm::vec3 _direction = {1, -1, -1};
 
-  glm::mat4 getViewProjectionMatrix() const;
+
+
+
+
+  glm::mat4 getProjectionMatrix(Camera* fittingTarget = nullptr) const;
+  glm::mat4 getViewMatrix(Camera* fittingTarget = nullptr) const;
+  glm::mat4 getViewProjectionMatrix(Camera* fittingTarget = nullptr) const;
+
+  void initFrustumDebugging(Camera* fittingTarget);
+  void updateFrustumDebugging(Camera *fittingTarget);
+  void renderWorldFrustum(Camera* viewCamera);
 
   // We need to bind the shadowmap of this light into
   // a texture unit slot, so while rendering
   // we can do the shadow lookup.
   void bindShadowMap(int i);
+
+  void calculateDirectionFromCurrentLocationLookat();
+
+private:
+  static float findMin(const std::vector<glm::vec3>& positions, const std::string& coord);
+  static float findMax(const std::vector<glm::vec3>& positions, const std::string& coord);
+  glm::vec3 findCenterForWorldPositions(std::vector<glm::vec3> worldCorners) const;
+
+  // Holds vertex data for debug drawing etc.
+  GLuint viewCameraFrustumVAO;
+  GLuint lightFrustumVAO;
+  GLuint targetPositionBuffer;
+  GLuint positionBuffer;
+  Shader * frustumShader = nullptr;
 };
 
 

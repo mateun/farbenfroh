@@ -1872,7 +1872,7 @@ void drawMesh(const MeshDrawData &drawData) {
 
             drawData.shader->setVec3Value(directionalLight->lookAtTarget - directionalLight->location, "directionalLightData[" + std::to_string(lightIndex) + "].direction");
             drawData.shader->setVec3Value(directionalLight->color, "directionalLightData[" + std::to_string(lightIndex) + "].diffuseColor");
-            drawData.shader->setMat4Value(directionalLight->getViewProjectionMatrix(), "directionalLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
+            drawData.shader->setMat4Value(directionalLight->getViewProjectionMatrix(drawData.camera), "directionalLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
             directionalLight->bindShadowMap(lightIndex+1);
             lightIndex++;
             GL_ERROR_EXIT(982)
@@ -1963,7 +1963,7 @@ void drawMesh(const MeshDrawData &drawData) {
 
 }
 
-void drawMeshIntoShadowMap(const MeshDrawData& drawData) {
+void drawMeshIntoShadowMap(const MeshDrawData& drawData, Light* directionalLight) {
     glBindVertexArray(drawData.mesh->vao);
 
     bindShader(drawData.shader);
@@ -1980,9 +1980,10 @@ void drawMeshIntoShadowMap(const MeshDrawData& drawData) {
         mat4 matrotZ = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.z), {0, 0, 1} );
         mat4 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
 
+        auto lightSpaceMatrices = directionalLight->getViewProjectionMatrix(drawData.camera);
         drawData.shader->setMat4Value(matworld, "mat_world");
-        drawData.shader->setMat4Value(drawData.shadowMapCamera->getViewMatrix(), "mat_view");
-        drawData.shader->setMat4Value(drawData.shadowMapCamera->getProjectionMatrixForShadowMap(drawData.camera), "mat_projection");
+        drawData.shader->setMat4Value(directionalLight->getViewMatrix(drawData.camera), "mat_view");
+        drawData.shader->setMat4Value(directionalLight->getProjectionMatrix(drawData.camera), "mat_projection");
     }
     glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices,
                    drawData.mesh->indexDataType, nullptr);
@@ -4110,6 +4111,10 @@ void SceneNode::disable() {
     _active = false;
 }
 
+void SceneNode::enable() {
+    _active = true;
+}
+
 std::vector<Light *> Scene::getLightsOfType(LightType type) {
     std::vector<Light*> ls;
     if (type == LightType::Directional) {
@@ -4176,6 +4181,16 @@ Scene::Scene() {
     raytracedShadowPositionFBO =  createFrameBufferWithTexture(scaled_width, scaled_height, rayTraceWorldPosTexture);
     worldPosShader = new Shader();
     worldPosShader->initFromFiles("../assets/shaders/world_pos.vert", "../assets/shaders/world_pos.frag");
+    shadowMapShader = new Shader();
+    shadowMapShader->initFromFiles("../assets/shaders/shadow_map.vert", "../assets/shaders/shadow_map.frag");
+
+    debugFlyCam = new Camera();
+    debugFlyCam->type = CameraType::Perspective;
+    debugFlyCam->location = glm::vec3(10, 10, -5);
+    debugFlyCam->lookAtTarget = glm::vec3(0, 0, 0);
+    debugFlyCam->updateNearFar(0.1, 400);
+    flyCamMover = new CameraMover(debugFlyCam);
+
 }
 
 Scene::~Scene() {
@@ -4208,6 +4223,21 @@ void Scene::addNode(SceneNode *node) {
 }
 
 void Scene::update() {
+    if (debugFlyCamActive) {
+        flyCamMover->update();
+    }
+}
+
+void Scene::activateDebugFlyCam(bool value) {
+    debugFlyCamActive = value;
+    if (value == true) {
+        for (auto dl : directionalLightNodes) {
+            dl->light->initFrustumDebugging(findActiveCameraNode()->camera);
+            dl->light->updateFrustumDebugging(findActiveCameraNode()->camera);
+        }
+
+    }
+
 }
 
 /**
@@ -4303,17 +4333,12 @@ void Scene::render() {
         throw std::runtime_error("Could not find active camera node.");
     }
 
+    auto activeCamera = debugFlyCamActive ? debugFlyCam : cameraNode->getCamera();
+
     // First, our directional lights
     {
 
         for (auto l: directionalLightNodes) {
-            // Build camera out of current light.
-            // We need this so the view/projection matrices are built correctly.
-            Camera lightCam;
-            lightCam.location = l->light->location;
-            lightCam.lookAtTarget = l->light->lookAtTarget;
-            lightCam.type = CameraType::Ortho;
-
             glBindFramebuffer(GL_FRAMEBUFFER, l->light->shadowMapFBO->handle);
             glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -4325,11 +4350,10 @@ void Scene::render() {
                 // New way
                 {
                     MeshDrawData dd;
-                    dd.shadowMapCamera = &lightCam;
-                    dd.camera = cameraNode->getCamera();
+                    dd.camera = activeCamera;
                     dd.location = m->_location;
                     dd.scale = m->_scale;
-                    dd.shader = m->shader;
+                    dd.shader = shadowMapShader;
                     dd.rotationEulers = m->_rotationInDeg;
                     dd.mesh = m->mesh;
                     dd.viewPortDimensions = {l->light->shadowMapFBO->texture->bitmap->width, l->light->shadowMapFBO->texture->bitmap->height};
@@ -4338,14 +4362,14 @@ void Scene::render() {
                          dd.skinnedDraw = m->skinnedMesh;
                          dd.boneMatrices = m->boneMatrices();
                     }
-                    drawMeshIntoShadowMap(dd);
+                    drawMeshIntoShadowMap(dd, l->light);
                 }
 
             }
         }
 
     }
-
+#ifdef POINTLIGHT_SHADOWS
     // Next the pointlights
     for (auto lightNode : pointLightNodes) {
         if (!lightNode->light->castsShadow) continue;
@@ -4385,8 +4409,11 @@ void Scene::render() {
             drawMeshIntoShadowMap(lightNode->light->shadowMapFBO);
         }
     }
-    activateFrameBuffer(nullptr);
 
+#endif
+
+    // Back to our "normal" framebuffer
+    activateFrameBuffer(nullptr);
 
 
     // 2. Actual render pass
@@ -4399,6 +4426,7 @@ void Scene::render() {
         // Build the actual render commands for each node and
         // render it into the shadow map.
         MeshDrawData mdd;
+        mdd.camera = activeCamera;
         mdd.location = m->_location;
         mdd.scale = m->_scale;
         mdd.rotationEulers = m->_rotationInDeg;
@@ -4406,7 +4434,6 @@ void Scene::render() {
         mdd.texture = m->texture;
         mdd.normalMap = m->normalMap;
         mdd.shader = m->shader;
-        mdd.camera = cameraNode->getCamera();
         mdd.uvPan = m->uvPan;
         mdd.uvScale = m->uvScale;
         mdd.uvScale2 = m->uvScale2;
@@ -4424,6 +4451,13 @@ void Scene::render() {
 
     }
 
+    // Render some debug things:
+    if (debugFlyCamActive) {
+        for (auto dl : directionalLightNodes) {
+            dl->light->renderWorldFrustum(debugFlyCam);
+        }
+
+    }
 
 }
 
@@ -4470,6 +4504,28 @@ std::vector<Centroid *> Mesh::calculateCentroids() {
 
     return centroids;
 }
+
+Camera::Camera() {
+}
+
+/**
+* Returns the 8 corners of this cameras view frustum in world coordinates.
+*/
+std::vector<glm::vec3> Camera::getFrustumWorldCorners() {
+    auto ltnw = ndcToWorldForOtherCamera(     glm::vec4{-1,1,-1, 1}, this);
+    auto rtnw = ndcToWorldForOtherCamera(    glm::vec4{1,1,-1, 1}, this);
+    auto lbnw = ndcToWorldForOtherCamera(  glm::vec4{-1,-1,-1, 1}, this);
+    auto rbnw = ndcToWorldForOtherCamera( glm::vec4{1,-1,-1, 1}, this);
+    auto ltfw = ndcToWorldForOtherCamera(      glm::vec4{-1,1,1, 1}, this);
+    auto rtfw = ndcToWorldForOtherCamera(     glm::vec4{1,1,1, 1}, this);
+    auto lbfw = ndcToWorldForOtherCamera(       glm::vec4{-1,-1,1, 1}, this);
+    auto rbfw = ndcToWorldForOtherCamera(  glm::vec4{1,-1,1, 1}, this);
+
+    return {ltnw, rtnw, lbnw, rbnw, ltfw, rtfw, lbfw, rbfw};
+}
+
+// Sets up the internal frustum based VAO
+// and also the shader for debug rendering.
 
 glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera) {
 
@@ -4744,6 +4800,102 @@ void bindShader(Shader* shader) {
     glDefaultObjects->currentRenderState->shader = shader;
     glUseProgram(shader->handle);
 }
+
+
+void Camera::setInitialForward(glm::vec3 fwd) {
+    _initialForward = fwd;
+}
+
+void Camera::follow(GameObject *gameObject, glm::vec3 offset) {
+    this->followedObject = gameObject;
+    this->followOffset = offset;
+    this->followDirection = glm::normalize(gameObject->location - location);
+}
+
+void Camera::updateFollow() {
+    if (followedObject) {
+        updateLocation(followedObject->location + followOffset);
+        this->followDirection = glm::normalize(followedObject->location - location);
+        updateLookupTarget(followedObject->location);
+    }
+}
+
+void Camera::updateLocation(glm::vec3 loc) {
+    location = loc;
+}
+
+void Camera::updateLookupTarget(glm::vec3 t) {
+    lookAtTarget = t;
+}
+
+glm::mat4 Camera::getViewMatrix() {
+    return lookAt((location), (lookAtTarget), glm::vec3(0, 1,0));
+}
+
+glm::vec3 Camera::getInitialFoward() {
+    return _initialForward;
+}
+
+glm::vec3 Camera::getForward() {
+    return normalize(lookAtTarget - location);
+}
+
+glm::mat4 Camera::getLightProjectionMatrix() {
+    // Directional light
+    if (type == CameraType::Ortho) {
+        return glm::ortho<float>(0, scaled_width, 0, scaled_height, 0.1f, 200);
+    }
+
+    // Assume perspective
+    return glm::ortho<float>(-10, 10, -8, 8, 0.1f, 400);
+
+}
+
+
+/**
+* viewCamera    Is the camera of which
+*/
+glm::vec4 Camera::ndcToWorldForOtherCamera(glm::vec4 ndc, Camera *viewCamera) {
+    auto temp = inverse( viewCamera->getProjectionMatrix()* viewCamera->getViewMatrix()) * ndc;
+    temp /= temp.w;
+    return temp;
+}
+
+glm::mat4 Camera::getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride,
+    std::optional<float> fovOverride) const {
+    auto w = scaled_width;
+    auto h = scaled_height;
+    if (widthHeightOverride.has_value()) {
+        w = widthHeightOverride.value().x;
+        h = widthHeightOverride.value().y;
+    }
+
+    float fov = 30;
+    if (fovOverride.has_value()) {
+        fov = fovOverride.value();
+    }
+
+    if (type == CameraType::Ortho) {
+        return glm::ortho<float>(0, w, 0, h, nearPlane, farPlane);
+    }
+
+    if (type == CameraType::OrthoGameplay) {
+        return glm::ortho<float>(-10, 10, -8, 8, nearPlane, farPlane);
+    }
+
+    if (type == CameraType::Perspective) {
+        return glm::perspectiveFov<float>(glm::radians(fov), w, h, nearPlane, farPlane);
+    }
+    return glm::mat4(1.0f);
+}
+
+void Camera::updateNearFar(float nearPlane, float farPlane) {
+    this->nearPlane = nearPlane;
+    this->farPlane = farPlane;
+}
+
+
+
 
 
 bool CameraCollider::collides(glm::vec3 cameraPosition) {

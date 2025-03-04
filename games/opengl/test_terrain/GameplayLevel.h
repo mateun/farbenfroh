@@ -25,6 +25,11 @@ public:
     SceneNode * terrainNode = nullptr;
     Shader * basicShader = nullptr;
     CameraMover * cameraMover = nullptr;
+    Camera* debugFlyCam = nullptr;
+    CameraMover* flyCamMover = nullptr;
+    bool inFlyCamDebugMode = false;
+    SceneNode * cameraNode = nullptr;
+    SceneNode* flyCamNode = nullptr;
 };
 
 } // ttg

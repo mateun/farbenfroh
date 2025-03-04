@@ -16,7 +16,15 @@ namespace ttg {
     }
 
     void GameplayLevel::update() {
-        cameraMover->update();
+        scene->update();
+        if (keyPressed(VK_F11)) {
+            inFlyCamDebugMode = !inFlyCamDebugMode;
+            scene->activateDebugFlyCam(inFlyCamDebugMode);
+        }
+
+        if (!inFlyCamDebugMode) {
+            cameraMover->update();
+        }
 
     }
 
@@ -104,8 +112,9 @@ namespace ttg {
         auto sun = new Light();
         sun->type = LightType::Directional;
         sun->color = glm::vec4(1, 1, 0.2, 1);
-        sun->location = glm::vec3(1, 2, 0);
+        sun->location = glm::vec3(3, 5, 2);
         sun->lookAtTarget = glm::vec3(0, 0, 0);
+        sun->calculateDirectionFromCurrentLocationLookat();
         sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
         sunNode->initAsLightNode(sun);
 
@@ -125,11 +134,13 @@ namespace ttg {
         auto plNode2 = new SceneNode();
         plNode2->initAsLightNode(pointLight2);
 
-
-        auto cameraNode = new SceneNode("camera");
+        cameraNode = new SceneNode("camera");
+        cameraNode->enable();
         cameraNode->initAsCameraNode(game->getGameplayCamera());
         auto cam = cameraNode->getCamera();
-        cam->updateLocation({0, 4, 2});
+        cam->updateLocation({0,2.8, 5});
+        cam->updateLookupTarget({0, 1.7, -1});
+        cam->updateNearFar(2, 10);
         cameraMover = new CameraMover(cameraNode->getCamera());
 
         scene = new Scene();
