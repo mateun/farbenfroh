@@ -4367,7 +4367,9 @@ void Scene::render() {
                         continue;
                     }
 
+                    //glCullFace(GL_FRONT);
                     drawMeshIntoShadowMap(dd, l->light);
+                    //glCullFace(GL_BACK);
                 }
 
             }

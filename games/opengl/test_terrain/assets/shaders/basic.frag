@@ -57,7 +57,7 @@ vec4 shadowDistanceAsColor(int lightIndex) {
 
 }
 
-bool isInShadow(int lightIndex) {
+bool isInShadow(int lightIndex, float bias) {
     vec3 projCoords = fragPosLightSpace[lightIndex].xyz / fragPosLightSpace[lightIndex].w;
     projCoords = projCoords * 0.5 + 0.5;
     float closestDepth = texture(shadowMapsDir[lightIndex], projCoords.xy).r;
@@ -66,20 +66,29 @@ bool isInShadow(int lightIndex) {
     // the smaller this bias must be.
     // The necessary bias must be smaller at least than the depth value you sample in renderdoc in the depth buffer
     // (as rendered by the shadowmap camera).
-    return (currentDepth - shadowBias) > closestDepth;
+    return (currentDepth - bias) > closestDepth;
+}
+
+float getSlopeAdjustedBias(vec3 L, vec3 N) {
+    // Adjust our bias based on th slope
+    //float bias = max(0.0001 * (1.0 - dot(normalize(N), L)), shadowBias);
+    float bias = 0.0001 + 0.003 * dot(normalize(N), L);
+    return bias;;
+    //return shadowBias;
 }
 
 vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
     vec4 col = {0, 0, 0, 0};
     for (int i = 0; i < numDirectionalLights; i++) {
-        vec3 tangentlightDir = normalize(tbn * -directionalLightData[i].direction) ;
+        vec3 tangentLightDir = normalize(tbn * -directionalLightData[i].direction) ;
 
-        float diffuse = max(dot(normalize(normal), tangentlightDir), 0.2);
+        float diffuse = max(dot(normalize(normal), tangentLightDir), 0.2);
         col += vec4(albedo.xyz * diffuse, albedo.w);
 
         col.rgb *= directionalLightData[i].diffuseColor;
-        if (isInShadow(i)) {
-            col.rgb *= 0.3;
+        float adjustedBias = getSlopeAdjustedBias(normal, tangentLightDir);
+        if (isInShadow(i, adjustedBias)) {
+            col.rgb *= 0.4;
         }
 
         //col = shadowDistanceAsColor(i);
@@ -94,7 +103,8 @@ vec4 calculateDirectionalLightWithoutNormalMap(vec4 albedo) {
     for (int i = 0; i < numPointLights; i++) {
         float diffuse = max(dot(normalize(fs_normals), -normalize(directionalLightData[i].direction)), 0.2);
         col += vec4(albedo.xyz * diffuse, albedo.w);
-        if (isInShadow(i)) {
+        float adjustedBias = getSlopeAdjustedBias(fs_normals, directionalLightData[i].direction);
+        if (isInShadow(i, adjustedBias)) {
             col.rgb *= 0.3;
         }
     }

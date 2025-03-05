@@ -59,6 +59,7 @@ namespace ttg {
         SceneMeshData smd;
 
         terrainNode = new SceneNode("terrain");
+        //terrainNode->disable();
         smd.mesh = terrain->getMesh();
         smd.shader = basicShader;
         smd.texture = game->getTextureByName("ground_albedo");
@@ -135,6 +136,7 @@ namespace ttg {
         sun->color = glm::vec4(1, 1, 1, 1);
         sun->location = glm::vec3(5, 5, 0);
         sun->lookAtTarget = glm::vec3(0, 0, 0);
+        sun->shadowBias = 0.001;
         sun->calculateDirectionFromCurrentLocationLookat();
         sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
         sunNode->initAsLightNode(sun);

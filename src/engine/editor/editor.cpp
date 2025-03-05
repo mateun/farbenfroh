@@ -4,6 +4,7 @@
 
 #include "editor.h"
 
+#include <ranges>
 #include <engine/animation/BoneMatrixCalculator.h>
 #include <engine/rastergraphics/rastergraphics.h>
 
@@ -146,6 +147,7 @@ namespace editor {
             sun->type = LightType::Directional;
             sun->location = {-1, 5, 3};
             sun->lookAtTarget = {0, 0, 0};
+            sun->calculateDirectionFromCurrentLocationLookat();
             sun->castsShadow = false;
 
             // Draw the filled mesh
@@ -850,8 +852,20 @@ namespace editor {
         if (ImGui::Button("Stop")) {
             animationPlaying = false;
         }
+        // Merge all animations we have together here (also the ones without a mesh..):
+        // We might want to see those as a skeleton only?!
+        std::vector<Animation*> allAnims;
+        for (auto anim : importedAnimations | std::views::values) {
+            allAnims.push_back(anim);
+        }
         if (importedMesh) {
-            auto animations = importedMesh->animations;
+            for (auto anim : importedMesh->animations) {
+                allAnims.push_back(anim);
+            }
+        }
+
+        if (!allAnims.empty()) {
+            auto animations = allAnims;
             int sampleOffsetY = 0;
             for (auto anim: animations) {
 
