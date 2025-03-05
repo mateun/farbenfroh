@@ -15,6 +15,9 @@ class GameplayLevel : public GameLevel {
 public:
 
     GameplayLevel(DefaultGame* game);
+
+    void renderShadowBias();
+
     void render() override;
     void update() override;
     void init() override;
@@ -30,6 +33,7 @@ public:
     bool inFlyCamDebugMode = false;
     SceneNode * cameraNode = nullptr;
     SceneNode* flyCamNode = nullptr;
+    float shadowBias =0;
 };
 
 } // ttg

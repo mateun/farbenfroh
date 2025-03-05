@@ -23,6 +23,7 @@
 #include "engine/animation/AnimationTransition.cpp"
 #include "engine/animation/AnimationPlayer.cpp"
 #include "engine/animation/BoneMatrixCalculator.cpp"
+#include "engine/algo/VectorUtils.cpp"
 
 //#include "../games/simple_king/king_main.cpp"
 

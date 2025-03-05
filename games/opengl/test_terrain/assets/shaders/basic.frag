@@ -17,6 +17,7 @@ struct DirectionalLightData {
 };
 uniform DirectionalLightData directionalLightData[MAX_DIR_LIGHTS];
 uniform int  numDirectionalLights = 0;
+uniform float shadowBias = 0.0;
 
 struct PointLightData {
     vec3 position;
@@ -42,20 +43,17 @@ in vec3 tangentFragPos;
 
 out vec4 color;
 
-bool isInShadowForPointLight(int lightIndex) {
-    vec3 projCoords = fragPosPointLightSpace[lightIndex].xyz / fragPosPointLightSpace[lightIndex].w;
-    projCoords = projCoords * 0.5 + 0.5;
-    float closestDepth = texture(shadowMapsPoint[lightIndex], projCoords.xy).r;
-    float currentDepth = projCoords.z;
-    return (currentDepth - 0.004) > closestDepth;
-}
-
 vec4 shadowDistanceAsColor(int lightIndex) {
     vec3 projCoords = fragPosLightSpace[lightIndex].xyz / fragPosLightSpace[lightIndex].w;
     projCoords = projCoords * 0.5 + 0.5;
     float closestDepth = texture(shadowMapsDir[lightIndex], projCoords.xy).r;
     float currentDepth = projCoords.z;
-    return vec4 (currentDepth * 2.25 , currentDepth * 2.25, currentDepth * 2.25, 1);
+    if (currentDepth - shadowBias > closestDepth) {
+        return vec4(1, 0, 0, 1);
+    } else {
+        float diff = (currentDepth - shadowBias) * 10;
+        return vec4(diff, diff, diff, 1);
+    }
 
 }
 
@@ -68,7 +66,7 @@ bool isInShadow(int lightIndex) {
     // the smaller this bias must be.
     // The necessary bias must be smaller at least than the depth value you sample in renderdoc in the depth buffer
     // (as rendered by the shadowmap camera).
-    return (currentDepth - 0.004) > closestDepth;
+    return (currentDepth - shadowBias) > closestDepth;
 }
 
 vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
@@ -84,7 +82,7 @@ vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
             col.rgb *= 0.3;
         }
 
-//        col = shadowDistanceAsColor(i);
+        //col = shadowDistanceAsColor(i);
     }
 
     return col;
@@ -125,12 +123,6 @@ vec4 calculatePointLights(vec4 albedo, vec3 normal) {
         diffuse *= att;
         vec4 accumuCol = vec4(albedo.xyz * diffuse, albedo.w);
         accumuCol.rgb *= pointLightData[i].diffuseColor;
-        // TODO need a cubemap which the host renders into to represent omnidirectinal point light
-        // shadows
-//        if (isInShadowForPointLight(i)) {
-//            accumuCol.rgb *= 0.3;
-//        }
-
         col += accumuCol;
     }
 

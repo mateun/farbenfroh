@@ -4,22 +4,23 @@
 
 #include "Light.h"
 #include "graphics.h"
+#include "../../engine/algo/VectorUtils.h"
 
 
-glm::vec3 Light::findCenterForWorldPositions(std::vector<glm::vec3> worldCorners) const {
-	glm::vec3 center = glm::vec3(0, 0, 0);
-	for (const auto& v : worldCorners)
-	{
-		center += glm::vec3(v);
-	}
-	center /= worldCorners.size();
-	return center;
-}
+
 
 glm::mat4 Light::getProjectionMatrix(Camera* fittingTarget) const {
 
-	if (!fittingTarget) {
-		return glm::ortho<float>(-28, 28, -28, 28, 1.0f, 43.0f);
+	if (type == LightType::Spot) {
+		throw std::runtime_error("Spotlight shadow mapping not implemented yet");
+	}
+
+	if (type == LightType::Point) {
+		throw std::runtime_error("Pointlight shadow mapping not implemented yet");
+	}
+
+	if (type == LightType::Directional && !fittingTarget) {
+		throw new std::runtime_error("Light is directional and we do not have provided a camera fitting target!");
 	}
 
 	// We fit the "camera" frustum of our light into the frustum of the view camera (fitting target),
@@ -42,12 +43,12 @@ glm::mat4 Light::getProjectionMatrix(Camera* fittingTarget) const {
 	}
 
 	// Finally we take the min x, y, z to have the correct dimensions of our frustum.
-	float left = findMin(lightViewCorners, "x");
-	float right = findMax(lightViewCorners, "x");
-	float bottom = findMin(lightViewCorners, "y");
-	float top = findMax(lightViewCorners, "y");
-	float n = findMin(lightViewCorners, "z");
-	float f = findMax(lightViewCorners, "z");
+	float left = VectorUtils::findMin(lightViewCorners, "x");
+	float right = VectorUtils::findMax(lightViewCorners, "x");
+	float bottom = VectorUtils::findMin(lightViewCorners, "y");
+	float top = VectorUtils::findMax(lightViewCorners, "y");
+	float n = VectorUtils::findMin(lightViewCorners, "z");
+	float f = VectorUtils::findMax(lightViewCorners, "z");
 
 	// Pushing/Pulling the near/far planes to accomodate for better scene coverage.
 	constexpr float zMult = 1.0f;
@@ -80,8 +81,8 @@ glm::mat4 Light::getViewMatrix(Camera *fittingTarget) const {
 	}
 
 	auto worldCorners = fittingTarget->getFrustumWorldCorners();
-	glm::vec3 center = findCenterForWorldPositions(worldCorners);
-	glm::vec3 eye = center + normalize(_direction);
+	glm::vec3 center = VectorUtils::findCenterForWorldPositions(worldCorners);
+	glm::vec3 eye = center + normalize(-_direction);
 	return lookAt(eye, center, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
@@ -145,41 +146,13 @@ void Light::initFrustumDebugging(Camera* fittingTarget) {
         glBindVertexArray(lightFrustumVAO);
     	GL_ERROR_EXIT(21114)
 
-		auto lightViewMatrix = getViewMatrix(fittingTarget);
-    	std::vector<glm::vec3> lightFrustumWorldCorners;
-    	for (auto fittingTargetPos : worldCorners) {
-    		auto lightFrustumPos = (lightViewMatrix) * glm::vec4(fittingTargetPos, 1);
-    		lightFrustumWorldCorners.push_back(lightFrustumPos);
+    	auto lightFrustumCornersFitted = getLightFrustumFittedToCamera(fittingTarget);
+    	std::vector<float> shadowMapPosFlat;
+    	for (auto frustumPos : lightFrustumCornersFitted) {
+    		shadowMapPosFlat.push_back(frustumPos.x);
+    		shadowMapPosFlat.push_back(frustumPos.y);
+    		shadowMapPosFlat.push_back(frustumPos.z);
     	}
-
-        // The we take the min x, y to have the correct dimensions.
-        float left = findMin(lightFrustumWorldCorners, "x");
-        float right = findMax(lightFrustumWorldCorners, "x");
-        float bottom = findMin(lightFrustumWorldCorners, "y");
-        float top = findMax(lightFrustumWorldCorners, "y");
-        float n = findMin(lightFrustumWorldCorners, "z");
-        float f = findMax(lightFrustumWorldCorners, "z");
-
-    	// Now we have found min/max, lets transform these back into world pos:
-		glm::vec3 leftTopNearWorld = inverse(lightViewMatrix) * glm::vec4(left, top, n, 1);
-    	glm::vec3 rightTopNearWorld = inverse(lightViewMatrix) * glm::vec4(right, top, n, 1);
-    	glm::vec3 leftBottomNearWorld = inverse(lightViewMatrix) * glm::vec4(left, bottom, n, 1);
-    	glm::vec3 rightBottomNearWorld = inverse(lightViewMatrix) * glm::vec4(right, bottom, n, 1);
-    	glm::vec3 leftTopFarWorld = inverse(lightViewMatrix) * glm::vec4(left, top, f, 1);
-    	glm::vec3 rightTopFarWorld = inverse(lightViewMatrix) * glm::vec4(right, top, f, 1);
-    	glm::vec3 leftBottomFarWorld = inverse(lightViewMatrix) * glm::vec4(left, bottom, f, 1);
-    	glm::vec3 rightBottomFarWorld = inverse(lightViewMatrix) * glm::vec4(right, bottom, f, 1);
-
-        std::vector<float> shadowMapPosFlat = {
-            leftTopNearWorld.x, leftTopNearWorld.y, leftTopNearWorld.z,									//  0
-            rightTopNearWorld.x, rightTopNearWorld.y, rightTopNearWorld.z,								//  1
-            leftBottomNearWorld.x, leftBottomNearWorld.y, leftBottomNearWorld.z,						//  2
-            rightBottomNearWorld.x, rightBottomNearWorld.y, rightBottomNearWorld.z,						//  3
-            leftTopFarWorld.x, leftTopFarWorld.y, leftTopFarWorld.z,									//  4
-            rightTopFarWorld.x, rightTopFarWorld.y, rightTopFarWorld.z,									//  5
-            leftBottomFarWorld.x, leftBottomFarWorld.y, leftBottomFarWorld.z,							//  6
-            rightBottomFarWorld.x, rightBottomFarWorld.y, rightBottomFarWorld.z,						//  7
-        };
 
         std::vector<uint16_t> shadowIndicesFlat  {
             0, 1,
@@ -220,7 +193,45 @@ void Light::initFrustumDebugging(Camera* fittingTarget) {
 
 }
 
-void Light::renderWorldFrustum(Camera *viewCamera) {
+/**
+* Returns a vector of world positions of the view frustum of this light, tightly wrapped around
+* the given fitting target camera.
+*/
+std::vector<glm::vec3> Light::getLightFrustumFittedToCamera(Camera* fittingTarget) {
+	auto lightViewMatrix = getViewMatrix(fittingTarget);
+	std::vector<glm::vec3> lightFrustumWorldCorners;
+	for (auto fittingTargetPos : fittingTarget->getFrustumWorldCorners()) {
+		auto lightFrustumPos = (lightViewMatrix) * glm::vec4(fittingTargetPos, 1);
+		lightFrustumWorldCorners.push_back(lightFrustumPos);
+	}
+
+	// The we take the min x, y to have the correct dimensions.
+	float left = VectorUtils::findMin(lightFrustumWorldCorners, "x");
+	float right = VectorUtils::findMax(lightFrustumWorldCorners, "x");
+	float bottom = VectorUtils::findMin(lightFrustumWorldCorners, "y");
+	float top = VectorUtils::findMax(lightFrustumWorldCorners, "y");
+	float n = VectorUtils::findMin(lightFrustumWorldCorners, "z");
+	float f = VectorUtils::findMax(lightFrustumWorldCorners, "z");
+
+	glm::vec3 leftTopNearWorld = inverse(lightViewMatrix) * glm::vec4(left, top, n, 1);
+	glm::vec3 rightTopNearWorld = inverse(lightViewMatrix) * glm::vec4(right, top, n, 1);
+	glm::vec3 leftBottomNearWorld = inverse(lightViewMatrix) * glm::vec4(left, bottom, n, 1);
+	glm::vec3 rightBottomNearWorld = inverse(lightViewMatrix) * glm::vec4(right, bottom, n, 1);
+	glm::vec3 leftTopFarWorld = inverse(lightViewMatrix) * glm::vec4(left, top, f, 1);
+	glm::vec3 rightTopFarWorld = inverse(lightViewMatrix) * glm::vec4(right, top, f, 1);
+	glm::vec3 leftBottomFarWorld = inverse(lightViewMatrix) * glm::vec4(left, bottom, f, 1);
+	glm::vec3 rightBottomFarWorld = inverse(lightViewMatrix) * glm::vec4(right, bottom, f, 1);
+	return {leftTopNearWorld, rightTopNearWorld, leftBottomNearWorld, rightBottomNearWorld, leftTopFarWorld, rightTopFarWorld, leftBottomFarWorld, rightBottomFarWorld};
+
+}
+
+/**
+* The view camera is the active camera through which we render this debug information.
+* This is normally different than the camera which the scene was originally rendered from (represented by the
+* viewCameraFrustumVAO). The name is misleading, as what was the viewCameraFrustum during the calculation of the
+* view frustum, is now represented by the originalFittingTarget.
+*/
+void Light::renderWorldFrustum(Camera *viewCamera, Camera* originalFittingTarget) {
 	glBindVertexArray(viewCameraFrustumVAO);
 	glUseProgram(frustumShader->handle);
 
@@ -239,6 +250,45 @@ void Light::renderWorldFrustum(Camera *viewCamera) {
 
 	glBindVertexArray(0);
 
+	// Now write some text at the corners of the frusta:
+	static FBFont* font;
+	if (!font) {
+		font = new FBFont("../assets/font.bmp");
+	}
+
+	static Camera* uiCamera;
+	if (!uiCamera) {
+		uiCamera = new Camera();
+		uiCamera->location = {0, 0, 1};
+		uiCamera->lookAtTarget = {0, 0, -1};
+		uiCamera->type = CameraType::Ortho;
+	}
+
+	lightingOff();
+	bindCamera(uiCamera);
+
+	flipUvs(false);
+	// World to screen space
+	// TODO refactor into separate function, especially the duplicated code to find the light frustum corners
+	// in world space
+	{
+
+		auto frustomWorldPositions = getLightFrustumFittedToCamera(originalFittingTarget);
+		for (auto frustumPos : frustomWorldPositions) {
+			glm::vec4 clipSpace = viewCamera->getProjectionMatrix() * viewCamera->getViewMatrix() * glm::vec4(frustumPos, 1);
+			glm::vec4 ndc = clipSpace / clipSpace.w;
+			glm::vec2 ss = {((ndc.x+1)/2) * scaled_width, ((ndc.y+1)/2)*scaled_height};
+			char buf[175];
+			sprintf_s(buf, 160, "%4.1f/%4.1f/%4.1f",
+					  frustumPos.x, frustumPos.y, frustumPos.z);
+			font->renderText(buf, {ss.x, ss.y, 0.9});
+		}
+
+
+
+	}
+
+
 }
 
 void Light::updateFrustumDebugging(Camera* fittingTarget) {
@@ -254,43 +304,13 @@ void Light::updateFrustumDebugging(Camera* fittingTarget) {
 	glBufferSubData(GL_ARRAY_BUFFER, 0, posFlat.size() * sizeof(float), posFlat.data());
 	GL_ERROR_EXIT(1111)
 
-
-	auto lightViewMatrix = getViewMatrix(fittingTarget);
-	std::vector<glm::vec3> lightFrustumWorldCorners;
-	for (auto fittingTargetPos : worldCorners) {
-		auto lightFrustumPos = lightViewMatrix * glm::vec4(fittingTargetPos, 1);
-		lightFrustumWorldCorners.push_back(lightFrustumPos);
+	auto lightFrustumCornersFitted = getLightFrustumFittedToCamera(fittingTarget);
+	std::vector<float> shadowMapPosFlat;
+	for (auto frustumPos : lightFrustumCornersFitted) {
+		shadowMapPosFlat.push_back(frustumPos.x);
+		shadowMapPosFlat.push_back(frustumPos.y);
+		shadowMapPosFlat.push_back(frustumPos.z);
 	}
-
-	  // The we take the min x, y to have the correct dimensions.
-        float left = findMin(lightFrustumWorldCorners, "x");
-        float right = findMax(lightFrustumWorldCorners, "x");
-        float bottom = findMin(lightFrustumWorldCorners, "y");
-        float top = findMax(lightFrustumWorldCorners, "y");
-        float n = findMin(lightFrustumWorldCorners, "z");
-        float f = findMax(lightFrustumWorldCorners, "z");
-
-    	// Now we have found min/max, lets transform these back into world pos:
-		glm::vec3 leftTopNearWorld = inverse(lightViewMatrix) * glm::vec4(left, top, n, 1);
-    	glm::vec3 rightTopNearWorld = inverse(lightViewMatrix) * glm::vec4(right, top, n, 1);
-    	glm::vec3 leftBottomNearWorld = inverse(lightViewMatrix) * glm::vec4(left, bottom, n, 1);
-    	glm::vec3 rightBottomNearWorld = inverse(lightViewMatrix) * glm::vec4(right, bottom, n, 1);
-    	glm::vec3 leftTopFarWorld = inverse(lightViewMatrix) * glm::vec4(left, top, f, 1);
-    	glm::vec3 rightTopFarWorld = inverse(lightViewMatrix) * glm::vec4(right, top, f, 1);
-    	glm::vec3 leftBottomFarWorld = inverse(lightViewMatrix) * glm::vec4(left, bottom, f, 1);
-    	glm::vec3 rightBottomFarWorld = inverse(lightViewMatrix) * glm::vec4(right, bottom, f, 1);
-
-        std::vector<float> shadowMapPosFlat = {
-            leftTopNearWorld.x, leftTopNearWorld.y, leftTopNearWorld.z,									//  0
-            rightTopNearWorld.x, rightTopNearWorld.y, rightTopNearWorld.z,								//  1
-            leftBottomNearWorld.x, leftBottomNearWorld.y, leftBottomNearWorld.z,						//  2
-            rightBottomNearWorld.x, rightBottomNearWorld.y, rightBottomNearWorld.z,						//  3
-            leftTopFarWorld.x, leftTopFarWorld.y, leftTopFarWorld.z,									//  4
-            rightTopFarWorld.x, rightTopFarWorld.y, rightTopFarWorld.z,									//  5
-            leftBottomFarWorld.x, leftBottomFarWorld.y, leftBottomFarWorld.z,							//  6
-            rightBottomFarWorld.x, rightBottomFarWorld.y, rightBottomFarWorld.z,						//  7
-        };
-
 
 	glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, shadowMapPosFlat.size() * 4, shadowMapPosFlat.data());
@@ -300,50 +320,7 @@ void Light::updateFrustumDebugging(Camera* fittingTarget) {
 
 
 
-float Light::findMin(const std::vector<glm::vec3> &positions, const std::string &coord) {
-	float min = std::numeric_limits<float>::max();
-	for (auto p : positions) {
-		if (coord == "x") {
-			if (p.x < min) {
-				min = p.x;
-			}
-		} else if (coord == "y") {
-			if (p.y < min) {
-				min = p.y;
-			}
-		}
-		else if (coord == "z") {
-			if (p.z < min) {
-				min = p.z;
-			}
-		}
 
-	}
-
-	return min;
-}
-
-float Light::findMax(const std::vector<glm::vec3> &positions, const std::string &coord) {
-	float m = std::numeric_limits<float>::lowest();
-	for (auto p : positions) {
-		if (coord == "x") {
-			if (p.x > m) {
-				m = p.x;
-			}
-		} else if (coord == "y") {
-			if (p.y > m) {
-				m = p.y;
-			}
-		}
-		else if (coord == "z") {
-			if (p.z > m) {
-				m = p.z;
-			}
-		}
-	}
-
-	return m;
-}
 
 void Light::bindShadowMap(int unitIndex) {
 	if (shadowMapFBO && shadowMapFBO->handle) {

@@ -154,7 +154,7 @@ void initDefaultGLObjects() {
     glDefaultObjects->textQuadVAO = createQuadVAO(PlanePivot::topleft);
     glDefaultObjects->shadowMapFramebuffer = createShadowMapFramebuffer();
     glDefaultObjects->currentRenderState = new RenderState();
-    glDefaultObjects->currentRenderState->foregroundColor = {0.7, 0, 0, 1};
+    glDefaultObjects->currentRenderState->foregroundColor = {0.9, 0.9, 0.9, 1};
 
     // createShader(singleColLitVert, singleColLitFrag, glDefaultObjects->singleColorShader);
     //createShader(singleColUnlitVert, singleColUnlitFrag, glDefaultObjects->singleColorShader);
@@ -198,8 +198,8 @@ Texture* createShadowMapTexture(int width, int height) {
     // It may not be ideal for non-shadow-map purposes.
      float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
      glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
 
     err = glGetError();
@@ -1874,6 +1874,7 @@ void drawMesh(const MeshDrawData &drawData) {
             drawData.shader->setVec3Value(directionalLight->color, "directionalLightData[" + std::to_string(lightIndex) + "].diffuseColor");
             drawData.shader->setMat4Value(directionalLight->getViewProjectionMatrix(drawData.camera), "directionalLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
             directionalLight->bindShadowMap(lightIndex+1);
+            drawData.shader->setFloatValue(directionalLight->shadowBias, "shadowBias");
             lightIndex++;
             GL_ERROR_EXIT(982)
         }
@@ -1980,7 +1981,6 @@ void drawMeshIntoShadowMap(const MeshDrawData& drawData, Light* directionalLight
         mat4 matrotZ = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.z), {0, 0, 1} );
         mat4 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
 
-        auto lightSpaceMatrices = directionalLight->getViewProjectionMatrix(drawData.camera);
         drawData.shader->setMat4Value(matworld, "mat_world");
         drawData.shader->setMat4Value(directionalLight->getViewMatrix(drawData.camera), "mat_view");
         drawData.shader->setMat4Value(directionalLight->getProjectionMatrix(drawData.camera), "mat_projection");
@@ -4350,7 +4350,7 @@ void Scene::render() {
                 // New way
                 {
                     MeshDrawData dd;
-                    dd.camera = activeCamera;
+                    dd.camera = cameraNode->getCamera();
                     dd.location = m->_location;
                     dd.scale = m->_scale;
                     dd.shader = shadowMapShader;
@@ -4362,6 +4362,11 @@ void Scene::render() {
                          dd.skinnedDraw = m->skinnedMesh;
                          dd.boneMatrices = m->boneMatrices();
                     }
+
+                    if (debugFlyCamActive) {
+                        continue;
+                    }
+
                     drawMeshIntoShadowMap(dd, l->light);
                 }
 
@@ -4454,7 +4459,7 @@ void Scene::render() {
     // Render some debug things:
     if (debugFlyCamActive) {
         for (auto dl : directionalLightNodes) {
-            dl->light->renderWorldFrustum(debugFlyCam);
+            dl->light->renderWorldFrustum(debugFlyCam, cameraNode->getCamera());
         }
 
     }
@@ -4512,14 +4517,14 @@ Camera::Camera() {
 * Returns the 8 corners of this cameras view frustum in world coordinates.
 */
 std::vector<glm::vec3> Camera::getFrustumWorldCorners() {
-    auto ltnw = ndcToWorldForOtherCamera(     glm::vec4{-1,1,-1, 1}, this);
-    auto rtnw = ndcToWorldForOtherCamera(    glm::vec4{1,1,-1, 1}, this);
-    auto lbnw = ndcToWorldForOtherCamera(  glm::vec4{-1,-1,-1, 1}, this);
-    auto rbnw = ndcToWorldForOtherCamera( glm::vec4{1,-1,-1, 1}, this);
-    auto ltfw = ndcToWorldForOtherCamera(      glm::vec4{-1,1,1, 1}, this);
-    auto rtfw = ndcToWorldForOtherCamera(     glm::vec4{1,1,1, 1}, this);
-    auto lbfw = ndcToWorldForOtherCamera(       glm::vec4{-1,-1,1, 1}, this);
-    auto rbfw = ndcToWorldForOtherCamera(  glm::vec4{1,-1,1, 1}, this);
+    auto ltnw = frustumToWorld(     glm::vec4{-1,1,-1, 1});
+    auto rtnw = frustumToWorld(    glm::vec4{1,1,-1, 1});
+    auto lbnw = frustumToWorld(  glm::vec4{-1,-1,-1, 1});
+    auto rbnw = frustumToWorld( glm::vec4{1,-1,-1, 1});
+    auto ltfw = frustumToWorld(      glm::vec4{-1,1,1, 1});
+    auto rtfw = frustumToWorld(     glm::vec4{1,1,1, 1});
+    auto lbfw = frustumToWorld(       glm::vec4{-1,-1,1, 1});
+    auto rbfw = frustumToWorld(  glm::vec4{1,-1,1, 1});
 
     return {ltnw, rtnw, lbnw, rbnw, ltfw, rtfw, lbfw, rbfw};
 }
@@ -4855,8 +4860,12 @@ glm::mat4 Camera::getLightProjectionMatrix() {
 /**
 * viewCamera    Is the camera of which
 */
-glm::vec4 Camera::ndcToWorldForOtherCamera(glm::vec4 ndc, Camera *viewCamera) {
-    auto temp = inverse( viewCamera->getProjectionMatrix()* viewCamera->getViewMatrix()) * ndc;
+glm::vec4 Camera::frustumToWorld(glm::vec4 ndc) {
+
+    // TODO prepare for cascading shadow maps, we need to be flexible with the near far plane of our camera.
+    // We construct our own perspective matrix here for a range of test near/far plane combinations
+    auto flexiProj = glm::perspectiveFov<float>(glm::radians(50.0f), scaled_width, scaled_height,nearPlane,farPlane);
+    auto temp = inverse( flexiProj* this->getViewMatrix()) * ndc;
     temp /= temp.w;
     return temp;
 }

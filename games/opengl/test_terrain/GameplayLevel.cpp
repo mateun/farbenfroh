@@ -9,10 +9,31 @@ namespace ttg {
     GameplayLevel::GameplayLevel(DefaultGame *game): GameLevel(game) {
     }
 
-    void GameplayLevel::render() {
+    void GameplayLevel::renderShadowBias() {
+        static FBFont* font;
+        if (!font) {
+            font = new FBFont("../assets/font.bmp");
+        }
 
+        lightingOff();
+        bindCamera(game->getUICamera());
+        char buf[175];
+        sprintf_s(buf, 160, "shadow bias:%1.5f",
+                  scene->getLightsOfType(LightType::Directional)[0]->shadowBias);
+        flipUvs(false);
+        font->renderText(buf, {scaled_width - 200, -16, 0.9});
+    }
+
+    void GameplayLevel::render() {
+        if (keyPressed('B')) {
+            scene->getLightsOfType(LightType::Directional)[0]->shadowBias += 0.0001f;
+        }
+        if (keyPressed('V')) {
+            scene->getLightsOfType(LightType::Directional)[0]->shadowBias -= 0.0001f;
+        }
         scene->render();
         game->renderFPS();
+        renderShadowBias();
     }
 
     void GameplayLevel::update() {
@@ -111,28 +132,28 @@ namespace ttg {
         auto sunNode = new SceneNode("sun");
         auto sun = new Light();
         sun->type = LightType::Directional;
-        sun->color = glm::vec4(1, 1, 0.2, 1);
-        sun->location = glm::vec3(3, 5, 2);
+        sun->color = glm::vec4(1, 1, 1, 1);
+        sun->location = glm::vec3(5, 5, 0);
         sun->lookAtTarget = glm::vec3(0, 0, 0);
         sun->calculateDirectionFromCurrentLocationLookat();
         sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
         sunNode->initAsLightNode(sun);
 
-        auto pointLight1 = new Light();
-        pointLight1->type = LightType::Point;
-        pointLight1->color = glm::vec3(0.8, 0.1, 0.1);
-        pointLight1->location = {4, 4,0};
-        pointLight1->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
-        auto plNode1 = new SceneNode();
-        plNode1->initAsLightNode(pointLight1);
-
-        auto pointLight2 = new Light();
-        pointLight2->type = LightType::Point;
-        pointLight2->color = glm::vec3(0.0, 0.0, 1);
-        pointLight2->location = {-3, 4,0};
-        pointLight2->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
-        auto plNode2 = new SceneNode();
-        plNode2->initAsLightNode(pointLight2);
+        // auto pointLight1 = new Light();
+        // pointLight1->type = LightType::Point;
+        // pointLight1->color = glm::vec3(0.8, 0.1, 0.1);
+        // pointLight1->location = {4, 4,0};
+        // pointLight1->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+        // auto plNode1 = new SceneNode();
+        // plNode1->initAsLightNode(pointLight1);
+        //
+        // auto pointLight2 = new Light();
+        // pointLight2->type = LightType::Point;
+        // pointLight2->color = glm::vec3(0.0, 0.0, 1);
+        // pointLight2->location = {-3, 4,0};
+        // pointLight2->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+        // auto plNode2 = new SceneNode();
+        // plNode2->initAsLightNode(pointLight2);
 
         cameraNode = new SceneNode("camera");
         cameraNode->enable();
@@ -140,7 +161,7 @@ namespace ttg {
         auto cam = cameraNode->getCamera();
         cam->updateLocation({0,2.8, 5});
         cam->updateLookupTarget({0, 1.7, -1});
-        cam->updateNearFar(2, 10);
+        cam->updateNearFar(0.5, 35);
         cameraMover = new CameraMover(cameraNode->getCamera());
 
         scene = new Scene();

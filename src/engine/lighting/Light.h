@@ -28,6 +28,7 @@ public:
   glm::vec3 lookAtTarget;
   glm::vec3 color = {1, 1,1};
   bool castsShadow = false;
+  float shadowBias = 0.004;
 
   PointLightData pointLightData;
 
@@ -45,7 +46,8 @@ public:
 
   void initFrustumDebugging(Camera* fittingTarget);
   void updateFrustumDebugging(Camera *fittingTarget);
-  void renderWorldFrustum(Camera* viewCamera);
+  void renderWorldFrustum(Camera* viewCamera, Camera* fittingTarget);
+  std::vector<glm::vec3> getLightFrustumFittedToCamera(Camera* fittingTarget);
 
   // We need to bind the shadowmap of this light into
   // a texture unit slot, so while rendering
@@ -55,9 +57,7 @@ public:
   void calculateDirectionFromCurrentLocationLookat();
 
 private:
-  static float findMin(const std::vector<glm::vec3>& positions, const std::string& coord);
-  static float findMax(const std::vector<glm::vec3>& positions, const std::string& coord);
-  glm::vec3 findCenterForWorldPositions(std::vector<glm::vec3> worldCorners) const;
+
 
   // Holds vertex data for debug drawing etc.
   GLuint viewCameraFrustumVAO;

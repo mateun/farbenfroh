@@ -235,7 +235,7 @@ public:
 
 
 
-    static glm::vec4 ndcToWorldForOtherCamera(glm::vec4 ndc, Camera* viewCamera);
+    glm::vec4 frustumToWorld(glm::vec4 ndc);
 
     // glm::vec4 ndcToShadowMap(glm::vec4 ndc, Camera* viewCamera) {
     //     auto temp = getViewMatrix() * inverse( viewCamera->getProjectionMatrix()* viewCamera->getViewMatrix()) * ndc;
