@@ -62,10 +62,6 @@ bool isInShadow(int lightIndex, float bias) {
     projCoords = projCoords * 0.5 + 0.5;
     float closestDepth = texture(shadowMapsDir[lightIndex], projCoords.xy).r;
     float currentDepth = projCoords.z;
-    // The smaller the depth range is (so, the less distance we have to span from near to far)
-    // the smaller this bias must be.
-    // The necessary bias must be smaller at least than the depth value you sample in renderdoc in the depth buffer
-    // (as rendered by the shadowmap camera).
     return (currentDepth - bias) > closestDepth;
 }
 
@@ -73,7 +69,9 @@ float getSlopeAdjustedBias(vec3 L, vec3 N) {
     // Adjust our bias based on th slope
     //float bias = max(0.0001 * (1.0 - dot(normalize(N), L)), shadowBias);
     float bias = 0.0001 + 0.003 * dot(normalize(N), L);
-    return bias;;
+    // 07032025: it seems the slope adjustment does not really work, returning 0 bias for now.
+    // return bias;
+    return 0;
     //return shadowBias;
 }
 
@@ -88,7 +86,7 @@ vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
         col.rgb *= directionalLightData[i].diffuseColor;
         float adjustedBias = getSlopeAdjustedBias(normal, tangentLightDir);
         if (isInShadow(i, adjustedBias)) {
-            col.rgb *= 0.4;
+            col.rgb *= 0.3;
         }
 
         //col = shadowDistanceAsColor(i);

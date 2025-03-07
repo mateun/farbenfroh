@@ -12,6 +12,12 @@
 */
 class AnimationBlender {
 
+public:
+    AnimationBlender();
+    void addAnimation(Animation* animation, const std::string& layerFilter);
+    void removeAnimation(Animation* animation);
+
+private:
     std::vector<Animation*> animations;
 
 

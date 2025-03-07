@@ -85,3 +85,18 @@ std::vector<AnimationSample*> Animation::findSamples(const std::string &jointNam
 
   return {};
 }
+
+void Animation::applyJointMask(JointMask *m) {
+  this->jointMask = m;
+
+  // TODO: what happens with the old one? delete it here?!
+  // Or let this be done by the creator of the Mask?
+}
+
+bool Animation::isMasked() {
+  return jointMask != nullptr;
+}
+
+JointMask * Animation::getJointMask() {
+  return jointMask;
+}

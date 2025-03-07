@@ -28,7 +28,7 @@ namespace editor {
         FolderAssetLoader *assetLoader = nullptr;
         FrameBuffer* skeletalMeshWindowFrameBuffer = nullptr;
         Animation* currentAnimation = nullptr;
-        float timeStamp = 0;
+        float blendTimestamp = 0;
         int currentAnimationFrame = 0;
         bool animationLooped = false;
         bool animationPlaying = false;
@@ -44,6 +44,7 @@ namespace editor {
         Shader * staticMeshShader = nullptr;
         Shader* skinnedMeshShader = nullptr;
         Shader* gradientShader = nullptr;
+        std::unordered_set<Animation*> blendedAnimations;
 
     private:
         void drawAnimationTimeline();
@@ -66,6 +67,8 @@ namespace editor {
         Camera *getMeshViewerCamera();
 
         void renderMeshViewerExt();
+
+
     };
 
 /**

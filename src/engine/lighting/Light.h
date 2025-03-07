@@ -36,14 +36,14 @@ public:
   FrameBuffer* shadowMapFBO = nullptr;
   glm::vec3 _direction = {1, -1, -1};
 
+  void quickDebugManipulation(float& left, float& right, float& bottom, float& top, float& x,
+                             float& f) const;
 
+  glm::mat4 getShadowProjectionMatrix(Camera* fittingTarget = nullptr) const;
+  glm::mat4 getShadowViewMatrix(Camera* fittingTarget = nullptr) const;
+  glm::mat4 getShadowViewProjectionMatrix(Camera* fittingTarget = nullptr) const;
 
-
-
-  glm::mat4 getProjectionMatrix(Camera* fittingTarget = nullptr) const;
-  glm::mat4 getViewMatrix(Camera* fittingTarget = nullptr) const;
-  glm::mat4 getViewProjectionMatrix(Camera* fittingTarget = nullptr) const;
-
+  // Shadowmap debugging related
   void initFrustumDebugging(Camera* fittingTarget);
   void updateFrustumDebugging(Camera *fittingTarget);
   void renderWorldFrustum(Camera* viewCamera, Camera* fittingTarget);

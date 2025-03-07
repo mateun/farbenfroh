@@ -1872,7 +1872,7 @@ void drawMesh(const MeshDrawData &drawData) {
 
             drawData.shader->setVec3Value(directionalLight->lookAtTarget - directionalLight->location, "directionalLightData[" + std::to_string(lightIndex) + "].direction");
             drawData.shader->setVec3Value(directionalLight->color, "directionalLightData[" + std::to_string(lightIndex) + "].diffuseColor");
-            drawData.shader->setMat4Value(directionalLight->getViewProjectionMatrix(drawData.camera), "directionalLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
+            drawData.shader->setMat4Value(directionalLight->getShadowViewProjectionMatrix(drawData.camera), "directionalLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
             directionalLight->bindShadowMap(lightIndex+1);
             drawData.shader->setFloatValue(directionalLight->shadowBias, "shadowBias");
             lightIndex++;
@@ -1888,7 +1888,7 @@ void drawMesh(const MeshDrawData &drawData) {
             drawData.shader->setFloatValue(l->pointLightData.linear, "pointLightData[" + std::to_string(lightIndex) + "].linear");
             drawData.shader->setFloatValue(l->pointLightData.quadratic, "pointLightData[" + std::to_string(lightIndex) + "].quadratic");
             drawData.shader->setVec3Value(l->color, "pointLightData[" + std::to_string(lightIndex) + "].diffuseColor");
-            drawData.shader->setMat4Value(l->getViewProjectionMatrix(), "pointLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
+            drawData.shader->setMat4Value(l->getShadowViewProjectionMatrix(), "pointLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
             l->bindShadowMap(lightIndex+3);
             lightIndex++;
             GL_ERROR_EXIT(982)
@@ -1944,7 +1944,9 @@ void drawMesh(const MeshDrawData &drawData) {
     }
 
     if (drawData.skinnedDraw) {
-        drawData.shader->setMat4Array(drawData.boneMatrices, "u_BoneMatrices");
+        if (!drawData.boneMatrices.empty()) {
+            drawData.shader->setMat4Array(drawData.boneMatrices, "u_BoneMatrices");
+        }
     }
 
     if (!drawData.depthTest) {
@@ -1982,8 +1984,8 @@ void drawMeshIntoShadowMap(const MeshDrawData& drawData, Light* directionalLight
         mat4 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
 
         drawData.shader->setMat4Value(matworld, "mat_world");
-        drawData.shader->setMat4Value(directionalLight->getViewMatrix(drawData.camera), "mat_view");
-        drawData.shader->setMat4Value(directionalLight->getProjectionMatrix(drawData.camera), "mat_projection");
+        drawData.shader->setMat4Value(directionalLight->getShadowViewMatrix(drawData.camera), "mat_view");
+        drawData.shader->setMat4Value(directionalLight->getShadowProjectionMatrix(drawData.camera), "mat_projection");
     }
     glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices,
                    drawData.mesh->indexDataType, nullptr);
@@ -3740,17 +3742,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
                 // In fact, according to the ordering, the parent must always exist.
                 // We try to do nothing at all for now in this case.
                 if (auto parentJoint = findJointByName(boneNode->mParent->mName.C_Str(), skeleton->joints)) {
-                    joint->parent = parentJoint;
-                } else {
-                    // joint->parent = new Joint();
-                    // joint->parent->name = boneNode->mParent->mName.C_Str();
-                    //
-                    // // We skip the Armature, it is not a real bone.
-                    // // Otherwise all bone indices are one off.
-                    // if (!joint->parent->name.starts_with("Armature")) {
-                    //     skeleton->joints.push_back(joint->parent);
-                    // }
-
+                    joint->setParent(parentJoint);
                 }
             }
 
@@ -4367,9 +4359,10 @@ void Scene::render() {
                         continue;
                     }
 
-                    //glCullFace(GL_FRONT);
+                    glCullFace(GL_FRONT);
+                    glPolygonOffset(1, 0.75);
                     drawMeshIntoShadowMap(dd, l->light);
-                    //glCullFace(GL_BACK);
+                    glCullFace(GL_BACK);
                 }
 
             }
@@ -4529,6 +4522,20 @@ std::vector<glm::vec3> Camera::getFrustumWorldCorners() {
     auto rbfw = frustumToWorld(  glm::vec4{1,-1,1, 1});
 
     return {ltnw, rtnw, lbnw, rbnw, ltfw, rtfw, lbfw, rbfw};
+}
+
+float Camera::getMaxFrustumDiagonal() {
+    auto ltnw = frustumToWorld(     glm::vec4{-1,1,-1, 1});
+    auto rtnw = frustumToWorld(    glm::vec4{1,1,-1, 1});
+    auto lbnw = frustumToWorld(  glm::vec4{-1,-1,-1, 1});
+    auto rbnw = frustumToWorld( glm::vec4{1,-1,-1, 1});
+    auto ltfw = frustumToWorld(      glm::vec4{-1,1,1, 1});
+    auto rtfw = frustumToWorld(     glm::vec4{1,1,1, 1});
+    auto lbfw = frustumToWorld(       glm::vec4{-1,-1,1, 1});
+    auto rbfw = frustumToWorld(  glm::vec4{1,-1,1, 1});
+
+    return distance(ltnw, rbfw);
+
 }
 
 // Sets up the internal frustum based VAO
@@ -4846,18 +4853,6 @@ glm::vec3 Camera::getInitialFoward() {
 glm::vec3 Camera::getForward() {
     return normalize(lookAtTarget - location);
 }
-
-glm::mat4 Camera::getLightProjectionMatrix() {
-    // Directional light
-    if (type == CameraType::Ortho) {
-        return glm::ortho<float>(0, scaled_width, 0, scaled_height, 0.1f, 200);
-    }
-
-    // Assume perspective
-    return glm::ortho<float>(-10, 10, -8, 8, 0.1f, 400);
-
-}
-
 
 /**
 * viewCamera    Is the camera of which

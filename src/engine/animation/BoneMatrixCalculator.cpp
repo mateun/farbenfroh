@@ -16,12 +16,34 @@ int getSampleIndex(Animation* animation, const std::string& jointName, float ani
     return -1;
 }
 
+Pose* BoneMatrixCalculator::calculateBlendedPose(Animation* first, Animation* second, Skeleton* skeleton, float animTime) {
+    Pose* blendedPose = new Pose;
+    auto pose1 = calculatePose(first, skeleton, animTime);
+    auto pose2 = calculatePose(second, skeleton, animTime);
+    for (auto j: skeleton->joints) {
+        auto j1 = pose1->findJointByName(j->name);
+        auto j2 = pose2->findJointByName(j->name);
+        auto interpolatedRotation = glm::slerp(j1->currentPoseOrientation[first->name], j2->currentPoseOrientation[second->name], 0.5f);
+        auto interpolatedLocation = glm::mix(j1->currentPoseLocation[first->name], j2->currentPoseLocation[second->name], 0.5f);
+
+        j->currentPoseLocalTransform= translate(glm::mat4(1), interpolatedLocation) *
+                               toMat4(interpolatedRotation);
+        blendedPose->joints.push_back(j);
+    }
+
+    return blendedPose;
+}
+
 
 
 Pose *BoneMatrixCalculator::calculatePose(Animation *animation, Skeleton *skeleton, float animTime) {
     Pose* pose = new Pose();
 
     for (auto j: skeleton->joints) {
+        auto mask = animation->getJointMask();
+        if (mask && !mask->isPartOfMask(j)) {
+            continue;
+        }
         auto rotationSamples = animation->findSamples(j->name, SampleType::rotation);
         auto translationSamples = animation->findSamples(j->name, SampleType::translation);
         glm::quat interpolatedRotation;
@@ -55,6 +77,8 @@ Pose *BoneMatrixCalculator::calculatePose(Animation *animation, Skeleton *skelet
 
         j->currentPoseLocalTransform= translate(glm::mat4(1), interpolatedTranslation) *
                                 toMat4(interpolatedRotation);
+        j->currentPoseLocation[animation->name] = interpolatedTranslation;
+        j->currentPoseOrientation[animation->name] = interpolatedRotation;
         //j->currentPoseGlobalTransform = calculateWorldTransform(j, j->currentPoseLocalTransform);
         //j->finalTransform = j->globalTransform * j->inverseBindMatrix;
 

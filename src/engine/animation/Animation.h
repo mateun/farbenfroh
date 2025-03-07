@@ -11,6 +11,8 @@
 #include <glm\glm.hpp>
 #include "glm/detail/type_quat.hpp"
 
+class JointMask;
+
 enum class SampleType {
     translation,
     rotation,
@@ -52,12 +54,20 @@ public:
     void storeSample(AnimationSample* sample, const std::string& jointName);
     std::vector<AnimationSample*> findSamples(SampleType sampleType);
     std::vector<AnimationSample*> findSamples(const std::string& jointName, SampleType sampleType);
+    void applyJointMask(JointMask* m);
+
+    bool isMasked();
+
+    JointMask* getJointMask();
 
     std::string name;
     float duration;
     int frames;
     SampleStore* sampleStore = nullptr;
     double ticksPerSecond;
+    float currentDebugTimestamp = 0;
+    std::string currentLayerMask;
+    JointMask* jointMask;
 };
 
 

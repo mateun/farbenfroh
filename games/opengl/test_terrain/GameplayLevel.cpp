@@ -61,10 +61,11 @@ namespace ttg {
         terrainNode = new SceneNode("terrain");
         //terrainNode->disable();
         smd.mesh = terrain->getMesh();
+        terrainNode->setScale({1, 1, 20});
         smd.shader = basicShader;
         smd.texture = game->getTextureByName("ground_albedo");
         smd.normalMap = game->getTextureByName("ground_normal");
-        smd.uvScale2 = {100, 100};
+        smd.uvScale2 = {100, 2000};
         smd.uvScale = 1;
         terrainNode->initAsMeshNode(smd);
 
@@ -104,7 +105,7 @@ namespace ttg {
         auto roadBarrier2 = new SceneNode("roadBarrier2");
         roadBarrier2->setRotation({0, 28, 0});
         roadBarrier2->setScale({0.5, 0.5, 0.5});
-        roadBarrier2->setLocation({1.6, 0.0, -4});
+        roadBarrier2->setLocation({1.6, 0.0, -25});
         roadBarrier2->initAsMeshNode(smd);
 
         auto shrub = new SceneNode("shrub");
@@ -161,9 +162,9 @@ namespace ttg {
         cameraNode->enable();
         cameraNode->initAsCameraNode(game->getGameplayCamera());
         auto cam = cameraNode->getCamera();
-        cam->updateLocation({0,2.8, 5});
-        cam->updateLookupTarget({0, 1.7, -1});
-        cam->updateNearFar(0.5, 35);
+        cam->updateLocation({0,8, 5});
+        cam->updateLookupTarget({0, 0, 0});
+        cam->updateNearFar(0.5, 30);
         cameraMover = new CameraMover(cameraNode->getCamera());
 
         scene = new Scene();

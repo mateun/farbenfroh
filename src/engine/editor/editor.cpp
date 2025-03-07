@@ -6,6 +6,8 @@
 
 #include <ranges>
 #include <engine/animation/BoneMatrixCalculator.h>
+#include <engine/animation/JointMask.h>
+#include <engine/animation/Pose.h>
 #include <engine/rastergraphics/rastergraphics.h>
 
 #include "graphics.h"
@@ -97,8 +99,8 @@ namespace editor {
     Camera *Editor::getMeshViewerCamera() {
         if (!_meshViewerCamera) {
             _meshViewerCamera = new Camera();
-            _meshViewerCamera->location = {0, 2, 3};
-            _meshViewerCamera->lookAtTarget = {0, 0, -5};
+            _meshViewerCamera->location = {-2, 3, 6};
+            _meshViewerCamera->lookAtTarget = {1, 1, 0};
             _meshViewerCamera->type = CameraType::Perspective;
         }
 
@@ -109,7 +111,6 @@ namespace editor {
         if (!importedMesh) {
             return;
         }
-
 
         cameraMover->update();
         ImGui::Begin("Mesh Viewer");
@@ -140,8 +141,6 @@ namespace editor {
         // regardless if this is a static or skeleton mesh
         {
 
-
-
             // Basic directional light for the render
             Light* sun = new Light();
             sun->type = LightType::Directional;
@@ -159,12 +158,36 @@ namespace editor {
             dd.color = {0.9, 0.9, 0.9, 1};
             dd.directionalLights.push_back(sun);
 
-            // Show the current pose based on the timestamp (TODO)
-            if (currentAnimation && !animationPlaying) {
-                auto startPose = BoneMatrixCalculator().calculatePose(currentAnimation, importedMesh->skeleton, timeStamp);
+            if (blendedAnimations.size() > 1) {
+                // Find the pose for each blended animation
+                // And then - blend it!!!
+                Pose* finalPose = new Pose();
+                // Always blend the first 2 animations for now:
+                auto blendedAnimsList = std::vector(blendedAnimations.begin(), blendedAnimations.end());
+                finalPose = BoneMatrixCalculator().calculateBlendedPose(blendedAnimsList[0], blendedAnimsList[1], importedMesh->skeleton, blendTimestamp);
+
+                if (finalPose) {
+                    dd.skinnedDraw = true;
+                    dd.shader = skinnedMeshShader;
+                    dd.boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(finalPose);
+                    if (finalPose) {
+                        delete finalPose;
+                    }
+                } else {
+                    throw std::runtime_error("no pose could be calculated!");
+                }
+
+
+            }
+
+            else if (currentAnimation && !animationPlaying) {
+                auto finalPose = BoneMatrixCalculator().calculatePose(currentAnimation, importedMesh->skeleton, currentAnimation->currentDebugTimestamp);
                 dd.skinnedDraw = true;
                 dd.shader = skinnedMeshShader;
-                dd.boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(startPose);
+                dd.boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(finalPose);
+                if (finalPose) {
+                    delete finalPose;
+                }
             }
             else if (currentAnimation && animationPlaying) {
                 animationPlayer->update();
@@ -182,6 +205,7 @@ namespace editor {
             drawMesh(dd);
             wireframeOff();
 
+
         }
 
         // Draw the skeleton if the mesh has one
@@ -194,8 +218,11 @@ namespace editor {
                             // For the bones themselves, we need just their global position.
                             // As we render each bone separately, we do NOT want the final transform, which includes
                             // the inverseBindMatrix.
-                            BoneMatrixCalculator().calculatePose(currentAnimation, importedMesh->skeleton, timeStamp);
+                            auto pose = BoneMatrixCalculator().calculatePose(currentAnimation, importedMesh->skeleton, currentAnimation->currentDebugTimestamp);
                             finalTransform = BoneMatrixCalculator().calculateGlobalTransform(j, j->currentPoseLocalTransform);
+                            if (pose) {
+                                delete(pose);
+                            }
                             //finalTransform = animationPlayer->calculateInterpolatedGlobalMatrixForJoint(j);
                          } else if (currentAnimation && animationPlaying) {
                              finalTransform = animationPlayer->calculateInterpolatedGlobalMatrixForJoint(j);
@@ -844,14 +871,23 @@ namespace editor {
         ImGui::Text("Animations");
         ImGui::Text("Current Active animation: %s",
                     (currentAnimation != nullptr ? currentAnimation->name.c_str() : "--"));
-        ImGui::Checkbox("Loop", &animationLooped);
+
+
         if (ImGui::Button("Play")) {
             animationPlaying = true;
             animationPlayer->play(animationLooped);
         }
+        ImGui::SameLine();
         if (ImGui::Button("Stop")) {
             animationPlaying = false;
         }
+        ImGui::SameLine();
+        ImGui::Checkbox("Loop", &animationLooped);
+        ImGui::SameLine();
+        ImGui::PushItemWidth(50);
+        ImGui::InputFloat("##BlendTimestamp", &blendTimestamp);
+
+
         // Merge all animations we have together here (also the ones without a mesh..):
         // We might want to see those as a skeleton only?!
         std::vector<Animation*> allAnims;
@@ -867,8 +903,8 @@ namespace editor {
         if (!allAnims.empty()) {
             auto animations = allAnims;
             int sampleOffsetY = 0;
+            int animIndex = 0;
             for (auto anim: animations) {
-
                 std::vector<std::string> joints;
                 // Iterate over the map and collect keys
                 for (const auto &sample: anim->findSamples(SampleType::rotation)) {
@@ -891,7 +927,7 @@ namespace editor {
                     currentAnimationFrame++;
                 }
                 ImGui::SameLine();
-                ImGui::Text("Current frame: %d", currentAnimationFrame);
+                //ImGui::Text("Current frame: %d", currentAnimationFrame);
                 ImGui::SameLine();
                 //ImGui::Text("time: %f", (*anim->samplesPerJoint[joints[0]])[currentAnimationFrame]->time);
                 ImGui::SameLine();
@@ -911,45 +947,40 @@ namespace editor {
                 }
 
                 ImGui::SameLine();
-
+                ImGui::Text("TS:");
+                ImGui::SameLine();
                 ImGui::PushItemWidth(50);
-                if (ImGui::InputFloat("##nextTimeStamp", &timeStamp)) {
-                    printf("entered nextTimeStamp: %f\n", timeStamp);
-                }
+                std::string animUID = "##ts" + std::to_string(animIndex);
+                ImGui::InputFloat(animUID.c_str(), &anim->currentDebugTimestamp);
+                ImGui::SameLine();
+                ImGui::PopItemWidth();
+                ImGui::Text("Mask:");
+                ImGui::PushItemWidth(50);
+                ImGui::SameLine();
+                std::string maskUID = "##Mask" + std::to_string(animIndex);
+                static char maskBuf[50];
+                ImGui::InputText(maskUID.c_str(), maskBuf, sizeof(maskBuf));
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                if (ImGui::Button("Jump to timestamp")) {
-                    printf("jumping to nextTimeStamp: %f\n", timeStamp);
-                    animationPlayer->switchAnimation(nullptr);
-                    animationPlayer->stop();
-                    animationPlaying= false;
-                    currentAnimation = nullptr;
-                    currentAnimationFrame = 0;
+                std::string lblBlendAdd = "Add##" + anim->name;
+                if (ImGui::Button(lblBlendAdd.c_str())) {
+                    blendedAnimations.emplace(anim);
+                }
+                ImGui::SameLine();
+                std::string lblBlendRemove = "Remove##" + anim->name;
+                if (ImGui::Button(lblBlendRemove.c_str())) {
+                    blendedAnimations.erase(anim);
                 }
 
-            }
-        }
+                ImGui::SameLine();
+                std::string lblApplyMask = "Apply Mask##" + anim->name;
+                if (ImGui::Button(lblApplyMask.c_str())) {
+                    auto jm = new JointMask(importedMesh->skeleton, MaskType::Hierarchy, HierarchyDirection::down, "neck");
+                    anim->applyJointMask(jm);
 
-        static float animTime = 0;
-        static float frameTime = 0;
-        if (currentAnimation && animationPlaying) {
-            animTime += (ftSeconds * 1000.0f);
-            frameTime += (ftSeconds * 1000.0f);
-
-            // TODO: Interpolate the key frames according to the current time
-            // in between the two frames we are.
-            // Currently we just update at 30fps
-            if (frameTime > 33.3333) {
-                currentAnimationFrame++;
-                frameTime = 0;
-            }
-
-            if (currentAnimationFrame > (currentAnimation->frames - 1)) {
-                currentAnimationFrame = 0;
-                animTime = 0;
-                if (!animationLooped) {
-                    animationPlaying = false;
+                    // TODO handle cleanup
                 }
+                animIndex++;
             }
         }
 

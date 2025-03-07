@@ -7,10 +7,23 @@
 #include "../../engine/algo/VectorUtils.h"
 
 
+void Light::quickDebugManipulation(float &left, float &right, float &bottom, float &top, float &n, float &f) const {
+//#define QUICK_DEBUG
+#ifdef QUICK_DEBUG
+	left = -10;
+	right = 10;
+	bottom = -10;
+	top = 10;
+	n = 0.1;
+	f = 20;
+#endif
+}
 
+glm::mat4 Light::getShadowProjectionMatrix(Camera* fittingTarget) const {
 
-glm::mat4 Light::getProjectionMatrix(Camera* fittingTarget) const {
-
+#ifdef QUICK_DEBUG
+	return glm::ortho<float>(-10, 10, -10, 10, 0.1, 20);
+#endif
 	if (type == LightType::Spot) {
 		throw std::runtime_error("Spotlight shadow mapping not implemented yet");
 	}
@@ -23,9 +36,21 @@ glm::mat4 Light::getProjectionMatrix(Camera* fittingTarget) const {
 		throw new std::runtime_error("Light is directional and we do not have provided a camera fitting target!");
 	}
 
+	// Experiment: only try this once
+	static bool projectionMatrixPreCalculated = false;
+	static glm::mat4 projMat = glm::mat4(1.0f);
+	if (projectionMatrixPreCalculated) {
+		return projMat;
+
+	}
+
+	projectionMatrixPreCalculated = true;
+
 	// We fit the "camera" frustum of our light into the frustum of the view camera (fitting target),
 	// so we make best use of the resolution and we do not calculate shadows where we are not looking currently anyway.
 	auto worldCorners = fittingTarget->getFrustumWorldCorners();
+
+
 
 	// To do this we need to find a projection of the camera space into our own light view space.
 	// We do this by construction a lookat matric, which needs a direction (our light direction, easy)
@@ -33,7 +58,7 @@ glm::mat4 Light::getProjectionMatrix(Camera* fittingTarget) const {
 	// As we are meant to be travelling with the fitting target, we do not use
 	// our own "location" property here, but we need to derive it based on the position of
 	// the fitting target.
-	auto lightViewMatrix = getViewMatrix(fittingTarget);
+	auto lightViewMatrix = getShadowViewMatrix(fittingTarget);
 
 	// From world into shadow camera view coordinates.
 	std::vector<glm::vec3> lightViewCorners;
@@ -50,7 +75,21 @@ glm::mat4 Light::getProjectionMatrix(Camera* fittingTarget) const {
 	float n = VectorUtils::findMin(lightViewCorners, "z");
 	float f = VectorUtils::findMax(lightViewCorners, "z");
 
-	// Pushing/Pulling the near/far planes to accomodate for better scene coverage.
+	quickDebugManipulation(left, right, bottom, top , n, f);
+
+	// float texelSize = (right - left) / 1024.0f;
+	// float centerX = (left + right) / 2.0f;
+	// float centerY = (bottom + top) / 2.0f;
+	// centerX = round(centerX / texelSize) * texelSize;
+	// centerY = round(centerY / texelSize) * texelSize;
+	// float halfWidth = (right - left) * 0.5f;
+	// float halfHeight = (top - bottom) * 0.5f;
+	// left   = centerX - halfWidth;
+	// right  = centerX + halfWidth;
+	// bottom = centerY - halfHeight;
+	// top    = centerY + halfHeight;
+
+	// Pushing/Pulling the near/far planes to accommodate for better scene coverage.
 	constexpr float zMult = 1.0f;
 
 	if (n < 0)
@@ -70,24 +109,60 @@ glm::mat4 Light::getProjectionMatrix(Camera* fittingTarget) const {
 		f *= zMult;
 	}
 
-	return glm::ortho<float>(left, right, bottom, top, n, f);
+	projMat = glm::ortho<float>(left, right, bottom, top, n, f);
+	return projMat;
 
  }
 
-glm::mat4 Light::getViewMatrix(Camera *fittingTarget) const {
-	// TODO think of this later, what can we do?
+glm::mat4 Light::getShadowViewMatrix(Camera *fittingTarget) const {
+
+	// If we have no fitting target, we will just assume a generic position
 	if (!fittingTarget) {
-		throw new std::runtime_error("No fitting target provided");
+		glm::vec3 eye = {5, 10, 0};
+		return lookAt(eye, eye + _direction, glm::vec3(0.0f, 1.0f, 0.0f));
 	}
 
 	auto worldCorners = fittingTarget->getFrustumWorldCorners();
 	glm::vec3 center = VectorUtils::findCenterForWorldPositions(worldCorners);
-	glm::vec3 eye = center + normalize(-_direction);
+
+
+	// Quantized position
+#ifdef QUANTIZED_SHADOW_VIEW
+	{
+		// Create a rotation-only matrix for the light's orientation
+		glm::mat4 lightRotationMat = glm::lookAt(glm::vec3(0.0f), _direction, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat3 lightRotation = glm::mat3(lightRotationMat);
+
+		// Transform center to light space
+		glm::vec3 centerLS = lightRotation * center;
+
+		float texelSize = abs((-20 - 20) / 256.0f);
+
+		// Quantize the x and y components in light space (using gridSize, which might be the same as texelSize)
+		float gridSize = texelSize;  // or another chosen value
+		centerLS.x = round(centerLS.x / gridSize) * gridSize;
+		centerLS.y = round(centerLS.y / gridSize) * gridSize;
+
+		// Transform the quantized center back to world space
+		glm::vec3 quantizedCenter = glm::transpose(lightRotation) * centerLS;
+
+		// Compute the eye position and rebuild the view matrix
+		glm::vec3 eye = quantizedCenter + glm::normalize(-_direction);
+		return lookAt(eye, quantizedCenter, glm::vec3(0.0f, 1.0f, 0.0f));
+	}
+#else
+
+	// Compute the eye position by offsetting along the inverse of the light's direction.
+	glm::vec3 eye = center + glm::normalize(-_direction);
 	return lookAt(eye, center, glm::vec3(0.0f, 1.0f, 0.0f));
+
+#endif
+
+
 }
 
-glm::mat4 Light::getViewProjectionMatrix(Camera *fittingTarget) const {
-	return getProjectionMatrix(fittingTarget) * getViewMatrix(fittingTarget);
+glm::mat4 Light::getShadowViewProjectionMatrix(Camera *fittingTarget) const {
+	return getShadowProjectionMatrix(fittingTarget) * getShadowViewMatrix(fittingTarget);
 }
 
 /**
@@ -198,7 +273,8 @@ void Light::initFrustumDebugging(Camera* fittingTarget) {
 * the given fitting target camera.
 */
 std::vector<glm::vec3> Light::getLightFrustumFittedToCamera(Camera* fittingTarget) {
-	auto lightViewMatrix = getViewMatrix(fittingTarget);
+
+	auto lightViewMatrix = getShadowViewMatrix(fittingTarget);
 	std::vector<glm::vec3> lightFrustumWorldCorners;
 	for (auto fittingTargetPos : fittingTarget->getFrustumWorldCorners()) {
 		auto lightFrustumPos = (lightViewMatrix) * glm::vec4(fittingTargetPos, 1);
@@ -212,6 +288,8 @@ std::vector<glm::vec3> Light::getLightFrustumFittedToCamera(Camera* fittingTarge
 	float top = VectorUtils::findMax(lightFrustumWorldCorners, "y");
 	float n = VectorUtils::findMin(lightFrustumWorldCorners, "z");
 	float f = VectorUtils::findMax(lightFrustumWorldCorners, "z");
+
+	quickDebugManipulation(left, right, bottom, top , n, f);
 
 	glm::vec3 leftTopNearWorld = inverse(lightViewMatrix) * glm::vec4(left, top, n, 1);
 	glm::vec3 rightTopNearWorld = inverse(lightViewMatrix) * glm::vec4(right, top, n, 1);
@@ -227,7 +305,7 @@ std::vector<glm::vec3> Light::getLightFrustumFittedToCamera(Camera* fittingTarge
 
 /**
 * The view camera is the active camera through which we render this debug information.
-* This is normally different than the camera which the scene was originally rendered from (represented by the
+* This is normally different from the camera which the scene was originally rendered from (represented by the
 * viewCameraFrustumVAO). The name is misleading, as what was the viewCameraFrustum during the calculation of the
 * view frustum, is now represented by the originalFittingTarget.
 */
@@ -268,9 +346,6 @@ void Light::renderWorldFrustum(Camera *viewCamera, Camera* originalFittingTarget
 	bindCamera(uiCamera);
 
 	flipUvs(false);
-	// World to screen space
-	// TODO refactor into separate function, especially the duplicated code to find the light frustum corners
-	// in world space
 	{
 
 		auto frustomWorldPositions = getLightFrustumFittedToCamera(originalFittingTarget);

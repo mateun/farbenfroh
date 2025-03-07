@@ -13,6 +13,7 @@ class Pose {
   public:
     std::vector<Joint*> joints;
 
+    Joint* findJointByName(const std::string & name);
 };
 
 

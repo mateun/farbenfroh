@@ -96,6 +96,12 @@ private:
 
 
 struct Joint {
+
+    void setParent(Joint* parent) {
+        this->parent = parent;
+        parent->children.push_back(this);
+    }
+
     std::string name;
     glm::mat4 inverseBindMatrix;
 
@@ -103,6 +109,10 @@ struct Joint {
     glm::vec3 translation;
     glm::quat rotation;
     glm::vec3 scale;
+
+    std::map<std::string, glm::vec3> currentPoseLocation;
+    std::map<std::string, glm::quat> currentPoseOrientation;
+    glm::vec3 currentPoseScale;
 
     glm::mat4 bindPoseLocalTransform = glm::mat4(1.0f);
     glm::mat4 bindPoseGlobalTransform = glm::mat4(1.0f);
@@ -199,6 +209,8 @@ public:
 
     std::vector<glm::vec3> getFrustumWorldCorners();
 
+    float getMaxFrustumDiagonal();
+
     CameraType type;
     glm::vec3 location;
     glm::vec3 lookAtTarget;
@@ -230,21 +242,7 @@ public:
 
     glm::vec3 getForward();
 
-    glm::mat4 getLightProjectionMatrix();
-
-
-
-
     glm::vec4 frustumToWorld(glm::vec4 ndc);
-
-    // glm::vec4 ndcToShadowMap(glm::vec4 ndc, Camera* viewCamera) {
-    //     auto temp = getViewMatrix() * inverse( viewCamera->getProjectionMatrix()* viewCamera->getViewMatrix()) * ndc;
-    //     temp /= temp.w;
-    //     return temp;
-    // }
-
-    static std::pair<glm::mat4, glm::mat4> getLightSpaceMaticesForShadowMap(Camera* viewCamera = nullptr, glm::vec3 lightDir = {1, -1, 0});
-
     glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) const;
 
     void updateNearFar(float nearPlane, float farPlane);

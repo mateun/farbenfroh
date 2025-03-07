@@ -22,6 +22,8 @@
 #include "engine/animation/AnimationController.cpp"
 #include "engine/animation/AnimationTransition.cpp"
 #include "engine/animation/AnimationPlayer.cpp"
+#include "engine/animation/Pose.cpp"
+#include "engine/animation/JointMask.cpp"
 #include "engine/animation/BoneMatrixCalculator.cpp"
 #include "engine/algo/VectorUtils.cpp"
 

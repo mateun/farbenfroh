@@ -15,6 +15,8 @@ class Skeleton;
 class BoneMatrixCalculator {
 
 public:
+    Pose *calculateBlendedPose(Animation *first, Animation *second, Skeleton *skeleton, float animTime);
+
     /**
     * It returns a pose, which is a list of joints with each joint having a location, rotation and scaled based
     * on the temporal interpolation between two keyframes.
