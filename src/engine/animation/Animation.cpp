@@ -5,6 +5,8 @@
 
 #include <ranges>
 
+#include "JointMask.h"
+
 std::vector<AnimationSample*> SampleStore::findTranslationSamples(const std::string &jointName) {
   return _translationSamples[jointName];
 }
@@ -87,16 +89,25 @@ std::vector<AnimationSample*> Animation::findSamples(const std::string &jointNam
 }
 
 void Animation::applyJointMask(JointMask *m) {
-  this->jointMask = m;
+  this->jointMasks.emplace(m);
+}
 
-  // TODO: what happens with the old one? delete it here?!
-  // Or let this be done by the creator of the Mask?
+bool Animation::isJointMasked(Joint *j) {
+  if (!isMasked()) { return false; }
+
+  bool masked = false;
+  for (auto m : jointMasks) {
+    masked = m->isPartOfMask(j);
+    if (masked) {
+      // Bail out quickly for the first mask hit.
+      return true;
+    }
+  }
+
+  return masked;
 }
 
 bool Animation::isMasked() {
-  return jointMask != nullptr;
+  return !jointMasks.empty();
 }
 
-JointMask * Animation::getJointMask() {
-  return jointMask;
-}

@@ -7,11 +7,19 @@
 
 #include "../../graphics.h"
 
+class AnimationBlender;
+
 Animation* findAnimationByName(std::string name, Mesh* mesh);
 
+/**
+* Manages the playback of either a single animation or an
+* AnimationBlender which combines 2 animations.
+*/
 class AnimationPlayer {
 public:
+    AnimationPlayer();
     AnimationPlayer(Animation* animation, Mesh* mesh);
+    AnimationPlayer(AnimationBlender* animBlender, Mesh* mesh);
     void play(bool looped);
     // This updates the current pose matrices based on frame time interpolation
     void update();
@@ -24,6 +32,9 @@ public:
     void calculateFramePose(int frame);
     void stop();
     void switchAnimation(Animation* animation);
+
+    void setAnimationBlender(AnimationBlender *animBlender);
+
     void setMesh(Mesh* mesh);
 
     // Searches for the index of the last rotation sample based on the given time
@@ -38,6 +49,8 @@ public:
 
 private:
     Animation* animation= nullptr;
+    AnimationBlender * animationBlender = nullptr;
+
     Mesh *mesh = nullptr;
 
     bool playing = false;

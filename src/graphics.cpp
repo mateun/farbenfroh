@@ -4925,6 +4925,14 @@ void FBFont::renderText(const std::string &text, glm::vec3 position) {
     free(buf);
 }
 
+void Skeleton::resetToBindPose() {
+    for (auto j: joints) {
+        j->currentPoseLocalTransform = j->bindPoseLocalTransform;
+        j->currentPoseLocation.clear();
+        j->currentPoseOrientation.clear();
+    }
+}
+
 void Shader::setVec4Value(const glm::vec4 vec, const std::string& name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
     glUniform4f(loc, vec.x, vec.y, vec.z, vec.w);

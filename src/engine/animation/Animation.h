@@ -11,6 +11,7 @@
 #include <glm\glm.hpp>
 #include "glm/detail/type_quat.hpp"
 
+struct Joint;
 class JointMask;
 
 enum class SampleType {
@@ -56,9 +57,12 @@ public:
     std::vector<AnimationSample*> findSamples(const std::string& jointName, SampleType sampleType);
     void applyJointMask(JointMask* m);
 
-    bool isMasked();
+    /**
+    * Checks if the joint is masked by any applied masks.
+    */
+    bool isJointMasked(Joint* j);
 
-    JointMask* getJointMask();
+    bool isMasked();
 
     std::string name;
     float duration;
@@ -67,7 +71,7 @@ public:
     double ticksPerSecond;
     float currentDebugTimestamp = 0;
     std::string currentLayerMask;
-    JointMask* jointMask;
+    std::unordered_set<JointMask*> jointMasks;
 };
 
 

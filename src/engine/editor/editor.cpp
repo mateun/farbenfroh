@@ -5,8 +5,10 @@
 #include "editor.h"
 
 #include <ranges>
+#include <engine/animation/AnimationBlender.h>
 #include <engine/animation/BoneMatrixCalculator.h>
 #include <engine/animation/JointMask.h>
+#include <engine/animation/PerBoneBlendData.h>
 #include <engine/animation/Pose.h>
 #include <engine/rastergraphics/rastergraphics.h>
 
@@ -158,13 +160,25 @@ namespace editor {
             dd.color = {0.9, 0.9, 0.9, 1};
             dd.directionalLights.push_back(sun);
 
-            if (blendedAnimations.size() > 1) {
+            if (blendedAnimations.size() > 1 && !animationPlaying) {
                 // Find the pose for each blended animation
                 // And then - blend it!!!
                 Pose* finalPose = new Pose();
+
+
+                // Create an effective override of the upper body for our aim/walk blend.
+                // Only the aim should contribute to the upper body bones.
+                PerBoneBlendData perBoneBlendData;
+                perBoneBlendData.addNamedBoneWeight("upperarm.r", 1);
+                perBoneBlendData.addNamedBoneWeight("lowerarm.r", 1);
+                perBoneBlendData.addNamedBoneWeight("hand.r", 1);
+                perBoneBlendData.addNamedBoneWeight("upperarm.l", 1);
+                perBoneBlendData.addNamedBoneWeight("lowerarm.l", 1);
+                perBoneBlendData.addNamedBoneWeight("hand.l", 1);
+
                 // Always blend the first 2 animations for now:
                 auto blendedAnimsList = std::vector(blendedAnimations.begin(), blendedAnimations.end());
-                finalPose = BoneMatrixCalculator().calculateBlendedPose(blendedAnimsList[0], blendedAnimsList[1], importedMesh->skeleton, blendTimestamp);
+                finalPose = BoneMatrixCalculator().calculateBlendedPose(blendedAnimsList[0], blendedAnimsList[1], importedMesh->skeleton, blendTimestamp, blendWeight, &perBoneBlendData);
 
                 if (finalPose) {
                     dd.skinnedDraw = true;
@@ -177,7 +191,6 @@ namespace editor {
                     throw std::runtime_error("no pose could be calculated!");
                 }
 
-
             }
 
             else if (currentAnimation && !animationPlaying) {
@@ -189,7 +202,7 @@ namespace editor {
                     delete finalPose;
                 }
             }
-            else if (currentAnimation && animationPlaying) {
+            else if ((currentAnimation || blendedAnimations.size() == 2)  && animationPlaying) {
                 animationPlayer->update();
                 dd.skinnedDraw = true;
                 dd.shader = skinnedMeshShader;
@@ -381,216 +394,6 @@ namespace editor {
             ImGui::EndTable();
         }
 
-
-        ImGui::End();
-    }
-
-    [[Deprecated("Please use the ext version")]]
-    void Editor::renderMeshViewer() {
-        if (!importedMesh) {
-            return;
-        }
-
-        cameraMover->update();
-
-        ImGui::Begin("Mesh Viewer");
-        ImGui::SetWindowSize("Mesh Viewer", {1000, 600});
-        // We render our imported skeletal mesh into a texture, which we then show as an image:
-        activateFrameBuffer(skeletalMeshWindowFrameBuffer);
-        bindCamera(getMeshViewerCamera());
-
-        glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width,
-                   skeletalMeshWindowFrameBuffer->texture->bitmap->height);
-
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-        static auto gd = createGrid(100);
-        drawGrid(gd);
-
-
-        static bool showMesh = true;
-        static bool showAsWireFrame = false;
-        static bool showSkeleton = false;
-        static float meshScale = .01;
-
-        if (showMesh) {
-
-            // Draw in red if no texture is set.
-            foregroundColor({1, 0, 0, 1});
-
-            // We bind a texture if it is not null, null otherwise
-            bindTexture(importedTexture);
-
-            // Make sure to display the texture correctly
-            flipUvs(true);
-
-            bindMesh(importedMesh);
-            location({0, 0, 0});
-            rotation({0, 0, 0});
-
-            if (importedMesh->skeleton) {
-                setSkinnedDraw(true);
-                if (showAsWireFrame) {
-                    lightingOff();
-                    wireframeOn();
-                }
-
-#ifdef SEFPARATE_ANIM_IMPL
-                std::vector<glm::mat4> boneMatrices;
-                for (auto j: importedMesh->skeleton->joints) {
-                    if (currentAnimation) {
-                        if (currentAnimation->samplesPerJoint[j->name] != nullptr &&
-                            (currentAnimation->samplesPerJoint[j->name]->size() > currentAnimationFrame)) {
-                            auto sample = (*currentAnimation->samplesPerJoint[j->name])[currentAnimationFrame];
-                            if (sample) {
-                                j->localTransform = glm::translate(glm::mat4(1), sample->translation) *
-                                                    glm::toMat4(sample->rotation);
-                                j->globalTransform = calculateWorldTransform(j, j->localTransform);
-                                j->finalTransform = j->globalTransform * j->inverseBindMatrix;
-                            }
-                        }
-
-                    }
-                    boneMatrices.push_back(j->finalTransform);
-
-                }
-                setBoneMatrices(boneMatrices);
-#endif
-
-                animationPlayer->update();
-
-            }
-
-            scale({meshScale, meshScale, meshScale});
-            drawMesh();
-
-            setSkinnedDraw(false);
-            if (showAsWireFrame) {
-                wireframeOff();
-                lightingOn();
-            }
-        }
-
-        // Track the selected joint in our table:
-        static int selectedJoint = -1;
-        if (showSkeleton) {
-            // Draw the skeleton
-            bindMesh(assetLoader->getMesh("bone_mesh"));
-            foregroundColor({0.5, 0.5, 1, 1});
-
-            int jointCounter = 0;
-            if (importedMesh->skeleton) {
-                // For rendering the joints we tweak the render state a bit:
-                if (showMesh) {
-                    depthTestOff();
-                }
-
-                for (auto j: importedMesh->skeleton->joints) {
-                    // We use the worldMatrix as is instead
-                    // of pulling out manually location, scale, rotation from the matrix.
-                    useWorldMatrix(true);
-                    setWorldMatrix(j->currentPoseGlobalTransform);
-
-                    // Color the selected joint differently
-                    if (jointCounter == selectedJoint) {
-                        foregroundColor({1, 1, 0, 1});
-                    } else {
-                        foregroundColor({0.5, 0.5, 1, 1});
-                    }
-                    jointCounter++;
-
-                    scale(glm::vec3(1));
-                    drawMesh();
-                }
-
-                // Reset our render state back to normal:
-                depthTestOn();
-                useWorldMatrix(false);
-
-            }
-        }
-
-
-        // Rest to normal viewport:
-        glViewport(0, 0, window_width, window_height);
-
-        // Activate main framebuffer again:
-        activateFrameBuffer(nullptr);
-
-        // We have a 2 column layout in our editor:
-        // Left is the visualisation of the mesh,
-        // right is some tabular information (properties):
-        if (ImGui::BeginTable("TwoColumnTable", 2)) {
-
-            // Left column
-            ImGui::TableNextColumn();
-            ImGui::Image((ImTextureID)(intptr_t)(skeletalMeshWindowFrameBuffer->texture->handle),
-                         {(float) skeletalMeshWindowFrameBuffer->texture->bitmap->width / 2,
-                          (float) skeletalMeshWindowFrameBuffer->texture->bitmap->height / 2},
-                         {0, 1}, {1, 0});
-
-
-            // Right column
-            ImGui::TableNextColumn();
-            ImGui::Text("Model: %s", importedMesh->fileName.c_str());
-
-            ImGui::Checkbox("Skeleton", &showSkeleton);
-            ImGui::Checkbox("Mesh", &showMesh);
-            ImGui::SameLine();
-            static char scaleBuf[5];
-            sprintf(scaleBuf, std::to_string(meshScale).c_str());
-            ImGui::InputText("##scale", scaleBuf, 5);
-            meshScale = atof(scaleBuf);
-            ImGui::Checkbox("Wireframe", &showAsWireFrame);
-
-            int row = 0;
-            if (importedMesh->skeleton) {
-                ImGui::Text("Bones: %d", importedMesh->skeleton->joints.size());
-
-
-                if (ImGui::BeginTable("bone_detail_table", 3)) {
-                    // Set up headers for the table (optional)
-                    ImGui::TableSetupColumn("Name");
-                    ImGui::TableSetupColumn("offsetMatrix");
-                    ImGui::TableSetupColumn("Parent");
-                    ImGui::TableHeadersRow();
-
-                    for (auto j: importedMesh->skeleton->joints) {
-
-                        ImGui::TableNextRow();
-                        ImGui::TableSetColumnIndex(0); // First column
-
-                        bool isSelected = (selectedJoint == row);
-                        if (ImGui::Selectable(j->name.c_str(), isSelected, ImGuiSelectableFlags_SpanAllColumns)) {
-                            selectedJoint = row;
-                        }
-                        row++;
-
-                        ImGui::TableSetColumnIndex(1); // Second column
-                        float x = j->currentPoseGlobalTransform[3][0]; // Translation x
-                        float y = j->currentPoseGlobalTransform[3][1]; // Translation y
-                        float z = j->currentPoseGlobalTransform[3][2]; // Translation z
-                        ImGui::Text("%f/%f/%f", x, y, z);
-
-                        ImGui::TableSetColumnIndex(2);
-                        if (j->parent) {
-                            ImGui::Text(j->parent->name.c_str());
-                        } else {
-                            ImGui::Text("-");
-                        }
-
-                    }
-
-                    // End the table
-                    ImGui::EndTable();
-                }
-            }
-
-            ImGui::EndTable();
-
-        }
 
         ImGui::End();
     }
@@ -883,9 +686,6 @@ namespace editor {
         }
         ImGui::SameLine();
         ImGui::Checkbox("Loop", &animationLooped);
-        ImGui::SameLine();
-        ImGui::PushItemWidth(50);
-        ImGui::InputFloat("##BlendTimestamp", &blendTimestamp);
 
 
         // Merge all animations we have together here (also the ones without a mesh..):
@@ -939,11 +739,13 @@ namespace editor {
 
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Deactivate")) {
+                if (ImGui::Button(std::string("Deactivate##Deactivate" + anim->name).c_str())) {
                     animationPlayer->switchAnimation(nullptr);
                     animationPlayer->stop();
+
                     currentAnimation = nullptr;
                     currentAnimationFrame = 0;
+                    importedMesh->skeleton->resetToBindPose();
                 }
 
                 ImGui::SameLine();
@@ -965,6 +767,18 @@ namespace editor {
                 std::string lblBlendAdd = "Add##" + anim->name;
                 if (ImGui::Button(lblBlendAdd.c_str())) {
                     blendedAnimations.emplace(anim);
+                    if (blendedAnimations.size() == 2) {
+                        PerBoneBlendData* perBoneBlendData = new PerBoneBlendData();
+                        perBoneBlendData->addNamedBoneWeight("upperarm.r", 1);
+                        perBoneBlendData->addNamedBoneWeight("lowerarm.r", 1);
+                        perBoneBlendData->addNamedBoneWeight("hand.r", 1);
+                        perBoneBlendData->addNamedBoneWeight("upperarm.l", 1);
+                        perBoneBlendData->addNamedBoneWeight("lowerarm.l", 1);
+                        perBoneBlendData->addNamedBoneWeight("hand.l", 1);
+                        std::vector<Animation*> animList = std::vector(blendedAnimations.begin(), blendedAnimations.end());
+                        auto ab = new AnimationBlender(animList[0], animList[1], perBoneBlendData );
+                        animationPlayer->setAnimationBlender(ab);
+                    }
                 }
                 ImGui::SameLine();
                 std::string lblBlendRemove = "Remove##" + anim->name;
@@ -975,14 +789,48 @@ namespace editor {
                 ImGui::SameLine();
                 std::string lblApplyMask = "Apply Mask##" + anim->name;
                 if (ImGui::Button(lblApplyMask.c_str())) {
-                    auto jm = new JointMask(importedMesh->skeleton, MaskType::Hierarchy, HierarchyDirection::down, "neck");
-                    anim->applyJointMask(jm);
+                    static auto jm1 = new JointMask(importedMesh->skeleton, MaskType::Hierarchy, HierarchyDirection::down, "neck");
+                    anim->applyJointMask(jm1);
 
-                    // TODO handle cleanup
+                    static auto jm2 = new JointMask(importedMesh->skeleton, MaskType::List);
+                    jm2->addJointByName("upperarm.r");
+                    jm2->addJointByName("lowerarm.l");
+                    jm2->addJointByName("hand.l");
+                    jm2->addJointByName("Bone");
+                    //anim->applyJointMask(jm2);
+
                 }
                 animIndex++;
             }
         }
+        if (!blendedAnimations.empty()) {
+            ImGui::Dummy({0, 30});
+            ImGui::TextColored({1, 0, 0.5, 1}, "Blending details");
+            ImGui::Dummy({0, 5});
+            ImGui::Text("Blend weight:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(80);
+            ImGui::InputFloat("##BlendWeight", &blendWeight);
+            ImGui::Text("Blend timestamp:");
+            ImGui::SameLine();
+            ImGui::InputFloat("##BlendTimesamp", &blendTimestamp);
+            ImGui::PopItemWidth();
+            if (ImGui::BeginTable("blend_detail_table", 3)) {
+                // Set up headers for the table (optional)
+                ImGui::TableSetupColumn("Animation Name");
+                ImGui::TableHeadersRow();
+
+                auto blendedAnimsList = std::vector(blendedAnimations.begin(), blendedAnimations.end());
+                for (auto banim: blendedAnimations) {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%s", banim->name.c_str());
+                }
+                ImGui::EndTable();
+            }
+        }
+
+
 
 
     }
@@ -998,7 +846,7 @@ namespace editor {
         skeletalMeshWindowFrameBuffer = createFrameBuffer(1024, 1024);
         cameraMover = new CameraMover(getMeshViewerCamera());
         cameraMover->setMovementSpeed(30);
-        animationPlayer = new AnimationPlayer(nullptr, nullptr);
+        animationPlayer = new AnimationPlayer();
         staticMeshShader = new Shader();
         staticMeshShader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
         skinnedMeshShader = new Shader();

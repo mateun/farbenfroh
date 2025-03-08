@@ -137,6 +137,7 @@ struct Joint {
 
 struct Skeleton {
     std::vector<Joint*> joints;
+    void resetToBindPose();
 };
 
 /**

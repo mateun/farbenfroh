@@ -24,6 +24,7 @@
 #include "engine/animation/AnimationPlayer.cpp"
 #include "engine/animation/Pose.cpp"
 #include "engine/animation/JointMask.cpp"
+#include "engine/animation/PerBoneBlendData.cpp"
 #include "engine/animation/BoneMatrixCalculator.cpp"
 #include "engine/algo/VectorUtils.cpp"
 

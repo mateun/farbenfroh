@@ -30,6 +30,9 @@ class JointMask {
 
 
     bool isPartOfMask(Joint* candidate);
+
+    void addJointByName(const std::string &name);
+
     void addJoint(Joint* joint);
 
 

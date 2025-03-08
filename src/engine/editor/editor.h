@@ -29,6 +29,7 @@ namespace editor {
         FrameBuffer* skeletalMeshWindowFrameBuffer = nullptr;
         Animation* currentAnimation = nullptr;
         float blendTimestamp = 0;
+        float blendWeight = 0.5;
         int currentAnimationFrame = 0;
         bool animationLooped = false;
         bool animationPlaying = false;
@@ -45,6 +46,7 @@ namespace editor {
         Shader* skinnedMeshShader = nullptr;
         Shader* gradientShader = nullptr;
         std::unordered_set<Animation*> blendedAnimations;
+
 
     private:
         void drawAnimationTimeline();

@@ -6,21 +6,22 @@
 #define ANIMATIONBLENDER_H
 
 
-
+class PerBoneBlendData;
 /**
-* Allows for the blending of n animations based on some criteria.
+* Allows for the blending of 2 animations.
 */
 class AnimationBlender {
 
 public:
-    AnimationBlender();
-    void addAnimation(Animation* animation, const std::string& layerFilter);
-    void removeAnimation(Animation* animation);
+    AnimationBlender(Animation* first, Animation* second, PerBoneBlendData* perBoneBlendData);
+    Animation* first();
+    Animation* second();
+    PerBoneBlendData* perBoneBlendData();
 
 private:
-    std::vector<Animation*> animations;
-
-
+    Animation * _first = nullptr;
+    Animation * _second = nullptr;
+    PerBoneBlendData * _perBoneBlendData = nullptr;
 };
 
 

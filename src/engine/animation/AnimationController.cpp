@@ -7,7 +7,7 @@
 #include "AnimationTransition.h"
 
 AnimationController::AnimationController(Mesh* mesh) : _mesh(mesh) {
-    _player = new AnimationPlayer(nullptr, mesh);
+    _player = new AnimationPlayer((Animation*)nullptr, mesh);
 }
 
 AnimationController::~AnimationController() {

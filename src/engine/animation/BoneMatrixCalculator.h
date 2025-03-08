@@ -10,12 +10,12 @@
 class Animation;
 class Pose;
 class Skeleton;
-
+class PerBoneBlendData;
 
 class BoneMatrixCalculator {
 
 public:
-    Pose *calculateBlendedPose(Animation *first, Animation *second, Skeleton *skeleton, float animTime);
+    Pose *calculateBlendedPose(Animation *first, Animation *second, Skeleton *skeleton, float animTime, float blendWeight = 0.5, PerBoneBlendData *perBoneBlendData = nullptr);
 
     /**
     * It returns a pose, which is a list of joints with each joint having a location, rotation and scaled based

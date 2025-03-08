@@ -4,10 +4,20 @@
 
 #include "AnimationPlayer.h"
 #include "Animation.h"
+#include <engine/animation/BoneMatrixCalculator.h>
+
+#include "AnimationBlender.h"
 #include "../../graphics.h"
+
+AnimationPlayer::AnimationPlayer() {
+}
+
 
 AnimationPlayer::AnimationPlayer(Animation *animation, Mesh* mesh) : animation(animation), mesh(mesh) {
 
+}
+
+AnimationPlayer::AnimationPlayer(AnimationBlender *animBlender, Mesh *mesh) : animationBlender(animBlender), mesh(mesh) {
 }
 
 void AnimationPlayer::play(bool looped) {
@@ -18,16 +28,25 @@ void AnimationPlayer::play(bool looped) {
 
 void AnimationPlayer::stop() {
     playing = false;
+    looped = false;
 }
 
 void AnimationPlayer::switchAnimation(Animation *animation) {
     stop();
     this->animation = animation;
     this->animTime = 0;
+    this->animationBlender = nullptr;
+
+}
+
+void AnimationPlayer::setAnimationBlender(AnimationBlender *animBlender) {
+    this->animationBlender = animBlender;
+    this->animation = nullptr;
 }
 
 void AnimationPlayer::setMesh(Mesh* mesh) {
     stop();
+
     this->mesh = mesh;
 }
 
@@ -100,27 +119,49 @@ glm::mat4 AnimationPlayer::calculateInterpolatedGlobalMatrixForJoint(Joint* j) {
 void AnimationPlayer::update() {
 
     static float frameTime = 0;
-    if (animation && playing) {
+    if (animation || animationBlender && playing) {
 
         animTime += ftSeconds;
 
         if (looped) {
-            animTime = fmod(animTime, animation->duration);
+            if (animation) {
+                animTime = fmod(animTime, animation->duration);
+            } else if (animationBlender) {
+                // Take the shorter one of the 2 animations, sometimes they are minimally off, but to avoid
+                // sampling issues in the shorter one, we take its duration, so we will always find a sample
+                //, also in the longer one.
+                float duration = std::min(animationBlender->first()->duration, animationBlender->second()->duration);
+                animTime = fmod(animTime, duration);
+            }
+
         } else {
-            if (animTime > (animation->duration)) {
+            if (animation && (animTime > (animation->duration))) {
+                animTime = 0;
+                playing = false;
+            }
+            else if (animationBlender && (animTime > (std::min(animationBlender->first()->duration, animationBlender->second()->duration)))) {
                 animTime = 0;
                 playing = false;
             }
         }
 
         boneMatrices.clear();
-        for (auto j: mesh->skeleton->joints) {
-            if (animation) {
-                j->currentPoseGlobalTransform = calculateInterpolatedGlobalMatrixForJoint(j);
-                j->currentPoseFinalTransform = j->currentPoseGlobalTransform * j->inverseBindMatrix;
-            }
-            boneMatrices.push_back(j->currentPoseFinalTransform);
+        if (animation) {
+            auto finalPose = BoneMatrixCalculator().calculatePose(animation, mesh->skeleton, animTime);
+            boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(finalPose);
         }
+        if (animationBlender) {
+            auto finalPose = BoneMatrixCalculator().calculateBlendedPose(animationBlender->first(), animationBlender->second(), mesh->skeleton, animTime, 0.5, animationBlender->perBoneBlendData());
+            boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(finalPose);
+        }
+
+        // for (auto j: mesh->skeleton->joints) {
+        //     if (animation) {
+        //         j->currentPoseGlobalTransform = calculateInterpolatedGlobalMatrixForJoint(j);
+        //         j->currentPoseFinalTransform = j->currentPoseGlobalTransform * j->inverseBindMatrix;
+        //     }
+        //     boneMatrices.push_back(j->currentPoseFinalTransform);
+        // }
     }
 }
 
@@ -188,3 +229,4 @@ Animation* findAnimationByName(std::string name, Mesh* mesh) {
     }
     return nullptr;
 }
+

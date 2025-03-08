@@ -29,7 +29,10 @@ bool JointMask::isPartOfMask(Joint* candidate, Joint* startJoint) {
                 if (childJoint->name == candidate->name) {
                     return true;
                 }
-                return  isPartOfMask(candidate, childJoint);
+                bool result = isPartOfMask(candidate, childJoint);
+                if (result == true) {
+                    return result;
+                }
             }
         } else {
             auto parent = startJoint->parent;
@@ -40,7 +43,7 @@ bool JointMask::isPartOfMask(Joint* candidate, Joint* startJoint) {
 
         }
 
-        return false;
+
     }
 
     if (maskType == MaskType::List) {
@@ -52,10 +55,19 @@ bool JointMask::isPartOfMask(Joint* candidate, Joint* startJoint) {
         return false;
     }
 
+    return false;
+
 }
 
 bool JointMask::isPartOfMask(Joint *candidate) {
     return isPartOfMask(candidate, hierarchyStartJoint);
+}
+
+void JointMask::addJointByName(const std::string& name) {
+    auto j = findJointByName(name, skeleton->joints);
+    if (j) {
+        joints.push_back(j);
+    }
 }
 
 void JointMask::addJoint(Joint *joint) {
