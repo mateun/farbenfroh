@@ -4,6 +4,7 @@
 
 #include "GamePlayLevel.h"
 #include "../../../src/engine/game/default_game.h"
+#include <engine/physics/PhysicsSystem.h>
 
 GamePlayLevel::GamePlayLevel(DefaultGame *game) : GameLevel(game) {
 }
@@ -102,5 +103,7 @@ void GamePlayLevel::init() {
 
     animationController->update();
     playerNode->updateBoneMatrices(animationController->getBoneMatrices());
+
+    physicsSystem = new PhysicsSystem(PhysicsSystemProvider::Jolt);
 
 }

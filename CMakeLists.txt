@@ -31,7 +31,7 @@ add_executable(game WIN32
         ${DETOUR_SRC}
         ${LUA_SRC}
         src/imgui-build.cpp
-        src/unity.cpp
+        src/game-build.cpp
 
 )
 
@@ -40,7 +40,11 @@ add_executable(animtest WIN32
         src/engine/tests/test_units.cpp
         src/engine/tests/AnimationTests.cpp
 )
+add_executable(quadtree_test
+        src/engine/algo/QuadTree.cpp
+        src/engine/tests/QuadTreeTests.cpp
+
+)
 
 target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
 target_link_libraries(animtest dsound dxgi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
-#target_link_libraries(game vulkan-1)

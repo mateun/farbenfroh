@@ -14,7 +14,7 @@ class GameplayLevel : public GameLevel {
 
 public:
 
-    GameplayLevel(DefaultGame* game);
+    GameplayLevel(DefaultGame* game, const std::string& name = "gameplay");
 
     void renderShadowBias();
 
@@ -32,6 +32,7 @@ public:
     CameraMover* flyCamMover = nullptr;
     bool inFlyCamDebugMode = false;
     SceneNode * cameraNode = nullptr;
+    SceneNode* heroNode = nullptr;
     SceneNode* flyCamNode = nullptr;
     float shadowBias =0;
 };

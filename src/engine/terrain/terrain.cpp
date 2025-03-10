@@ -235,6 +235,8 @@ Terrain::Terrain(int horizontalCells, int verticalCells, glm::mat4* rotation, fl
     terrainMesh = new Mesh();
     terrainMesh->vao = vao;
     terrainMesh->numberOfIndices = indices.size();
+    terrainMesh->indexDataType  = GL_UNSIGNED_INT;
+    terrainMesh->indices = indices;
     terrainMesh->instanceOffsetVBO = instanceVBO;
 
 }

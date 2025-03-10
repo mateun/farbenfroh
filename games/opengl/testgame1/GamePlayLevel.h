@@ -5,7 +5,15 @@
 #ifndef GAMEPLAY_H
 #define GAMEPLAY_H
 
+#include <engine/game/default_game.h>
+
 class DefaultGame;
+class Scene;
+class SceneNode;
+class AnimationPlayer;
+class AnimationController;
+class PhysicsSystem;
+
 
 class GamePlayLevel : public GameLevel {
 
@@ -20,6 +28,7 @@ public:
   AnimationPlayer * idlePlayer = nullptr;
   AnimationPlayer * walkPlayer = nullptr;
   AnimationController * animationController = nullptr;
+  PhysicsSystem * physicsSystem = nullptr;
 };
 
 

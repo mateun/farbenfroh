@@ -1,32 +1,36 @@
+// This file includes every cpp file which is needed for the game to build.
+// Technically, from the point of view of CMake, we only build this file.
+// We do not need to update CMakeLists.txt very often, only adding file to compile here.
 
-
-#include "windows.cpp"
-#include "engine/io/io.cpp"
-#include "engine/io/json.cpp"
-#include "engine/sound/sound.cpp"
-#include "engine/math/math3d.cpp"
-#include "engine/game/game_model.cpp"
-
-#include "engine/algo/Bvh.cpp"
-#include "engine/rastergraphics/rastergraphics.cpp"
-#include "engine/animation/Cinematic.cpp"
-#include "engine/ui/Window.cpp"
-#include "engine/input/UpdateSwitcher.cpp"
-#include "engine/vulkan/VulkanRenderer.cpp"
-#include "engine/lighting/Light.cpp"
-#include "graphics.cpp"
-#include "engine/animation/CharacterController.cpp"
-#include "engine/animation/Animation.cpp"
-#include "engine/animation/AnimationBlender.cpp"
-#include "engine/animation/AnimationState.cpp"
-#include "engine/animation/AnimationController.cpp"
-#include "engine/animation/AnimationTransition.cpp"
-#include "engine/animation/AnimationPlayer.cpp"
-#include "engine/animation/Pose.cpp"
-#include "engine/animation/JointMask.cpp"
-#include "engine/animation/PerBoneBlendData.cpp"
-#include "engine/animation/BoneMatrixCalculator.cpp"
-#include "engine/algo/VectorUtils.cpp"
+#include <windows.cpp>
+#include <engine/io/io.cpp>
+#include <engine/io/json.cpp>
+#include <engine/sound/sound.cpp>
+#include <engine/math/math3d.cpp>
+#include <engine/game/game_model.cpp>
+#include <engine/algo/Bvh.cpp>
+#include <engine/rastergraphics/rastergraphics.cpp>
+#include <engine/animation/Cinematic.cpp>
+#include <engine/ui/Window.cpp>
+#include <engine/input/UpdateSwitcher.cpp>
+#include <engine/vulkan/VulkanRenderer.cpp>
+#include <engine/lighting/Light.cpp>
+#include <graphics.cpp>
+#include <engine/physics/PhysicsSystem.cpp>
+#include <engine/physics/JoltPhysicsSystem.cpp>
+#include <engine/animation/CharacterController.cpp>
+#include <engine/animation/Animation.cpp>
+#include <engine/animation/AnimationBlender.cpp>
+#include <engine/animation/AnimationState.cpp>
+#include <engine/animation/AnimationController.cpp>
+#include <engine/animation/AnimationTransition.cpp>
+#include <engine/animation/AnimationPlayer.cpp>
+#include <engine/animation/Pose.cpp>
+#include <engine/animation/JointMask.cpp>
+#include <engine/animation/PerBoneBlendData.cpp>
+#include <engine/animation/BoneMatrixCalculator.cpp>
+#include <engine/algo/VectorUtils.cpp>
+#include <engine/algo/QuadTree.cpp>
 
 //#include "../games/simple_king/king_main.cpp"
 
@@ -45,18 +49,18 @@
 //#include "../games/multithread-king/physics.cpp"
 
 // Default Game
-#include "engine/game/default_game.cpp"
-#include "engine/game/FolderAssetLoader.cpp"
+#include <engine/game/default_game.cpp>
+#include <engine/game/FolderAssetLoader.cpp>
 
 // Physics
-#include "engine/physics/Particle.cpp"
+#include <engine/physics/Particle.cpp>
 
 // Editor
-#include "engine/editor/editor.cpp"
+#include <engine/editor/editor.cpp>
 
 // Terrain
-#include "engine/terrain/terrain.cpp"
-#include "engine/terrain/planet.cpp"
+#include <engine/terrain/terrain.cpp>
+#include <engine/terrain/planet.cpp>
 
 
 // Adventure
@@ -80,6 +84,7 @@
 // Opengl/TerrainTest
 #include "../games/opengl/test_terrain/TestTerrainGame.cpp"
 #include "../games/opengl/test_terrain/GameplayLevel.cpp"
+#include "../games/opengl/test_terrain/LevelEditor.cpp"
 
 //#include "../src/engine/editor/shadergraph/ShaderGraph.cpp"
 

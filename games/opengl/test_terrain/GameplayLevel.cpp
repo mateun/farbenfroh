@@ -6,7 +6,7 @@
 #include  "../../../src/engine/game/default_game.h"
 
 namespace ttg {
-    GameplayLevel::GameplayLevel(DefaultGame *game): GameLevel(game) {
+    GameplayLevel::GameplayLevel(DefaultGame *game, const std::string& name): GameLevel(game, name) {
     }
 
     void GameplayLevel::renderShadowBias() {
@@ -167,6 +167,15 @@ namespace ttg {
         cam->updateNearFar(0.5, 30);
         cameraMover = new CameraMover(cameraNode->getCamera());
 
+        heroNode = new SceneNode("hero");
+        SceneMeshData heroMeshData;
+        heroMeshData.mesh = game->getMeshByName("hero_small");
+        heroMeshData.texture = game->getTextureByName("hero_albedo.png");
+        heroMeshData.normalMap = game->getTextureByName("hero_normal");
+        heroMeshData.shader = new Shader();
+        // TODO shader
+        //heroMeshData.shader->initFromFiles("../src/engine/editor/assets/")
+
         scene = new Scene();
         scene->addNode(cameraNode);
         scene->addNode(terrainNode);
@@ -179,6 +188,8 @@ namespace ttg {
         scene->addNode(sunNode);
         //scene->addNode(plNode1);
         //scene->addNode(plNode2);
+
+        //characterController = new CharacterController(play);
 
     }
 } // ttg

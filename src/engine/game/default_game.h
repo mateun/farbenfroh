@@ -19,13 +19,17 @@ class DefaultGame;
 class GameLevel {
 
 public:
-    GameLevel(DefaultGame* game);
+    GameLevel(DefaultGame* game, const std::string& name = "");
     virtual void update() = 0;
     virtual void render() = 0;
     virtual void init() = 0;
+    std::string name();
+
+
 
 protected:
     DefaultGame* game = nullptr;
+    std::string _name = "";
 
 
 };
@@ -35,6 +39,9 @@ class DefaultGame {
 
 public:
     virtual ~DefaultGame() = default;
+
+    Shader * getDefaultStaticMeshShader();
+    Shader* getDefaultSkinnedMeshShader();
 
     DefaultGame();
 
@@ -81,17 +88,17 @@ public:
 
     virtual void stopGame() ;
 
-    void registerGameLevel(const std::string& name, GameLevel *level);
+    void registerGameLevel(GameLevel *level);
 
     // Switches the current level to the new one
     void switchLevel(const std::string& name);
 
-
+    GameLevel *currentLevel();
 
 protected:
     HWND hwnd;
     int64_t performanceFrequency = 0;
-
+    Shader* baseStaticMeshShader = nullptr;
 
 private:
     Camera *_gameplayCamera = nullptr;

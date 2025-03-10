@@ -4,6 +4,7 @@
 
 #include "TestTerrainGame.h"
 #include "GameplayLevel.h"
+#include "LevelEditor.h"
 
 
 DefaultGame* getGame() {
@@ -12,12 +13,21 @@ DefaultGame* getGame() {
 
 void ttg::TestTerrainGame::init() {
     DefaultGame::init();
-    registerGameLevel("gameplay", new GameplayLevel(this));
+    registerGameLevel(new GameplayLevel(this));
+    registerGameLevel(new LevelEditor(this));
     switchLevel("gameplay");
 }
 
 void ttg::TestTerrainGame::update() {
     DefaultGame::update();
+    if (keyPressed(VK_F7)) {
+        if (currentLevel()->name() == "gameplay") {
+            switchLevel("levelEditor");
+        } else {
+            switchLevel("gameplay");
+        }
+
+    }
 }
 
 void ttg::TestTerrainGame::render() {

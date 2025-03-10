@@ -49,8 +49,25 @@ Camera *DefaultGame::getUICamera() {
 
 }
 
-GameLevel::GameLevel(DefaultGame *game) : game(game) {
+GameLevel::GameLevel(DefaultGame *game, const std::string& name) : game(game), _name(name) {
 
+}
+
+std::string GameLevel::name() {
+    return _name;
+}
+
+Shader * DefaultGame::getDefaultStaticMeshShader() {
+    if (!baseStaticMeshShader) {
+        baseStaticMeshShader = new Shader();
+        baseStaticMeshShader->initFromFiles("../assets/shaders/base_static_mesh.vert", "../assets/shaders/base.frag");
+    }
+    return baseStaticMeshShader;
+}
+
+Shader * DefaultGame::getDefaultSkinnedMeshShader() {
+    // TODO implement
+    return nullptr;
 }
 
 DefaultGame::DefaultGame()  {
@@ -169,8 +186,8 @@ void DefaultGame::stopGame() {
     // noop
 }
 
-void DefaultGame::registerGameLevel(const std::string &name, GameLevel *level) {
-    levels[name] = level;
+void DefaultGame::registerGameLevel(GameLevel *level) {
+    levels[level->name()] = level;
 }
 
 void DefaultGame::switchLevel(const std::string &name) {
@@ -178,6 +195,12 @@ void DefaultGame::switchLevel(const std::string &name) {
     _currentLevel = levels[name];
     _currentLevel->init();
 }
+
+GameLevel* DefaultGame::currentLevel() {
+    return _currentLevel;
+}
+
+
 
 
 

@@ -9,8 +9,9 @@
 
 class Animation;
 class Pose;
-class Skeleton;
+struct Skeleton;
 class PerBoneBlendData;
+struct Joint;
 
 class BoneMatrixCalculator {
 

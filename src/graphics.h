@@ -694,6 +694,7 @@ struct MeshDrawData {
     bool depthTest = true;
     bool skinnedDraw = false;
     std::optional<glm::ivec2> viewPortDimensions;
+    std::string subroutineFragBind = "";
 };
 
 GridData* createGrid(int lines = 100);
