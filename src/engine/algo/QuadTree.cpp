@@ -62,6 +62,8 @@ QuadTree* QuadTree::findFirstContainingQuadTree(glm::vec2 point) {
         bottomRight->findFirstContainingQuadTree(point);
     }
 
+    return nullptr;
+
 }
 
 const std::vector<QuadTree *> QuadTree::childrenList() {
@@ -85,7 +87,7 @@ QuadTree * QuadTree::findContainingLeafQuadTree(glm::vec2 point) {
             return this;
         }
     }
-
+    return nullptr;
 }
 
 float QuadTree::getHalfSize() const {

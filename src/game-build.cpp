@@ -31,6 +31,7 @@
 #include <engine/animation/BoneMatrixCalculator.cpp>
 #include <engine/algo/VectorUtils.cpp>
 #include <engine/algo/QuadTree.cpp>
+#include <engine/algo/CollisionGrid.cpp>
 
 //#include "../games/simple_king/king_main.cpp"
 

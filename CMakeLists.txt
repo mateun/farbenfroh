@@ -43,7 +43,10 @@ add_executable(animtest WIN32
 add_executable(quadtree_test
         src/engine/algo/QuadTree.cpp
         src/engine/tests/QuadTreeTests.cpp
-
+)
+add_executable(collisiongrid_test
+        src/engine/algo/CollisionGrid.cpp
+        src/engine/tests/CollisionGridTests.cpp
 )
 
 target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
