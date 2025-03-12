@@ -19,8 +19,6 @@ GridCell * CollisionGrid::getCellForPosition(glm::vec2 point) const {
     return cells[gridCoord.x][gridCoord.y];
 }
 
-
-
 CollisionGrid::CollisionGrid(glm::vec2 worldPosition, GridOrigin origin, int numberHorizontalCells, int numberVerticalCells, int cellSize, std::vector<PositionProvider *> objects) : cellSize(cellSize), origin(origin), worldPosition(worldPosition),
     number_horizontal_cells(numberHorizontalCells), number_vertical_cells(numberVerticalCells) {
 

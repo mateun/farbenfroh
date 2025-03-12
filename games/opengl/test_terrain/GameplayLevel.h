@@ -26,6 +26,7 @@ public:
     Terrain * terrain = nullptr;
     Scene * scene = nullptr;
     SceneNode * terrainNode = nullptr;
+    SceneNode * shotCursorNode = nullptr;
     Shader * basicShader = nullptr;
     CameraMover * cameraMover = nullptr;
     Camera* debugFlyCam = nullptr;
@@ -35,6 +36,8 @@ public:
     SceneNode* heroNode = nullptr;
     SceneNode* flyCamNode = nullptr;
     float shadowBias =0;
+    CharacterController * characterController = nullptr;
+
 };
 
 } // ttg

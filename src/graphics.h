@@ -861,6 +861,7 @@ enum class SceneNodeType {
 
 struct SceneMeshData {
     Mesh* mesh = nullptr;
+    glm::vec4 color = glm::vec4(1.0f);
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
     Shader* shader = nullptr;
@@ -868,6 +869,7 @@ struct SceneMeshData {
     glm::vec2 uvScale2 = {1, 1};
     float uvScale = 1;
     bool skinnedMesh = false;
+    bool castShadow = true;
 };
 
 class SceneNode {
@@ -894,7 +896,14 @@ public:
     void setLocation(glm::vec3 vec);
     void setScale(glm::vec3 _scale);
     void setRotation(glm::vec3 rotationInEulers, AngleUnit angleUnit = AngleUnit::DEGREES);
-    void setOrientation(glm::vec3 eulers);
+    void setOrientation(glm::quat orientation);
+
+    glm::vec3 getHierarchicalWorldLocation(glm::vec3 localLocation);
+    glm::quat getWorldOrientation();
+
+    void collectParentNodes(std::vector<SceneNode *>& parents);
+
+
 
     glm::vec3 getLocation();
     glm::vec3 getScale();
@@ -908,6 +917,14 @@ public:
     void disable();
     void enable();
 
+    void setParent(SceneNode * scene_node);
+
+    void addChild(SceneNode *child);
+
+    SceneMeshData getMeshData();
+
+
+
 private:
 
     // These are type specific fields and can be null
@@ -918,11 +935,13 @@ private:
     Shader* shader = nullptr;
     Camera* camera = nullptr;
     Light* light = nullptr;
+    SceneMeshData meshData;
 
     glm::vec3 _location = glm::vec3(0);
     glm::vec3 _velocity = glm::vec3(0);
     glm::vec3 _scale = glm::vec3(1.0f);
     glm::vec3 _rotationInDeg = glm::vec3(0);
+    glm::quat orientation = glm::identity<glm::quat>();
     glm::vec3 forward= {0, 0, -1};   // This is normally how we face when coming from Blender
     glm::vec3 right = {1, 0, 0}; // Based on the incoming Blender default orientation
     glm::vec4 foregroundColor = {1, 0,1, 1};
@@ -933,6 +952,9 @@ private:
     std::vector<glm::mat4> _boneMatrices;
     SceneNodeType _type;
     bool _active = true;
+    SceneNode * parent = nullptr;
+    std::vector<SceneNode*> children;
+
 };
 
 
@@ -946,7 +968,10 @@ public:
 
     void activateDebugFlyCam(bool value);
     SceneNode* findActiveCameraNode();
+
     std::vector<Light *> getLightsOfType(LightType type);
+
+    void flattenNodes(const std::vector<SceneNode*>& sourceNodeTree, std::vector<SceneNode*>& targetList);
 
     void render();
 

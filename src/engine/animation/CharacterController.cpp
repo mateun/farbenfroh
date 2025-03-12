@@ -15,7 +15,7 @@ CharacterController::CharacterController(SceneNode *characterNode) : _characterN
 */
 void CharacterController::update() {
     float frameMovementSpeed = baseSpeed * ftSeconds;
-    float frameRotationSpeed = baseSpeed * ftSeconds;
+    float frameRotationSpeed = baseSpeed * ftSeconds * 30;
     float dir = 0;
     float hdir = 0;
     float yaw = 0;
@@ -24,33 +24,33 @@ void CharacterController::update() {
     // TODO: instead of directly using specific bindings, we could let us inject the actual
     // values for yaw, pitch etc. from the consumer.
     // Alternative: use a keybinding map injected from outside.
-    if (isKeyDown('E') || isKeyDown(VK_RIGHT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.4) {
+    if (isKeyDown('E') || isKeyDown(VK_RIGHT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.25) {
         yaw = -1;
     }
 
-    if (isKeyDown('Q') || isKeyDown(VK_LEFT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.4) {
+    if (isKeyDown('Q') || isKeyDown(VK_LEFT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.25) {
         yaw = 1;
     }
 
 
-    if (isKeyDown('W') || getControllerAxis(ControllerAxis::R_TRIGGER, 0) > 0.2) {
+    if (isKeyDown('W') || getControllerAxis(ControllerAxis::LSTICK_Y, 0) > 0.25 ) {
         dir = 1;
     }
-    if (isKeyDown('S') || getControllerAxis(ControllerAxis::L_TRIGGER, 0) > 0.2) {
+    if (isKeyDown('S') || getControllerAxis(ControllerAxis::LSTICK_Y, 0) < -0.25) {
         dir = -1;
     }
 
 
-    if (isKeyDown('A') || getControllerAxis(ControllerAxis::LSTICK_X, 0) < -0.4) {
+    if (isKeyDown('A') || getControllerAxis(ControllerAxis::LSTICK_X, 0) < -0.25) {
         hdir = -1;
     }
-    if (isKeyDown('D') || getControllerAxis(ControllerAxis::LSTICK_X, 0) > 0.4) {
+    if (isKeyDown('D') || getControllerAxis(ControllerAxis::LSTICK_X, 0) > 0.25) {
         hdir = 1;
     }
 
 
     // Apply yaw rotation
-    _characterNode->yaw(yaw + frameRotationSpeed);
+    _characterNode->yaw(yaw * frameRotationSpeed);
 
     glm::vec3 loc = _characterNode->getLocation();
 

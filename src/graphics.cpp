@@ -2057,9 +2057,9 @@ void drawMesh(const MeshDrawData &drawData) {
                 matworld = mattrans * (*glDefaultObjects->currentRenderState->rotMatrix) * matscale;
 
             } else {
-                mat4 matrotX = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.x), {1, 0, 0} );
-                mat4 matrotY = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.y), {0, 1, 0} );
-                mat4 matrotZ = glm::rotate(mat4(1), glm::radians(drawData.rotationEulers.z), {0, 0, 1} );
+                mat4 matrotX = rotate(mat4(1), radians(drawData.rotationEulers.x), {1, 0, 0} );
+                mat4 matrotY = rotate(mat4(1), radians(drawData.rotationEulers.y), {0, 1, 0} );
+                mat4 matrotZ = rotate(mat4(1), radians(drawData.rotationEulers.z), {0, 0, 1} );
                 matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
 
             }
@@ -4166,11 +4166,10 @@ std::string SceneNode::getId() {
 }
 
 void SceneNode::yaw(float degrees) {
-    glm::mat4 yawMatrix = glm::rotate(glm::mat4(1.0f), _rotationInDeg.y, glm::vec3(0, 1, 0));
 
-    glm::vec4 newForward = yawMatrix * glm::vec4(forward, 1.0f);
-    forward = normalize(glm::vec3{newForward.x, newForward.y, newForward.z});
-    right = normalize(cross( forward, {0, 1, 0}));
+    auto yawQuat =angleAxis(glm::radians(degrees), glm::vec3(0.0f, 1.0f, 0.0f));
+    orientation = yawQuat * orientation;
+    //orientation = yawQuat;
 
 }
 
@@ -4242,6 +4241,19 @@ void SceneNode::enable() {
     _active = true;
 }
 
+void SceneNode::setParent(SceneNode *parent) {
+    this->parent = parent;
+    parent->children.push_back(this);
+}
+
+void SceneNode::addChild(SceneNode* child) {
+    child->setParent(this);
+}
+
+SceneMeshData SceneNode::getMeshData() {
+    return meshData;
+}
+
 std::vector<Light *> Scene::getLightsOfType(LightType type) {
     std::vector<Light*> ls;
     if (type == LightType::Directional) {
@@ -4265,6 +4277,13 @@ std::vector<Light *> Scene::getLightsOfType(LightType type) {
 }
 
 
+void Scene::flattenNodes(const std::vector<SceneNode*>& sourceNodeTree, std::vector<SceneNode*>& targetList) {
+    for (auto n : sourceNodeTree) {
+        targetList.push_back(n);
+        flattenNodes(n->children, targetList);
+    }
+}
+
 
 SceneNode::SceneNode(const std::string &nodeId) : id(nodeId){
 }
@@ -4282,7 +4301,8 @@ void SceneNode::initAsMeshNode(const SceneMeshData& sceneMeshData) {
     this->uvScale2 = sceneMeshData.uvScale2;
     this->uvPan = sceneMeshData.uvPan;
     this->skinnedMesh = sceneMeshData.skinnedMesh;
-
+    this->foregroundColor = sceneMeshData.color;
+    this->meshData = sceneMeshData;
 
 }
 
@@ -4379,6 +4399,61 @@ SceneNode* Scene::findActiveCameraNode() {
     return nullptr;
 }
 
+glm::vec3 SceneNode::getHierarchicalWorldLocation(glm::vec3 localLocation) {
+    if (parent) {
+        return localLocation + parent->_location;
+    }
+
+    return localLocation;
+
+
+}
+
+void SceneNode::collectParentNodes(std::vector<SceneNode*>& parents) {
+    if (parent) {
+        parents.push_back(parent);
+        parent->collectParentNodes(parents);
+    }
+
+}
+
+glm::quat SceneNode::getWorldOrientation() {
+    std::vector<SceneNode*> flatParents;
+    collectParentNodes(flatParents);
+    //std::ranges::reverse(flatParents);
+
+    glm::quat aggOrientation = orientation;
+    for (auto p : flatParents) {
+        aggOrientation = p->orientation * aggOrientation;
+    }
+    return aggOrientation;
+
+}
+
+
+// MeshDrawData Scene::renderNodeRecursively(SceneNode* root, Camera* camera, Light* light) {
+//     MeshDrawData dd;
+//     dd.camera = camera;
+//     dd.location = root->getHierarchicalWorldLocation(root->getLocation());
+//     dd.scale = root->_scale;
+//     dd.shader = shadowMapShader;
+//     dd.rotationEulers = root->_rotationInDeg;
+//     dd.mesh = root->mesh;
+//     dd.viewPortDimensions = {light->shadowMapFBO->texture->bitmap->width, light->shadowMapFBO->texture->bitmap->height};
+//     dd.directionalLights.push_back(light);
+//     if (root->skinnedMesh) {
+//         dd.skinnedDraw = root->skinnedMesh;
+//         dd.boneMatrices = root->boneMatrices();
+//     }
+//
+//     // TODO how to handle the recursive handling of the
+//     return dd;
+//
+//     for (auto child : root->children) {
+//         renderNodeRecursively(child, camera, light);
+//     }
+// }
+
 void Scene::render() {
     // 1. Shadow pass
     // Check all lights which cast a shadow
@@ -4462,6 +4537,9 @@ void Scene::render() {
 
     auto activeCamera = debugFlyCamActive ? debugFlyCam : cameraNode->getCamera();
 
+    std::vector<SceneNode*> flatMeshNodes;
+    flattenNodes(meshNodes, flatMeshNodes);
+
     // First, our directional lights
     {
 
@@ -4469,36 +4547,34 @@ void Scene::render() {
             glBindFramebuffer(GL_FRAMEBUFFER, l->light->shadowMapFBO->handle);
             glClear(GL_DEPTH_BUFFER_BIT);
 
-            for (auto m : meshNodes) {
-                if (!m->isActive()) {
+            for (auto m : flatMeshNodes) {
+                if (!m->isActive() || !m->getMeshData().castShadow) {
+                    continue;
+                }
+                MeshDrawData dd;
+                dd.camera = cameraNode->getCamera();
+                dd.location = m->getHierarchicalWorldLocation(m->_location);
+                dd.scale = m->_scale;
+                dd.color == m->foregroundColor;
+                dd.shader = shadowMapShader;
+                auto worldOrientation = m->getWorldOrientation();
+                dd.rotationEulers = degrees(eulerAngles(worldOrientation));
+                dd.mesh = m->mesh;
+                dd.viewPortDimensions = {l->light->shadowMapFBO->texture->bitmap->width, l->light->shadowMapFBO->texture->bitmap->height};
+                dd.directionalLights.push_back(l->light);
+                if (m->skinnedMesh) {
+                     dd.skinnedDraw = m->skinnedMesh;
+                     dd.boneMatrices = m->boneMatrices();
+                }
+
+                if (debugFlyCamActive) {
                     continue;
                 }
 
-                // New way
-                {
-                    MeshDrawData dd;
-                    dd.camera = cameraNode->getCamera();
-                    dd.location = m->_location;
-                    dd.scale = m->_scale;
-                    dd.shader = shadowMapShader;
-                    dd.rotationEulers = m->_rotationInDeg;
-                    dd.mesh = m->mesh;
-                    dd.viewPortDimensions = {l->light->shadowMapFBO->texture->bitmap->width, l->light->shadowMapFBO->texture->bitmap->height};
-                    dd.directionalLights.push_back(l->light);
-                    if (m->skinnedMesh) {
-                         dd.skinnedDraw = m->skinnedMesh;
-                         dd.boneMatrices = m->boneMatrices();
-                    }
-
-                    if (debugFlyCamActive) {
-                        continue;
-                    }
-
-                    glCullFace(GL_FRONT);
-                    glPolygonOffset(1, 0.75);
-                    drawMeshIntoShadowMap(dd, l->light);
-                    glCullFace(GL_BACK);
-                }
+                glCullFace(GL_FRONT);
+                glPolygonOffset(1, 0.75);
+                drawMeshIntoShadowMap(dd, l->light);
+                glCullFace(GL_BACK);
 
             }
         }
@@ -4552,7 +4628,7 @@ void Scene::render() {
 
 
     // 2. Actual render pass
-    for (auto m : meshNodes) {
+    for (auto m : flatMeshNodes) {
 
         if (!m->isActive()) {
             continue;
@@ -4562,9 +4638,11 @@ void Scene::render() {
         // render it into the shadow map.
         MeshDrawData mdd;
         mdd.camera = activeCamera;
-        mdd.location = m->_location;
+        mdd.location = m->getHierarchicalWorldLocation(m->_location);
         mdd.scale = m->_scale;
-        mdd.rotationEulers = m->_rotationInDeg;
+        auto worldOrientation = m->getWorldOrientation();
+        mdd.rotationEulers = degrees(eulerAngles(worldOrientation));
+
         mdd.mesh = m->mesh;
         mdd.texture = m->texture;
         mdd.normalMap = m->normalMap;

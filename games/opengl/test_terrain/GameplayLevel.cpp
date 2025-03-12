@@ -44,7 +44,8 @@ namespace ttg {
         }
 
         if (!inFlyCamDebugMode) {
-            cameraMover->update();
+            //cameraMover->update();
+            characterController->update();
         }
 
     }
@@ -127,7 +128,7 @@ namespace ttg {
         smd.uvScale2 = {1, 1};
         smd.uvScale = 1;
         smd.uvPan = {0, 0};
-        hydrantdNode->setScale({1, 1, 1});
+        hydrantdNode->setScale({1.5, 1.5, 1.5});
         hydrantdNode->setLocation({0, 0.0, 0});
         hydrantdNode->initAsMeshNode(smd);
 
@@ -162,19 +163,39 @@ namespace ttg {
         cameraNode->enable();
         cameraNode->initAsCameraNode(game->getGameplayCamera());
         auto cam = cameraNode->getCamera();
-        cam->updateLocation({0,8, 5});
-        cam->updateLookupTarget({0, 0, 0});
+        cam->updateLocation({0,14, 8});
+        cam->updateLookupTarget({0, 0, 1});
         cam->updateNearFar(0.5, 30);
         cameraMover = new CameraMover(cameraNode->getCamera());
 
         heroNode = new SceneNode("hero");
+        heroNode->setLocation({0, 0.2, 0});
         SceneMeshData heroMeshData;
         heroMeshData.mesh = game->getMeshByName("hero_small");
         heroMeshData.texture = game->getTextureByName("hero_albedo.png");
         heroMeshData.normalMap = game->getTextureByName("hero_normal");
         heroMeshData.shader = new Shader();
-        // TODO shader
-        //heroMeshData.shader->initFromFiles("../src/engine/editor/assets/")
+        heroMeshData.shader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
+        heroNode->initAsMeshNode(heroMeshData);
+
+        shotCursorNode = new SceneNode("shotCursor");
+        shotCursorNode->setLocation({0, 1, 0});
+        SceneMeshData cursorMeshData;
+        cursorMeshData.mesh = game->getMeshByName("shotcursor");
+        cursorMeshData.color = {1,1, 1, 0.5};
+        cursorMeshData.shader = heroMeshData.shader;
+        cursorMeshData.castShadow = false;
+        shotCursorNode->initAsMeshNode(cursorMeshData);
+
+        auto padNode = new SceneNode("heroPad");
+        padNode->setLocation({0, 0.5, 5});
+        padNode->addChild(heroNode);
+        padNode->addChild(shotCursorNode);
+        SceneMeshData padMeshData;
+        padMeshData.mesh = game->getMeshByName("hero_pad");
+        padMeshData.color = {0.2,0.2, 0, 1};
+        padMeshData.shader = heroMeshData.shader;
+        padNode->initAsMeshNode(padMeshData);
 
         scene = new Scene();
         scene->addNode(cameraNode);
@@ -186,10 +207,11 @@ namespace ttg {
         scene->addNode(roadBarrier2);
         scene->addNode(shrub);
         scene->addNode(sunNode);
+        scene->addNode(padNode);
         //scene->addNode(plNode1);
         //scene->addNode(plNode2);
 
-        //characterController = new CharacterController(play);
+        characterController = new CharacterController(padNode);
 
     }
 } // ttg
