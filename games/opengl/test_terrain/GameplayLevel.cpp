@@ -24,7 +24,7 @@ namespace ttg {
         font->renderText(buf, {2, scaled_height -66, 0.9});
     }
 
-    void GameplayLevel::renderPlayerBullets() {
+    void GameplayLevel::renderPlayerStats() {
         static FBFont* font;
         if (!font) {
             font = new FBFont("../assets/font.bmp");
@@ -43,6 +43,17 @@ namespace ttg {
                   activeBullets);
         flipUvs(false);
         font->renderText(buf, {2, scaled_height - 40, 0.88});
+
+        sprintf_s(buf, 160, "# player location:%3.2f/%3.2f/%3.2f",
+                  padNode->getLocation().x, padNode->getLocation().y, padNode->getLocation().z);
+        font->renderText(buf, {2, scaled_height - 102, 0.87});
+
+        sprintf_s(buf, 160, "# cam distance:%3.2f",
+          distance(cameraNode->getLocation(), padNode->getLocation()));
+        font->renderText(buf, {2, scaled_height - 142, 0.87});
+
+
+
     }
 
     void GameplayLevel::render() {
@@ -55,7 +66,7 @@ namespace ttg {
         scene->render();
         game->renderFPS();
         renderShadowBias();
-        renderPlayerBullets();
+        renderPlayerStats();
     }
 
     SceneNode * GameplayLevel::findFirstInactive(const std::vector<SceneNode *> &nodeList) {
@@ -86,6 +97,36 @@ namespace ttg {
         }
     }
 
+    void GameplayLevel::checkPlayerCollision() {
+        // First check all walls
+        // left
+        if (padNode->getLocation().x < -22.5f) {
+            padNode->setLocation({-22.5f, padNode->getLocation().y, padNode->getLocation().z});
+        }
+        // right
+        if (padNode->getLocation().x > 24.0f) {
+            padNode->setLocation({24.0f, padNode->getLocation().y, padNode->getLocation().z});
+        }
+    }
+
+    void GameplayLevel::cameraUpdate() {
+        // We want the camera to follow the player, but with a smooth lag.
+        // This is the ideal position we want to be in.
+        // If the player moves away from us, we try to catch up to him.
+        glm::vec3 targetPosition = padNode->getLocation() + glm::vec3{0, 34, 8};
+        float currentDelta = glm::distance(cameraNode->getLocation(), targetPosition);
+        float maxDelta = 5.0f;
+        if (currentDelta > maxDelta) {
+            glm::vec3 direction = glm::normalize(targetPosition - cameraNode->getLocation());
+            glm::vec3 pos = cameraNode->getLocation();
+            pos += glm::vec3{direction.x, 0, direction.z} *ftSeconds * 20.0f;
+            cameraNode->setLocation(pos);
+            cameraNode->getCamera()->updateLookupTarget({cameraNode->getLocation().x, cameraNode->getLocation().y - 34, cameraNode->getLocation().z - 7});
+            // cam->updateLocation({0,34, 8});
+            // cam->updateLookupTarget({0, 0, 1});
+        }
+    }
+
     void GameplayLevel::update() {
         scene->update();
         if (keyPressed(VK_F11)) {
@@ -96,6 +137,11 @@ namespace ttg {
         if (!inFlyCamDebugMode) {
             //cameraMover->update();
             characterController->update();
+
+            checkPlayerCollision();
+            cameraUpdate();
+
+
             // Player shooting
             // TODO move into own "controller" class?
 
@@ -249,7 +295,8 @@ namespace ttg {
         cameraNode->enable();
         cameraNode->initAsCameraNode(game->getGameplayCamera());
         auto cam = cameraNode->getCamera();
-        cam->updateLocation({0,34, 8});
+        //cam->updateLocation({0,34, 8});
+        cameraNode->setLocation({0, 34, 8});
         cam->updateLookupTarget({0, 0, 1});
         cam->updateNearFar(0.5, 60);
         cameraMover = new CameraMover(cameraNode->getCamera());
@@ -285,6 +332,20 @@ namespace ttg {
         padMeshData.shader = heroMeshData.shader;
         padNode->initAsMeshNode(padMeshData);
 
+
+        // Enemies
+        for (int i = 0; i < 5; i++) {
+            auto targetDummy = new SceneNode("targetDummy_" + std::to_string(i));
+            targetDummy->setLocation({-15 + (i*5), 0, -6});
+            MeshDrawData targetDummyMeshData;
+            targetDummyMeshData.shader = basicShader;
+            targetDummyMeshData.mesh = game->getMeshByName("target_dummy");
+            targetDummyMeshData.texture = game->getTextureByName("dummy-target-diffuse");
+            targetDummy->initAsMeshNode(targetDummyMeshData);
+            enemyList.push_back(targetDummy);
+        }
+
+
         scene = new Scene();
         scene->addNode(cameraNode);
         scene->addNode(terrainNode);
@@ -298,6 +359,10 @@ namespace ttg {
         //scene->addNode(shrub);
         scene->addNode(sunNode);
         scene->addNode(padNode);
+        for (auto e : enemyList) {
+            scene->addNode(e);
+        }
+
 
         characterController = new CharacterController(padNode);
         characterController->setMovementSpeed(10);

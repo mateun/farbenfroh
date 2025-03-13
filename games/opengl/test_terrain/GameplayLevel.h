@@ -26,13 +26,17 @@ public:
 
     void renderShadowBias();
 
-    void renderPlayerBullets();
+    void renderPlayerStats();
 
     void render() override;
 
     SceneNode* findFirstInactive(const std::vector<SceneNode *> & nodeList);
 
     void updatePlayerBullets();
+
+    void checkPlayerCollision();
+
+    void cameraUpdate();
 
     void update() override;
     void init() override;
@@ -55,7 +59,7 @@ public:
     CharacterController * characterController = nullptr;
     MeshDrawData * playerBulletMeshData = nullptr;
     std::vector<SceneNode*> playerBulletPool;
-
+    std::vector<SceneNode*> enemyList;
 };
 
 } // ttg
