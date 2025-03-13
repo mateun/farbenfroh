@@ -10,6 +10,14 @@ class DefaultGame;
 
 namespace ttg {
 
+    class BulletData {
+    public:
+        float maxLifeInSeconds = 2.0f;
+        float currentLifeInSeconds = 0.0f;
+        int damage = 100;
+        int bouncesLeft = 0;
+    };
+
 class GameplayLevel : public GameLevel {
 
 public:
@@ -18,7 +26,14 @@ public:
 
     void renderShadowBias();
 
+    void renderPlayerBullets();
+
     void render() override;
+
+    SceneNode* findFirstInactive(const std::vector<SceneNode *> & nodeList);
+
+    void updatePlayerBullets();
+
     void update() override;
     void init() override;
 
@@ -34,9 +49,12 @@ public:
     bool inFlyCamDebugMode = false;
     SceneNode * cameraNode = nullptr;
     SceneNode* heroNode = nullptr;
+    SceneNode * padNode = nullptr;
     SceneNode* flyCamNode = nullptr;
     float shadowBias =0;
     CharacterController * characterController = nullptr;
+    MeshDrawData * playerBulletMeshData = nullptr;
+    std::vector<SceneNode*> playerBulletPool;
 
 };
 

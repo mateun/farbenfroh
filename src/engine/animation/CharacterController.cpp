@@ -9,13 +9,21 @@ CharacterController::CharacterController(SceneNode *characterNode) : _characterN
 
 }
 
+void CharacterController::setRotationSpeed(float value) {
+    this->rotationSpeed = value;
+}
+
+void CharacterController::setMovementSpeed(float value) {
+    this->movementSpeed = value;
+}
+
 /**
 * The character controller takes input and translates it to movement of the
 * attached character SceneNode
 */
 void CharacterController::update() {
-    float frameMovementSpeed = baseSpeed * ftSeconds;
-    float frameRotationSpeed = baseSpeed * ftSeconds * 30;
+    float frameMovementSpeed = movementSpeed * ftSeconds;
+    float frameRotationSpeed = rotationSpeed * ftSeconds;
     float dir = 0;
     float hdir = 0;
     float yaw = 0;
@@ -54,12 +62,24 @@ void CharacterController::update() {
 
     glm::vec3 loc = _characterNode->getLocation();
 
-    // Forward
-    loc += glm::vec3{frameMovementSpeed * _characterNode->getForwardVector().x, 0, frameMovementSpeed * _characterNode->getForwardVector().z} * dir;
+    // TODO
+    // Here we need to decide if our movement shall be guided by our orientation, or if we always
+    // move globally north, south,east and west.
+    // For top down shooters the latter is the better.
+    if (movementMode == MovementMode::FORWARD) {
+        // Forward
+        loc += glm::vec3{frameMovementSpeed * _characterNode->getForwardVector().x, 0, frameMovementSpeed * _characterNode->getForwardVector().z} * dir;
+
+        // Strafing
+        loc += glm::vec3{frameMovementSpeed * _characterNode->getRightVector().x * 0.33, 0, frameMovementSpeed * _characterNode->getRightVector().z * 0.33} * hdir;
+    }
+
+    else if (movementMode == MovementMode::GLOBAL) {
+        glm::vec3 globalFwd = (glm::vec3{hdir, 0, -dir});
+        loc += glm::vec3{frameMovementSpeed * globalFwd.x, 0, frameMovementSpeed * globalFwd.z};
+    }
 
 
-    // Strafing
-    loc += glm::vec3{frameMovementSpeed * _characterNode->getRightVector().x * 0.33, 0, frameMovementSpeed * _characterNode->getRightVector().z * 0.33} * hdir;
 
     _characterNode->setLocation(loc);
 

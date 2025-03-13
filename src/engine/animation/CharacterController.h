@@ -7,15 +7,27 @@
 
 #include <graphics.h>
 
+enum class MovementMode {
+    FORWARD,
+    GLOBAL,
+};
+
 class CharacterController : public Updatable {
 
 public:
     CharacterController(SceneNode* characterNode);
+
+    void setRotationSpeed(float value);
+    void setMovementSpeed(float value);
+
     void update() override;
 
 private:
     SceneNode * _characterNode = nullptr;
     float baseSpeed = 10;
+    MovementMode movementMode = MovementMode::GLOBAL;
+    float movementSpeed = 15;
+    float rotationSpeed = 45;
 };
 
 

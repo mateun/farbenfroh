@@ -684,7 +684,7 @@ struct MeshDrawData {
 
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
-    glm::vec4 color = {1, 0, 1, 1}; // Nice pink if we have no texture set.
+    glm::vec4 color = {1, 0, 1, 1}; // Nice magenta if we have no texture set.
     std::vector<Light*> directionalLights;
     std::vector<Light*> pointLights;
     std::vector<Light*> spotLights;
@@ -695,6 +695,7 @@ struct MeshDrawData {
     bool skinnedDraw = false;
     std::optional<glm::ivec2> viewPortDimensions;
     std::string subroutineFragBind = "";
+    bool castShadow = true;
 };
 
 GridData* createGrid(int lines = 100);
@@ -727,6 +728,7 @@ void foregroundColor(glm::vec4 col);
 // This can be used with textures, will multiply with the texel color
 void tint(glm::vec4 col);
 
+Texture* getDefaultNormalMap();
 void scale(glm::vec3 val);
 void textScale(glm::vec2 val);
 void panUVS(glm::vec2 pan);
@@ -878,7 +880,7 @@ public:
     SceneNode(const std::string& nodeId = "undefined");
     ~SceneNode();
 
-    void initAsMeshNode(const SceneMeshData& sceneMeshData);
+    void initAsMeshNode(const MeshDrawData& meshData);
     void initAsCameraNode(Camera* camera);
     void initAsLightNode(Light* light);
     void initAsTextNode();  // TODO
@@ -903,8 +905,6 @@ public:
 
     void collectParentNodes(std::vector<SceneNode *>& parents);
 
-
-
     glm::vec3 getLocation();
     glm::vec3 getScale();
 
@@ -921,7 +921,10 @@ public:
 
     void addChild(SceneNode *child);
 
-    SceneMeshData getMeshData();
+    MeshDrawData getMeshData();
+
+    void setExtraData(void* data);
+    void* getExtraData();
 
 
 
@@ -935,7 +938,7 @@ private:
     Shader* shader = nullptr;
     Camera* camera = nullptr;
     Light* light = nullptr;
-    SceneMeshData meshData;
+    MeshDrawData meshData;
 
     glm::vec3 _location = glm::vec3(0);
     glm::vec3 _velocity = glm::vec3(0);
@@ -954,6 +957,8 @@ private:
     bool _active = true;
     SceneNode * parent = nullptr;
     std::vector<SceneNode*> children;
+
+    void* extraData = nullptr;
 
 };
 

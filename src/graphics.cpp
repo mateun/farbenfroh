@@ -1990,6 +1990,8 @@ void drawMesh(const MeshDrawData &drawData) {
         // Normal map starts at 13...
         drawData.normalMap->bindAt(13);
         GL_ERROR_EXIT(981);
+    } else {
+        getDefaultNormalMap()->bindAt(13);
     }
 
     // Lighting related:
@@ -3403,6 +3405,41 @@ void tint(glm::vec4 col) {
     glDefaultObjects->currentRenderState->tint = col;
 }
 
+/**
+* Generates a normal map just pointing outwards.
+* Can be used if no real normal map is available and we
+* avoid shader branching.
+*/
+Texture * getDefaultNormalMap() {
+    static Texture* normalMap = nullptr;
+    if (!normalMap) {
+        // 1-pixel default normal map (0,0,1)
+        GLubyte defaultNormalPixel[] = {128, 128, 255}; // RGB = (0.5, 0.5, 1.0)
+
+        GLuint defaultNormalMapTex;
+        glGenTextures(1, &defaultNormalMapTex);
+        glBindTexture(GL_TEXTURE_2D, defaultNormalMapTex);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, defaultNormalPixel);
+
+        // Set parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        normalMap = new Texture();
+        normalMap->bitmap = new Bitmap();
+        normalMap->bitmap->height = 1;
+        normalMap->bitmap->width = 1;
+        normalMap->bitmap->pixels = defaultNormalPixel;
+        normalMap->handle = defaultNormalMapTex;
+    }
+
+    return normalMap;
+
+}
+
 void panUVS(glm::vec2 pan) {
     glDefaultObjects->currentRenderState->panUVS = pan;
 }
@@ -4213,6 +4250,10 @@ void SceneNode::setRotation(glm::vec3 rotationInEulers, AngleUnit unit) {
     }
 }
 
+void SceneNode::setOrientation(glm::quat orientation) {
+    this->orientation = orientation;
+}
+
 glm::vec3 SceneNode::getLocation() {
     return _location;
 }
@@ -4250,8 +4291,16 @@ void SceneNode::addChild(SceneNode* child) {
     child->setParent(this);
 }
 
-SceneMeshData SceneNode::getMeshData() {
+MeshDrawData SceneNode::getMeshData() {
     return meshData;
+}
+
+void SceneNode::setExtraData(void *data) {
+    this->extraData = data;
+}
+
+void * SceneNode::getExtraData() {
+    return extraData;
 }
 
 std::vector<Light *> Scene::getLightsOfType(LightType type) {
@@ -4291,20 +4340,34 @@ SceneNode::SceneNode(const std::string &nodeId) : id(nodeId){
 SceneNode::~SceneNode() {
 }
 
-void SceneNode::initAsMeshNode(const SceneMeshData& sceneMeshData) {
+void SceneNode::initAsMeshNode(const MeshDrawData& meshData) {
     this->_type = SceneNodeType::Mesh;
-    this->mesh = sceneMeshData.mesh;
-    this->texture = sceneMeshData.texture;
-    this->normalMap = sceneMeshData.normalMap;
-    this->shader = sceneMeshData.shader;
-    this->uvScale = sceneMeshData.uvScale;
-    this->uvScale2 = sceneMeshData.uvScale2;
-    this->uvPan = sceneMeshData.uvPan;
-    this->skinnedMesh = sceneMeshData.skinnedMesh;
-    this->foregroundColor = sceneMeshData.color;
-    this->meshData = sceneMeshData;
-
+    this->mesh = meshData.mesh;
+    this->texture = meshData.texture;
+    this->normalMap = meshData.normalMap;
+    this->shader = meshData.shader;
+    this->uvScale = meshData.uvScale;
+    this->uvScale2 = meshData.uvScale2;
+    this->uvPan = meshData.uvPan;
+    this->skinnedMesh = meshData.skinnedDraw;
+    this->foregroundColor = meshData.color;
+    this->meshData = meshData;
 }
+
+// void SceneNode::initAsMeshNode(const SceneMeshData& sceneMeshData) {
+//     this->_type = SceneNodeType::Mesh;
+//     this->mesh = sceneMeshData.mesh;
+//     this->texture = sceneMeshData.texture;
+//     this->normalMap = sceneMeshData.normalMap;
+//     this->shader = sceneMeshData.shader;
+//     this->uvScale = sceneMeshData.uvScale;
+//     this->uvScale2 = sceneMeshData.uvScale2;
+//     this->uvPan = sceneMeshData.uvPan;
+//     this->skinnedMesh = sceneMeshData.skinnedMesh;
+//     this->foregroundColor = sceneMeshData.color;
+//     this->meshData = sceneMeshData;
+//
+// }
 
 void SceneNode::initAsCameraNode(Camera *camera) {
     this->_type = SceneNodeType::Camera;
@@ -4320,7 +4383,8 @@ void SceneNode::initAsLightNode(Light *light) {
 }
 
 glm::vec3 SceneNode::getForwardVector() {
-    return forward;
+    glm::vec3 defaultForward = {0, 0, -1};
+    return normalize(orientation * defaultForward);
 }
 
 Scene::Scene() {

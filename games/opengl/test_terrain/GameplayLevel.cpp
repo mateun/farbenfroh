@@ -21,7 +21,28 @@ namespace ttg {
         sprintf_s(buf, 160, "shadow bias:%1.5f",
                   scene->getLightsOfType(LightType::Directional)[0]->shadowBias);
         flipUvs(false);
-        font->renderText(buf, {scaled_width - 200, -16, 0.9});
+        font->renderText(buf, {2, scaled_height -66, 0.9});
+    }
+
+    void GameplayLevel::renderPlayerBullets() {
+        static FBFont* font;
+        if (!font) {
+            font = new FBFont("../assets/font.bmp");
+        }
+
+        lightingOff();
+        bindCamera(game->getUICamera());
+        int activeBullets = 0;
+        for (auto b : playerBulletPool) {
+            if (b->isActive()) {
+                activeBullets++;
+            }
+        }
+        char buf[175];
+        sprintf_s(buf, 160, "# player bullets:%03d",
+                  activeBullets);
+        flipUvs(false);
+        font->renderText(buf, {2, scaled_height - 40, 0.88});
     }
 
     void GameplayLevel::render() {
@@ -34,6 +55,35 @@ namespace ttg {
         scene->render();
         game->renderFPS();
         renderShadowBias();
+        renderPlayerBullets();
+    }
+
+    SceneNode * GameplayLevel::findFirstInactive(const std::vector<SceneNode *> &nodeList) {
+        for (auto n : nodeList) {
+            if (!n->isActive()) {
+                return n;
+            }
+        }
+
+        return nullptr;
+    }
+
+    void GameplayLevel::updatePlayerBullets() {
+        for (auto b : playerBulletPool) {
+            if (!b->isActive()) {
+                continue;
+            }
+
+            auto pos = b->getLocation();
+            pos += b->getForwardVector() * ftSeconds * 45.0f;
+            b->setLocation(pos);
+            BulletData* bd = (BulletData*) b->getExtraData();
+            bd->currentLifeInSeconds += ftSeconds;
+            if (bd->currentLifeInSeconds >= bd->maxLifeInSeconds) {
+                b->disable();
+                bd->currentLifeInSeconds = 0;
+            }
+        }
     }
 
     void GameplayLevel::update() {
@@ -46,6 +96,25 @@ namespace ttg {
         if (!inFlyCamDebugMode) {
             //cameraMover->update();
             characterController->update();
+            // Player shooting
+            // TODO move into own "controller" class?
+
+            static float lastShotInterval = 0.0f;
+            lastShotInterval += ftSeconds;
+            if (getControllerAxis(ControllerAxis::R_TRIGGER, 0) > 0.1 && lastShotInterval >= 0.1f) {
+                lastShotInterval = 0.0f;
+                auto bulletNode = findFirstInactive(playerBulletPool);
+                if (!bulletNode) {
+                    throw std::runtime_error("No bullet node found!!");
+                }
+                bulletNode->enable();
+                bulletNode->setLocation(padNode->getLocation() + glm::vec3{0, 1.0f, 0} + padNode->getForwardVector() * .5f);
+                bulletNode->setOrientation(padNode->getWorldOrientation());
+                BulletData* bd = (BulletData*)bulletNode->getExtraData();
+                bd->currentLifeInSeconds = 0;
+            }
+
+            updatePlayerBullets();
         }
 
     }
@@ -57,7 +126,7 @@ namespace ttg {
 
         terrain = new Terrain(50, 50);
 
-        SceneMeshData smd;
+        MeshDrawData smd;
 
         terrainNode = new SceneNode("terrain");
         //terrainNode->disable();
@@ -132,11 +201,28 @@ namespace ttg {
         hydrantdNode->setLocation({0, 0.0, 0});
         hydrantdNode->initAsMeshNode(smd);
 
+        auto wall1Node = new SceneNode("wall_left");
+        smd.mesh = game->getMeshByName("wall");
+        smd.texture = game->getTextureByName("color_grid");
+        smd.normalMap = nullptr;
+        smd.uvScale2 = {1, 10};
+        smd.uvScale = 1;
+        smd.uvPan = {0, 0};
+        wall1Node->setScale({2, 1, 10});
+        wall1Node->setLocation({-25, 0.0, 40});
+        wall1Node->initAsMeshNode(smd);
+
+        auto wall2Node = new SceneNode("wall_right");
+        wall2Node->setScale({2, 1, 10});
+        wall2Node->setLocation({25, 0.0, 40});
+        wall2Node->initAsMeshNode(smd);
+
+
         auto sunNode = new SceneNode("sun");
         auto sun = new Light();
         sun->type = LightType::Directional;
-        sun->color = glm::vec4(1, 1, 1, 1);
-        sun->location = glm::vec3(5, 5, 0);
+        sun->color = glm::vec4(.9, .9, .9, 1);
+        sun->location = glm::vec3(4,5, 2);
         sun->lookAtTarget = glm::vec3(0, 0, 0);
         sun->shadowBias = 0.001;
         sun->calculateDirectionFromCurrentLocationLookat();
@@ -163,14 +249,14 @@ namespace ttg {
         cameraNode->enable();
         cameraNode->initAsCameraNode(game->getGameplayCamera());
         auto cam = cameraNode->getCamera();
-        cam->updateLocation({0,14, 8});
+        cam->updateLocation({0,34, 8});
         cam->updateLookupTarget({0, 0, 1});
-        cam->updateNearFar(0.5, 30);
+        cam->updateNearFar(0.5, 60);
         cameraMover = new CameraMover(cameraNode->getCamera());
 
         heroNode = new SceneNode("hero");
         heroNode->setLocation({0, 0.2, 0});
-        SceneMeshData heroMeshData;
+        MeshDrawData heroMeshData;
         heroMeshData.mesh = game->getMeshByName("hero_small");
         heroMeshData.texture = game->getTextureByName("hero_albedo.png");
         heroMeshData.normalMap = game->getTextureByName("hero_normal");
@@ -179,19 +265,21 @@ namespace ttg {
         heroNode->initAsMeshNode(heroMeshData);
 
         shotCursorNode = new SceneNode("shotCursor");
-        shotCursorNode->setLocation({0, 1, 0});
-        SceneMeshData cursorMeshData;
-        cursorMeshData.mesh = game->getMeshByName("shotcursor");
-        cursorMeshData.color = {1,1, 1, 0.5};
+        shotCursorNode->setLocation({0, 0.6, 0});
+        shotCursorNode->setScale({0.5, 1, 0.5});
+        MeshDrawData cursorMeshData;
+        cursorMeshData.mesh = game->getMeshByName("cursor_plane");
+        cursorMeshData.color = {0.1,0.1, 1, 0.5};
         cursorMeshData.shader = heroMeshData.shader;
         cursorMeshData.castShadow = false;
         shotCursorNode->initAsMeshNode(cursorMeshData);
 
-        auto padNode = new SceneNode("heroPad");
+        padNode = new SceneNode("heroPad");
         padNode->setLocation({0, 0.5, 5});
         padNode->addChild(heroNode);
         padNode->addChild(shotCursorNode);
-        SceneMeshData padMeshData;
+        padNode->setScale({0.6, 0.6, 0.6});
+        MeshDrawData padMeshData;
         padMeshData.mesh = game->getMeshByName("hero_pad");
         padMeshData.color = {0.2,0.2, 0, 1};
         padMeshData.shader = heroMeshData.shader;
@@ -200,18 +288,44 @@ namespace ttg {
         scene = new Scene();
         scene->addNode(cameraNode);
         scene->addNode(terrainNode);
-        scene->addNode(hydrantdNode);
-        scene->addNode(roadNode);
-        scene->addNode(roadNode2);
-        scene->addNode(roadBarrier);
-        scene->addNode(roadBarrier2);
-        scene->addNode(shrub);
+        scene->addNode(wall1Node);
+        scene->addNode(wall2Node);
+        //scene->addNode(hydrantdNode);
+        //scene->addNode(roadNode);
+        //scene->addNode(roadNode2);
+        //scene->addNode(roadBarrier);
+        //scene->addNode(roadBarrier2);
+        //scene->addNode(shrub);
         scene->addNode(sunNode);
         scene->addNode(padNode);
-        //scene->addNode(plNode1);
-        //scene->addNode(plNode2);
 
         characterController = new CharacterController(padNode);
+        characterController->setMovementSpeed(10);
+        characterController->setRotationSpeed(400);
+
+        // Player bullet pool
+        // A list of bullets which all start in active but are activated at shooting.
+        // When being too old, they get reset again, a bit like particles.
+
+        playerBulletMeshData = new MeshDrawData();
+        playerBulletMeshData->texture = game->getTextureByName("planar_bullet_diffuse");
+        playerBulletMeshData->mesh = game->getMeshByName("planar_bullet");
+        playerBulletMeshData->shader = basicShader;
+        playerBulletMeshData->castShadow = false;
+        playerBulletMeshData->subroutineFragBind = "calculateSingleColor";
+        //playerBulletMeshData->lit = false;
+        for (int i = 0; i< 50; i++) {
+            auto bulletNode = new SceneNode("playerBullet_" + std::to_string(i));
+            bulletNode->disable();
+            bulletNode->initAsMeshNode(*playerBulletMeshData);
+            bulletNode->setScale({1, 1, 1});
+            bulletNode->setExtraData(new BulletData());
+
+            playerBulletPool.push_back(bulletNode);
+            scene->addNode(bulletNode);
+        }
+
+
 
     }
 } // ttg
