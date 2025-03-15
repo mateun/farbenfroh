@@ -64,6 +64,11 @@ namespace ttg {
             scene->getLightsOfType(LightType::Directional)[0]->shadowBias -= 0.0001f;
         }
         scene->render();
+
+
+        particleSystem->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
+        //particleSystem2->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
+
         game->renderFPS();
         renderShadowBias();
         renderPlayerStats();
@@ -161,6 +166,8 @@ namespace ttg {
             }
 
             updatePlayerBullets();
+            particleSystem->update();
+            particleSystem2->update();
         }
 
     }
@@ -389,6 +396,9 @@ namespace ttg {
             playerBulletPool.push_back(bulletNode);
             scene->addNode(bulletNode);
         }
+
+        particleSystem = new gru::ParticleSystem(game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), {-10, 0, -2});
+        particleSystem2 = new gru::ParticleSystem(game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), {-4, 0, 7});
 
 
 

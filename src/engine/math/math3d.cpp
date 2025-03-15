@@ -3,6 +3,7 @@
 //
 
 #include "math3d.h"
+#include <random>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -213,6 +214,13 @@ AABBCollisionResult aabbsCollidingPerAxis(const AABB& a, const AABB& b) {
     result.yCollision = (a.maxY >= b.minY) && (a.minY <= b.maxY);
     result.zCollision = (a.maxZ <= b.minZ) && (a.minZ >= b.maxZ);
     return result;
+}
+
+float randomFloat(float min, float max) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist(min, max);
+    return dist(gen);
 }
 
 bool aabbsColliding(const AABB& a, const AABB& b) {

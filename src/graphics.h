@@ -181,11 +181,16 @@ struct Mesh {
     std::vector<uint32_t> indices;
     std::vector<glm::vec3> tangents;
     std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> uvs;
     std::vector<glm::ivec4> boneIndices;
     std::vector<glm::vec4> boneWeights;
     std::string fileName;
 
     std::vector<Animation*> animations;
+    GLuint positionVBO;
+    GLuint indicesVBO;
+    GLuint uvsVBO;
+    GLuint normalsVBO;
 
     bool rayCollides(Ray ray, glm::vec4& color);
     Animation* findAnimation(const std::string& name);
@@ -696,6 +701,7 @@ struct MeshDrawData {
     std::optional<glm::ivec2> viewPortDimensions;
     std::string subroutineFragBind = "";
     bool castShadow = true;
+    uint32_t instanceCount = 0;
 };
 
 GridData* createGrid(int lines = 100);
@@ -972,6 +978,7 @@ public:
     void update();
 
     void activateDebugFlyCam(bool value);
+    Camera* getDebugFlyCam();
     SceneNode* findActiveCameraNode();
 
     std::vector<Light *> getLightsOfType(LightType type);

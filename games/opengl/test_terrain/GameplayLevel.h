@@ -60,6 +60,8 @@ public:
     MeshDrawData * playerBulletMeshData = nullptr;
     std::vector<SceneNode*> playerBulletPool;
     std::vector<SceneNode*> enemyList;
+    gru::ParticleSystem * particleSystem = nullptr;
+    gru::ParticleSystem * particleSystem2 = nullptr;
 };
 
 } // ttg

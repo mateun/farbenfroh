@@ -90,5 +90,7 @@ struct Wall {
 
 };
 
+float randomFloat(float min, float max);
+
 
 #endif //SIMPLE_KING_MATH3D_H

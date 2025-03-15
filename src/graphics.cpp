@@ -2090,7 +2090,12 @@ void drawMesh(const MeshDrawData &drawData) {
     }
 
     //glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices, drawData.mesh->indexDataType, nullptr);
-    glDrawElements(GL_TRIANGLES, drawData.mesh->indices.size(), drawData.mesh->indexDataType, nullptr);
+    if (drawData.instanceCount > 0) {
+        //glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, drawData.instanceCount);
+        glDrawElementsInstanced(GL_TRIANGLES, drawData.mesh->indices.size(), GL_UNSIGNED_INT, nullptr, drawData.instanceCount );
+    } else {
+        glDrawElements(GL_TRIANGLES, drawData.mesh->indices.size(), drawData.mesh->indexDataType, nullptr);
+    }
     GL_ERROR_EXIT(993);
 
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -4119,6 +4124,10 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
 
     auto mymesh = new Mesh();
     mymesh->vao = vao;
+    mymesh->positionVBO = vboPos;
+    mymesh->indicesVBO = vboIndices;
+    mymesh->uvsVBO = vbUvs;
+    mymesh->normalsVBO = vboNormals;
     mymesh->numberOfIndices = indicesFlat.size();
     mymesh->instanceOffsetVBO = instanceVBO;
     mymesh->instanceMatrixVBO = matrixInstanceVBO;
@@ -4126,6 +4135,7 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
     mymesh->instanceTintVBO = instanceTintVBO;
     mymesh->indexDataType = GL_UNSIGNED_INT;
     mymesh->positions = posMasterList;
+    mymesh->uvs = uvMasterList;
     mymesh->positionsSortedByIndex = posIndexSortedMasterList;
     mymesh->indices = indicesFlat;
     mymesh->normals = normalMasterList;
@@ -4449,6 +4459,10 @@ void Scene::activateDebugFlyCam(bool value) {
 
     }
 
+}
+
+Camera * Scene::getDebugFlyCam() {
+    return debugFlyCam;
 }
 
 /**

@@ -32,6 +32,9 @@
 #include <engine/algo/VectorUtils.cpp>
 #include <engine/algo/QuadTree.cpp>
 #include <engine/algo/CollisionGrid.cpp>
+#include <engine/fx/ParticleSystem.cpp>
+#include <engine/compute/ComputeShader.cpp>
+#include <engine/profiling/PerformanceTimer.cpp>
 
 //#include "../games/simple_king/king_main.cpp"
 
