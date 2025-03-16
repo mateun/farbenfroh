@@ -67,7 +67,7 @@ namespace ttg {
 
 
         particleSystem->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
-        //particleSystem2->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
+        particleSystem2->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
 
         game->renderFPS();
         renderShadowBias();
@@ -126,7 +126,7 @@ namespace ttg {
             glm::vec3 pos = cameraNode->getLocation();
             pos += glm::vec3{direction.x, 0, direction.z} *ftSeconds * 20.0f;
             cameraNode->setLocation(pos);
-            cameraNode->getCamera()->updateLookupTarget({cameraNode->getLocation().x, cameraNode->getLocation().y - 34, cameraNode->getLocation().z - 7});
+            cameraNode->getCamera()->updateLookupTarget({cameraNode->getLocation().x, cameraNode->getLocation().y - 34, cameraNode->getLocation().z -8 });
             // cam->updateLocation({0,34, 8});
             // cam->updateLookupTarget({0, 0, 1});
         }
@@ -319,11 +319,11 @@ namespace ttg {
         heroNode->initAsMeshNode(heroMeshData);
 
         shotCursorNode = new SceneNode("shotCursor");
-        shotCursorNode->setLocation({0, 0.6, 0});
+        shotCursorNode->setLocation({0, 0.2, 0});
         shotCursorNode->setScale({0.5, 1, 0.5});
         MeshDrawData cursorMeshData;
         cursorMeshData.mesh = game->getMeshByName("cursor_plane");
-        cursorMeshData.color = {0.1,0.1, 1, 0.5};
+        cursorMeshData.color = {0.1,0.1, 1, 0.3};
         cursorMeshData.shader = heroMeshData.shader;
         cursorMeshData.castShadow = false;
         shotCursorNode->initAsMeshNode(cursorMeshData);
@@ -397,8 +397,8 @@ namespace ttg {
             scene->addNode(bulletNode);
         }
 
-        particleSystem = new gru::ParticleSystem(game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), {-10, 0, -2});
-        particleSystem2 = new gru::ParticleSystem(game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), {-4, 0, 7});
+        particleSystem = new gru::ParticleSystem(nullptr, game->getTextureByName("smoke_diffuse"), {10, 0.5, -4}, 200);
+        particleSystem2 = new gru::ParticleSystem(nullptr, game->getTextureByName("smoke_diffuse"), {-12, 0.5, 4}, 200);
 
 
 

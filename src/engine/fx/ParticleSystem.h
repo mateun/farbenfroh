@@ -42,6 +42,9 @@ namespace gru {
   public:
     void initMegaBuffer();
 
+    /**
+    * If mesh is a nullptr, a quad will be used.
+    */
     ParticleSystem(Mesh* mesh, Texture* texture, glm::vec3 location = {0,0, 0}, int numParticles = 5000, bool useInstancing = true);
     void reset();
     void update();

@@ -2071,6 +2071,9 @@ void drawMesh(const MeshDrawData &drawData) {
         drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
         drawData.shader->setMat4Value(drawData.camera->getProjectionMatrix(drawData.viewPortDimensions), "mat_projection");
 
+        drawData.shader->setVec3Value(drawData.camera->getUp(), "cameraUp");
+        drawData.shader->setVec3Value(drawData.camera->getRight(), "cameraRight");
+
     }
     GL_ERROR_EXIT(9930);
 
@@ -5145,11 +5148,18 @@ glm::vec3 Camera::getForward() {
     return normalize(lookAtTarget - location);
 }
 
+glm::vec3 Camera::getRight() {
+    return normalize(cross( getForward(), {0, 1, 0}));
+}
+
+glm::vec3 Camera::getUp() {
+    return normalize(cross(getRight(), getForward() ));
+}
+
 /**
 * viewCamera    Is the camera of which
 */
 glm::vec4 Camera::frustumToWorld(glm::vec4 ndc) {
-
     // TODO prepare for cascading shadow maps, we need to be flexible with the near far plane of our camera.
     // We construct our own perspective matrix here for a range of test near/far plane combinations
     auto flexiProj = glm::perspectiveFov<float>(glm::radians(50.0f), scaled_width, scaled_height,nearPlane,farPlane);

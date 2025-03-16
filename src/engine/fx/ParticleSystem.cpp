@@ -118,7 +118,7 @@ void gru::ParticleSystem::initMegaBuffer() {
 
 gru::ParticleSystem::ParticleSystem(Mesh *mesh, Texture *texture, glm::vec3 location, int numParticles, bool useInstancing) : mesh(mesh), texture(texture), numParticles(numParticles), location(location) {
     particleShader = new Shader();
-    particleShader->initFromFiles("../assets/shaders/particle.vert", "../assets/shaders/particle.frag");
+    particleShader->initFromFiles("../assets/shaders/smoke.vert", "../assets/shaders/smoke.frag");
     positionComputeShader = new ComputeShader("../src/engine/fx/shaders/particles.comp");
 
     if (useInstancing) {
@@ -126,7 +126,14 @@ gru::ParticleSystem::ParticleSystem(Mesh *mesh, Texture *texture, glm::vec3 loca
         for (int i = 0; i < numParticles; ++i)
             particleIDs[i] = i;
 
-        glBindVertexArray(mesh->vao);
+        if (!mesh) {
+            auto quadMesh = createQuadMesh(PlanePivot::center);
+            this->mesh = quadMesh;
+
+        }
+
+        // Attach a new buffer for the particle ids to the given mesh VAO:
+        glBindVertexArray(this->mesh->vao);
         GLuint particleID_VBO;
         glGenBuffers(1, &particleID_VBO);
         glBindBuffer(GL_ARRAY_BUFFER, particleID_VBO);
@@ -136,19 +143,21 @@ gru::ParticleSystem::ParticleSystem(Mesh *mesh, Texture *texture, glm::vec3 loca
         glEnableVertexAttribArray(3);
         glVertexAttribIPointer(3, 1, GL_INT, 0, nullptr);
         glVertexAttribDivisor(3, 1);  // per instance
+        glBindVertexArray(0);
 
+        // Initialize the particles
         for (int i = 0; i < numParticles; i++) {
             auto p = Particle();
             p.position = {0, 0, 0, 0};
             p.velocity = {0, 0, 0, 0};
             p.emitterPosition = glm::vec4(location, 0);
-            p.lifetime = float(rand()%5000) / 1000.0f; // random 0–5 sec;
-            p.type = 0;
+            p.lifetime = float(rand()%200) / 1000.0f; // random 0–.2 sec;
+            //p.lifetime = 0; // to provoke immediate reset in the shader
+            p.type = 0; // smoke
             particles.push_back(p);
 
 
         }
-        glBindVertexArray(0);
         positionComputeShader->initWithShaderStorageBuffer(particles);
 
     } else {
@@ -167,90 +176,17 @@ void gru::ParticleSystem::reset() {
 
 
 void gru::ParticleSystem::update() {
-    static float timePassed = 0.0f;
-    timePassed += ftSeconds * 0.5f;
-
-    // Temp
-    // Use CPU to compute new particle positions:
-    // std::vector<int> indices;
-    // std::vector<glm::vec3> positions;
-    // static float timePassed = 0.0f;
-    // timePassed += ftSecs * 0.5f;
-    // for (int i= 0; i< 1000; i++) {
-    //     // Generate a new random position offset
-    //     float rx = randomFloat(-5, 5);
-    //     float rz = randomFloat(-5, 5);
-    //     float freq = 2.0f;
-    //     float phaseOffset = i * glm::pi<float>() * 0.3f;
-    //     float y = sinf((timePassed * freq) + phaseOffset);
-    //
-    //     indices.push_back(i);
-    //     positions.push_back({y, 0, 0});
-    // }
-    //updateParticlePositions(indices, positions, false);
-
-    // end temp
-
     // Computeshader to update all particles
     // Bind and dispatch compute shader
-    positionComputeShader->setFloat("deltaTime", timePassed);
+    positionComputeShader->setFloat("deltaTime", ftSeconds);
+    GL_ERROR_EXIT(556688)
     GLuint numWorkGroups = (numParticles + 255) / 256;
     positionComputeShader->dispatch(DispatchOutput::Buffer, {numWorkGroups, 1, 1});
-
-
-    // Memory barrier (ensures particle data is visible after compute shader)
-
-
+    GL_ERROR_EXIT(556689)
 
 
 }
 
-void gru::ParticleSystem::updateParticlePositions(std::vector<int> indices, std::vector<glm::vec3> positions, bool accumulative) {
-
-    int numberOfPositions = mesh->positions.size();
-    std::vector<float> posFlat;
-    for (auto index : indices) {
-        // How many vertices do we have per particle (mesh)?
-        // Now to reach the correct positions we multiply with the index:
-        int positionStartIndex = numberOfPositions * index;
-        for (int i = positionStartIndex; i < numberOfPositions + positionStartIndex; i++) {
-            glm::vec3 newPos = compoundMesh->positions[i] + positions[index];
-            if (accumulative) {
-                newPos = compoundMesh->positions[i] += positions[index];
-            }
-
-            posFlat.push_back(newPos.x);
-            posFlat.push_back(newPos.y);
-            posFlat.push_back(newPos.z);
-        }
-    }
-
-    glBindBuffer(GL_ARRAY_BUFFER, compoundMesh->positionVBO);
-    glBufferSubData(GL_ARRAY_BUFFER, indices[0] * 3 * sizeof(float), posFlat.size()* sizeof(float), posFlat.data());
-
-}
-
-void gru::ParticleSystem::updateParticlePosition(int particleIndex, glm::vec3 particlePosition, bool accumulative) {
-    // How many vertices do we have per particle (mesh)?
-    int numberOfPositions = mesh->positions.size();
-    // Now to reach the correct positions we multiply with the index:
-    int positionStartIndex = numberOfPositions * particleIndex;
-    std::vector<float> posFlat;
-    for (int i = positionStartIndex; i < numberOfPositions + positionStartIndex; i++) {
-        glm::vec3 newPos = compoundMesh->positions[i] + particlePosition;
-        if (accumulative) {
-            newPos = compoundMesh->positions[i] += particlePosition;
-        }
-
-        posFlat.push_back(newPos.x);
-        posFlat.push_back(newPos.y);
-        posFlat.push_back(newPos.z);
-    }
-
-    glBindBuffer(GL_ARRAY_BUFFER, compoundMesh->positionVBO);
-    glBufferSubData(GL_ARRAY_BUFFER, positionStartIndex * 3 * sizeof(float), numberOfPositions * 3 * sizeof(float), posFlat.data());
-
-}
 
 void gru::ParticleSystem::draw(Camera* camera) const {
     MeshDrawData mdd;
@@ -261,7 +197,13 @@ void gru::ParticleSystem::draw(Camera* camera) const {
     mdd.scale = glm::vec3(.2f, .2f, .2f);
     mdd.camera = camera;
     mdd.instanceCount = numParticles;
+    positionComputeShader->bindSSBO();
+
+    // usually disable depth-writing for transparent smoke
+    // TODO how to handle particle effects which are not smoke...
+    glDepthMask(GL_FALSE);
     drawMesh(mdd);
+    glDepthMask(GL_TRUE);
 
 
 }

@@ -28,6 +28,7 @@ uniform PointLightData pointLightData[MAX_POINT_LIGHTS];
 uniform int numPointLights = 0;
 uniform bool lit = false;
 uniform vec4 singleColor = {1, 1, 1, 1};
+uniform float globalOpacity = 0.6;
 
 in vec3 fs_normals;
 in vec4 fragPosLightSpace[MAX_DIR_LIGHTS];
@@ -36,6 +37,7 @@ in vec3 fsFogCameraPos;
 in vec2 fs_uvs;
 in vec4 tintInstanced;
 in vec4 singleColorInstanced;
+in float lifeFactor;
 out vec4 color;
 
 //bool isInShadow() {
@@ -96,6 +98,15 @@ vec4 calculateDirectionalLight(vec4 albedo, vec3 normal) {
 void main() {
     if (true) {
         color = texture(diffuseTexture, fs_uvs);
+
+        // Darken slightly with age
+        color.rgb *= mix(1.0, 0.4, 1.0 - lifeFactor);
+
+        float lifeTimeFade = smoothstep(0.0, 0.2, lifeFactor) * smoothstep(1.0, 0.8, lifeFactor);
+        float verticalFade = smoothstep(0.0, 1.9, fs_uvs.y);
+
+        color.a *= verticalFade * lifeTimeFade * globalOpacity;
+
     }else {
         vec4 col = vec4(0, 0, 0, 0);
         vec4 albedo = texture(diffuseTexture, fs_uvs);

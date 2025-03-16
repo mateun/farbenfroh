@@ -19,6 +19,8 @@ public:
     template<class T>
     void initWithShaderStorageBuffer(std::vector<T>& data);
 
+    void bindSSBO();
+
     void dispatch(DispatchOutput dispatchOutput, glm::ivec3 groupSize) const;
 
     void setFloat(const std::string& uniformName, float time_passed);

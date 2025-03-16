@@ -57,10 +57,13 @@ void main() {
 
     switch (p.type) {
         case 0:  // Smoke particle behavior
-        p.velocity.y += .004 * deltaTime;          // slowly ascend
+        p.velocity.y += 0.5 * deltaTime;          // gently accelerate upwards more noticeably
+        p.velocity.xz *= 0.99;                     // slowly reduce horizontal motion each frame (gentle drift)
+        float turbulence = 0.04;
+        p.velocity.x += (random(idx + deltaTime) - 0.5) * turbulence * deltaTime;
+        p.velocity.z += (random(idx - deltaTime) - 0.5) * turbulence * deltaTime;
         p.position.xyz += p.velocity.xyz * deltaTime;
-        //p.position.xyz *= 0.2;
-        p.lifetime -= deltaTime * .5;            // slow decay
+        p.lifetime -= deltaTime * 0.8;             // particles live longer (slower decay)
         if (p.lifetime <= 0.0) {
             resetSmokeParticle(p, idx);
         }

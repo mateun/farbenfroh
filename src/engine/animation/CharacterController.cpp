@@ -27,6 +27,8 @@ void CharacterController::update() {
     float dir = 0;
     float hdir = 0;
     float yaw = 0;
+    float lookHor = 0;
+    float lookVer = 0;
 
 
     // TODO: instead of directly using specific bindings, we could let us inject the actual
@@ -34,10 +36,20 @@ void CharacterController::update() {
     // Alternative: use a keybinding map injected from outside.
     if (isKeyDown('E') || isKeyDown(VK_RIGHT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.25) {
         yaw = -1;
+        lookHor = -1;
     }
 
     if (isKeyDown('Q') || isKeyDown(VK_LEFT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.25) {
         yaw = 1;
+        lookHor = 1;
+    }
+
+    if (getControllerAxis(ControllerAxis::RSTICK_Y, 0) > 0.25) {
+        lookVer = -1;
+    }
+
+    if (getControllerAxis(ControllerAxis::RSTICK_Y, 0) < -0.25) {
+        lookVer = 1;
     }
 
 
@@ -77,6 +89,29 @@ void CharacterController::update() {
     else if (movementMode == MovementMode::GLOBAL) {
         glm::vec3 globalFwd = (glm::vec3{hdir, 0, -dir});
         loc += glm::vec3{frameMovementSpeed * globalFwd.x, 0, frameMovementSpeed * globalFwd.z};
+
+        // Orientation
+        glm::vec3 lookDir = glm::normalize(glm::vec3{lookHor, 0, -lookVer});
+        if (length(lookDir) > 0) {
+            //player->forward = glm::normalize(glm::vec3(shootDir.x, 0, -shootDir.y));
+            float yawAngle = glm::atan(lookDir.x, lookDir.z);
+
+            glm::quat currentOrientation = _characterNode->getWorldOrientation();
+            auto targetOrientation = angleAxis(yawAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+            // Calculate an interpolation factor (t).
+            // This should be between 0 and 1 and can be based on your frame's delta time and a smoothing speed.
+            float smoothingSpeed = 20; // adjust as needed
+            float deltaTime = ftSeconds;
+            float t = glm::clamp(smoothingSpeed * deltaTime, 0.0f, 1.0f);
+
+            // Interpolate using slerp.
+            glm::quat smoothOrientation = glm::slerp(currentOrientation, targetOrientation, t);
+
+            // Set the new orientation.
+            _characterNode->setOrientation(smoothOrientation);
+
+        }
+
     }
 
 

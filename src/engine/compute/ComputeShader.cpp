@@ -93,6 +93,10 @@ void ComputeShader::initWithShaderStorageBuffer(std::vector<T>& data) {
     glBufferData(GL_SHADER_STORAGE_BUFFER, size, data.data(), GL_DYNAMIC_COPY);
 }
 
+void ComputeShader::bindSSBO() {
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+}
+
 void ComputeShader::dispatch(DispatchOutput dispatchOutput, glm::ivec3 groupSize) const {
 
     glUseProgram(handle);
@@ -120,8 +124,9 @@ void ComputeShader::dispatch(DispatchOutput dispatchOutput, glm::ivec3 groupSize
 
 void ComputeShader::setFloat(const std::string &uniformName, float value) {
     glUseProgram(handle);
+    auto loc = glGetUniformLocation(handle, uniformName.c_str());
     GL_ERROR_EXIT(10200)
-    glUniform1f(glGetUniformLocation(handle, uniformName.c_str()), value);
+    glUniform1f(loc, value);
     GL_ERROR_EXIT(10201)
 }
 

@@ -247,6 +247,8 @@ public:
     glm::vec3 getInitialFoward();
 
     glm::vec3 getForward();
+    glm::vec3 getUp();
+    glm::vec3 getRight();
 
     glm::vec4 frustumToWorld(glm::vec4 ndc);
     glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) const;
