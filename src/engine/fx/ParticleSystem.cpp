@@ -116,6 +116,10 @@ void gru::ParticleSystem::initMegaBuffer() {
 
 }
 
+void gru::ParticleSystem::disable() {
+    this->active = false;
+}
+
 gru::ParticleSystem::ParticleSystem(Mesh *mesh, Texture *texture, glm::vec3 location, int numParticles, bool useInstancing) : mesh(mesh), texture(texture), numParticles(numParticles), location(location) {
     particleShader = new Shader();
     particleShader->initFromFiles("../assets/shaders/smoke.vert", "../assets/shaders/smoke.frag");
@@ -172,10 +176,13 @@ void gru::ParticleSystem::reset() {
     done = false;
     initialized = false;
     finishedParticles = 0;
+    //active = true;
 }
 
 
 void gru::ParticleSystem::update() {
+    if (!active) return;
+
     // Computeshader to update all particles
     // Bind and dispatch compute shader
     positionComputeShader->setFloat("deltaTime", ftSeconds);
@@ -189,6 +196,8 @@ void gru::ParticleSystem::update() {
 
 
 void gru::ParticleSystem::draw(Camera* camera) const {
+    if (!active) return;
+
     MeshDrawData mdd;
     mdd.mesh = mesh;
     mdd.texture = texture;

@@ -3,6 +3,8 @@
 //
 
 #include "GameplayLevel.h"
+
+#include "EnemyExplosionComponent.h"
 #include  "../../../src/engine/game/default_game.h"
 
 namespace ttg {
@@ -68,6 +70,14 @@ namespace ttg {
 
         particleSystem->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
         particleSystem2->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
+        particleSystem3->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
+
+        // Active enemy explosions
+        {
+            for (auto ee: activeExplosions) {
+                ee->render(game->getGameplayCamera());
+            }
+        }
 
         game->renderFPS();
         renderShadowBias();
@@ -82,6 +92,12 @@ namespace ttg {
         }
 
         return nullptr;
+    }
+
+    void GameplayLevel::updateActiveEnemyExplosions() {
+        for (auto ee: activeExplosions) {
+            ee->update();
+        }
     }
 
     void GameplayLevel::updatePlayerBullets() {
@@ -99,6 +115,22 @@ namespace ttg {
                 b->disable();
                 bd->currentLifeInSeconds = 0;
             }
+
+            // Check for collision with enemies
+            for (auto e: enemyList) {
+                if (!e->isActive()) {
+                    continue;
+                }
+                float distance = glm::distance(pos, e->getLocation());
+                if (distance < 2) {
+                    b->disable();
+                    e->disable();
+                    auto explosionComp = (EnemyExplosionComponent*) e->getExtraData();
+                    activeExplosions.push_back(explosionComp);
+                }
+            }
+
+            // TODO check wall collision
         }
     }
 
@@ -166,8 +198,10 @@ namespace ttg {
             }
 
             updatePlayerBullets();
+            updateActiveEnemyExplosions();
             particleSystem->update();
             particleSystem2->update();
+            particleSystem3->update();
         }
 
     }
@@ -349,6 +383,7 @@ namespace ttg {
             targetDummyMeshData.mesh = game->getMeshByName("target_dummy");
             targetDummyMeshData.texture = game->getTextureByName("dummy-target-diffuse");
             targetDummy->initAsMeshNode(targetDummyMeshData);
+            targetDummy->setExtraData(new EnemyExplosionComponent(nullptr, game->getTextureByName("smoke_diffuse"), targetDummy->getLocation()));
             enemyList.push_back(targetDummy);
         }
 
@@ -399,6 +434,7 @@ namespace ttg {
 
         particleSystem = new gru::ParticleSystem(nullptr, game->getTextureByName("smoke_diffuse"), {10, 0.5, -4}, 200);
         particleSystem2 = new gru::ParticleSystem(nullptr, game->getTextureByName("smoke_diffuse"), {-12, 0.5, 4}, 200);
+        particleSystem3 = new gru::ParticleSystem(nullptr, game->getTextureByName("smoke_diffuse"), {-3, 0.5, 7}, 200);
 
 
 

@@ -42,6 +42,8 @@ namespace gru {
   public:
     void initMegaBuffer();
 
+    void disable();
+
     /**
     * If mesh is a nullptr, a quad will be used.
     */
@@ -80,6 +82,7 @@ namespace gru {
     // so we calculate the world positions on the CPU and update the VBO per frame.
     Mesh * compoundMesh = nullptr;
     int numParticles = 0;
+    bool active = true;
 
     /**
     * Updates the respective position vertex buffer for the given particle (by its index)

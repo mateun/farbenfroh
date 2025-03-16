@@ -6,6 +6,7 @@
 #define GAMEPLAYLEVEL_H
 
 
+class EnemyExplosionComponent;
 class DefaultGame;
 
 namespace ttg {
@@ -31,6 +32,8 @@ public:
     void render() override;
 
     SceneNode* findFirstInactive(const std::vector<SceneNode *> & nodeList);
+
+    void updateActiveEnemyExplosions();
 
     void updatePlayerBullets();
 
@@ -62,6 +65,8 @@ public:
     std::vector<SceneNode*> enemyList;
     gru::ParticleSystem * particleSystem = nullptr;
     gru::ParticleSystem * particleSystem2 = nullptr;
+    gru::ParticleSystem * particleSystem3 = nullptr;
+    std::vector<EnemyExplosionComponent*> activeExplosions;
 };
 
 } // ttg

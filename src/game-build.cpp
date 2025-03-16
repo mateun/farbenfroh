@@ -89,6 +89,7 @@
 #include "../games/opengl/test_terrain/TestTerrainGame.cpp"
 #include "../games/opengl/test_terrain/GameplayLevel.cpp"
 #include "../games/opengl/test_terrain/LevelEditor.cpp"
+#include "../games/opengl/test_terrain/EnemyExplosionComponent.cpp"
 
 //#include "../src/engine/editor/shadergraph/ShaderGraph.cpp"
 
