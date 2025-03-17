@@ -3,11 +3,12 @@
 //
 
 #include "ParticleSystem.h"
+#include <GL/glew.h>
 #include <engine/compute/ComputeShader.h>
 #include "engine/math/math3d.h"
 
 
-void gru::ParticleSystem::initMegaBuffer() {
+void gru::ParticleEmitter::initMegaBuffer() {
         // Now we put all the vertices of all instances into a single VBO
     // to render the complete particle system in one go.
     {
@@ -116,14 +117,51 @@ void gru::ParticleSystem::initMegaBuffer() {
 
 }
 
-void gru::ParticleSystem::disable() {
+void gru::ParticleEmitter::disable() {
     this->active = false;
 }
 
-gru::ParticleSystem::ParticleSystem(Mesh *mesh, Texture *texture, glm::vec3 location, int numParticles, bool useInstancing) : mesh(mesh), texture(texture), numParticles(numParticles), location(location) {
-    particleShader = new Shader();
-    particleShader->initFromFiles("../assets/shaders/smoke.vert", "../assets/shaders/smoke.frag");
-    positionComputeShader = new ComputeShader("../src/engine/fx/shaders/particles.comp");
+void gru::ParticleEmitter::enable() {
+    this->active = true;
+}
+
+bool gru::ParticleEmitter::isActive() {
+    return active;
+}
+
+Shader * gru::ParticleEmitter::getShaderByType(EmitterType type) const {
+    auto shader = new Shader();
+    switch (type) {
+        case EmitterType::SMOKE:   shader->initFromFiles("../assets/shaders/fx/smoke.vert", "../assets/shaders/fx/smoke.frag"); break;
+        case EmitterType::EXPLOSION: shader->initFromFiles("../assets/shaders/fx/explosion.vert", "../assets/shaders/fx/explosion.frag"); break;
+        default: return nullptr;
+    }
+    return shader;
+}
+
+ComputeShader * gru::ParticleEmitter::getComputeShader(EmitterType type) {
+    switch (type) {
+        case EmitterType::SMOKE:   return new ComputeShader("../src/engine/fx/shaders/smoke.comp", {"../src/engine/fx/shaders/helper_funcs.comp"});
+        case EmitterType::EXPLOSION: return new ComputeShader("../src/engine/fx/shaders/explosion.comp", {"../src/engine/fx/shaders/helper_funcs.comp"});
+        case EmitterType::TRAIL: return new ComputeShader("../src/engine/fx/shaders/trail.comp", {"../src/engine/fx/shaders/helper_funcs.comp"});
+        case EmitterType::FIRE: return new ComputeShader("../src/engine/fx/shaders/fire.comp", {"../src/engine/fx/shaders/helper_funcs.comp"});
+        default: return nullptr;
+    }
+
+}
+
+
+/**
+* An emitter needs a mesh, a texture and 3 shaders:
+* - compute shader to handle position & velocity updates
+* - vertex shader to apply the transformation
+* - fragment shader for any color based and transparent effects like fading in and out.
+* If no specific mesh is passed in, a quad will be used as the mesh.
+*/
+gru::ParticleEmitter::ParticleEmitter(Mesh *mesh, Texture *texture, EmitterType type, glm::vec3 location,
+    int numParticles, bool useInstancing, bool loop) : mesh(mesh), texture(texture), numParticles(numParticles), location(location), type(type) {
+    particleShader = getShaderByType(type);
+    computeShader = getComputeShader(type);
 
     if (useInstancing) {
         std::vector<int> particleIDs(numParticles);
@@ -133,7 +171,6 @@ gru::ParticleSystem::ParticleSystem(Mesh *mesh, Texture *texture, glm::vec3 loca
         if (!mesh) {
             auto quadMesh = createQuadMesh(PlanePivot::center);
             this->mesh = quadMesh;
-
         }
 
         // Attach a new buffer for the particle ids to the given mesh VAO:
@@ -153,49 +190,46 @@ gru::ParticleSystem::ParticleSystem(Mesh *mesh, Texture *texture, glm::vec3 loca
         for (int i = 0; i < numParticles; i++) {
             auto p = Particle();
             p.position = {0, 0, 0, 0};
-            p.velocity = {0, 0, 0, 0};
+            p.velocity = {0, 0.5, 0, 0};
             p.emitterPosition = glm::vec4(location, 0);
             p.lifetime = float(rand()%200) / 1000.0f; // random 0–.2 sec;
-            //p.lifetime = 0; // to provoke immediate reset in the shader
+            p.lifetime = 0; // to provoke immediate reset in the shader
             p.type = 0; // smoke
+            p.loop = loop;
             particles.push_back(p);
-
-
         }
-        positionComputeShader->initWithShaderStorageBuffer(particles);
+        computeShader->initWithShaderStorageBuffer(particles);
 
     } else {
         initMegaBuffer();
     }
 
-
-
 }
 
-void gru::ParticleSystem::reset() {
+void gru::ParticleEmitter::reset() {
     done = false;
     initialized = false;
     finishedParticles = 0;
-    //active = true;
+    active = false;
 }
 
 
-void gru::ParticleSystem::update() {
+void gru::ParticleEmitter::update() {
     if (!active) return;
 
     // Computeshader to update all particles
     // Bind and dispatch compute shader
-    positionComputeShader->setFloat("deltaTime", ftSeconds);
+    computeShader->setFloat("deltaTime", ftSeconds);
     GL_ERROR_EXIT(556688)
     GLuint numWorkGroups = (numParticles + 255) / 256;
-    positionComputeShader->dispatch(DispatchOutput::Buffer, {numWorkGroups, 1, 1});
+    computeShader->dispatch(DispatchOutput::Buffer, {numWorkGroups, 1, 1});
     GL_ERROR_EXIT(556689)
 
 
 }
 
 
-void gru::ParticleSystem::draw(Camera* camera) const {
+void gru::ParticleEmitter::draw(Camera* camera) const {
     if (!active) return;
 
     MeshDrawData mdd;
@@ -206,15 +240,50 @@ void gru::ParticleSystem::draw(Camera* camera) const {
     mdd.scale = glm::vec3(.2f, .2f, .2f);
     mdd.camera = camera;
     mdd.instanceCount = numParticles;
-    positionComputeShader->bindSSBO();
+    computeShader->bindSSBO();
 
-    // usually disable depth-writing for transparent smoke
-    // TODO how to handle particle effects which are not smoke...
     glDepthMask(GL_FALSE);
     drawMesh(mdd);
     glDepthMask(GL_TRUE);
 
 
+}
+
+void gru::ParticleSystem::addEmitter(ParticleEmitter *emitter, EmitterExecutionRule emitterRule) {
+    emitters.push_back(emitter);
+    ruleMap[emitter] = emitterRule;
+}
+
+void gru::ParticleSystem::update() {
+    timeElapsed += ftSeconds;
+
+
+    // If this is the first time around, we need to check if any of the emitters have a startup delay defined.
+    // So we only are allowed to start (update) them if the time is right.
+    for (auto e : emitters) {
+        auto rule = ruleMap[e];
+        if (timeElapsed >= rule.startDelay) {
+            e->enable();
+            e->update();
+        }
+
+        if (rule.maxDuration > 0) {
+            if (timeElapsed >= rule.maxDuration) {
+                e->disable();
+            }
+        }
+    }
+
+
+
+}
+
+void gru::ParticleSystem::render(Camera *camera) {
+    for (auto e : emitters) {
+        if (e->isActive()) {
+            e->draw(camera);
+        }
+    }
 }
 
 

@@ -5,7 +5,7 @@
 #include "EnemyExplosionComponent.h"
 
 EnemyExplosionComponent::EnemyExplosionComponent(Mesh* debrisMesh, Texture* texture, glm::vec3 location) : location(location), mesh(debrisMesh), texture(texture) {
-    smokeEmitter = new gru::ParticleSystem(nullptr,  texture, location, 50);
+    smokeEmitter = new gru::ParticleEmitter(nullptr,  texture, gru::EmitterType::EXPLOSION, location, 50);
     // TODO acd actual debris/explosion emitter
     //explosionEmitter = new gru::ParticleSystem(debrisMesh, texture, location, 50);
 }

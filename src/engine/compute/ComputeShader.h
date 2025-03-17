@@ -12,7 +12,7 @@ enum class DispatchOutput {
 
 class ComputeShader {
 public:
-    ComputeShader(const std::string & shaderPath);
+    ComputeShader(const std::string & shaderPath, std::vector<std::string> includeFiles = {});
 
     void initWithTexture(int width, int height);
 

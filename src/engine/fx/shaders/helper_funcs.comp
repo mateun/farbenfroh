@@ -1,0 +1,29 @@
+#version 450 core
+
+// Define local workgroup size (adjust as needed; 256 is a common choice)
+layout(local_size_x = 256) in;
+
+// Particle struct matching your CPU-side definition (std430 alignment!)
+struct Particle {
+    vec4 position;  // xyz = position, w = unused or lifetime if you prefer
+    vec4 velocity;  // xyz = velocity, w = unused
+    vec4 emitterPosition; // base emitter position
+    float lifetime; // remaining particle lifetime
+    int type;       // 0 = smoke, 1 = explosion, etc.
+    bool loop;
+    vec2 padding;   // ensures 16-byte alignment (total size = 48 bytes)
+};
+
+// SSBO binding to store particles on GPU (matches CPU buffer binding point)
+layout(std430, binding = 0) buffer Particles {
+    Particle particles[];
+};
+
+// Uniforms for particle logic
+uniform float deltaTime;
+
+
+// Random number function (simple hash-based)
+float random(float seed) {
+    return fract(sin(seed) * 43758.5453123);
+}

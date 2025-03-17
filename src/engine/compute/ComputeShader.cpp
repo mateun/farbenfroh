@@ -11,9 +11,20 @@
 #include <engine/io/io.h>
 #include <engine/profiling/PerformanceTimer.h>
 
-ComputeShader::ComputeShader(const std::string& shaderPath) {
-    auto source = readFile(shaderPath);
+ComputeShader::ComputeShader(const std::string &shaderPath, std::vector<std::string> includeFiles) {
+    std::string source = "";
 
+    // Put any includes in front of the main shader source file.
+    for (auto includeFile : includeFiles) {
+        auto includeSource = readFile(includeFile);
+        source += includeSource;
+
+    }
+
+    // Add the actual shader core/main source:
+    source += readFile(shaderPath);
+
+    // Now compile and link the complete source:
     GLuint cshader = glCreateShader(GL_COMPUTE_SHADER);
     const GLchar* vssource_char = source.c_str();
     glShaderSource(cshader, 1, &vssource_char, NULL);
@@ -27,8 +38,8 @@ ComputeShader::ComputeShader(const std::string& shaderPath) {
         std::vector<GLchar> errorLog(logSize);
         glGetShaderInfoLog(cshader, logSize, &logSize, &errorLog[0]);
         //    result.errorMessage = errorLog.data();
-        char buf[1024];
-        sprintf_s(buf, 1024, "compute shader error: %s", errorLog.data());
+        char buf[4096];
+        sprintf_s(buf, 4096, "compute shader error: %s", errorLog.data());
         printf(buf);
         OutputDebugStringA(buf);
         glDeleteShader(cshader);
@@ -62,7 +73,6 @@ ComputeShader::ComputeShader(const std::string& shaderPath) {
     GL_ERROR_EXIT(10100)
 
 }
-
 
 
 void ComputeShader::initWithTexture(int width, int height) {

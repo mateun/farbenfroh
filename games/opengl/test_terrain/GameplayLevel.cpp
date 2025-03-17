@@ -6,6 +6,8 @@
 
 #include "EnemyExplosionComponent.h"
 #include  "../../../src/engine/game/default_game.h"
+class gru::ParticleSystem;
+class gru::ParticleEmitter;
 
 namespace ttg {
     GameplayLevel::GameplayLevel(DefaultGame *game, const std::string& name): GameLevel(game, name) {
@@ -68,9 +70,10 @@ namespace ttg {
         scene->render();
 
 
-        particleSystem->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
-        particleSystem2->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
-        particleSystem3->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
+        psystem0->render(inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera());
+        // peSmoke0->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
+        // peSmoke1->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
+        // peSmoke2->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
 
         // Active enemy explosions
         {
@@ -199,9 +202,10 @@ namespace ttg {
 
             updatePlayerBullets();
             updateActiveEnemyExplosions();
-            particleSystem->update();
-            particleSystem2->update();
-            particleSystem3->update();
+            psystem0->update();
+            //peSmoke0->update();
+            //peSmoke1->update();
+            //peSmoke2->update();
         }
 
     }
@@ -431,12 +435,21 @@ namespace ttg {
             playerBulletPool.push_back(bulletNode);
             scene->addNode(bulletNode);
         }
+        //peSmoke0 = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, {10, 0.5, -4}, 200);
+        peExplosion0 = new gru::ParticleEmitter(game->getMeshByName("cubby"), game->getTextureByName("color_grid"), gru::EmitterType::EXPLOSION, {-0, 5, 1}, 1, true, true);
+        //peSmoke2 = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, {-3, 0.5, 7}, 200);
 
-        particleSystem = new gru::ParticleSystem(nullptr, game->getTextureByName("smoke_diffuse"), {10, 0.5, -4}, 200);
-        particleSystem2 = new gru::ParticleSystem(nullptr, game->getTextureByName("smoke_diffuse"), {-12, 0.5, 4}, 200);
-        particleSystem3 = new gru::ParticleSystem(nullptr, game->getTextureByName("smoke_diffuse"), {-3, 0.5, 7}, 200);
+        gru::EmitterExecutionRule rule;
+        rule.loop = false;
+        rule.startDelay = 1.5;
+        rule.locationOffset = {0, 0, 0};
+        psystem0 = new gru::ParticleSystem();
+        //psystem0->addEmitter(peSmoke0, rule);
 
+        rule.startDelay = 0.0;
+        rule.maxDuration = -1.00;
 
+        psystem0->addEmitter(peExplosion0, rule);
 
     }
 } // ttg

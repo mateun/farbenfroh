@@ -12,6 +12,7 @@ struct Particle {
     vec4 emitterPosition;
     float lifetime;
     int type;
+    bool loop;
     vec2 padding;    // alignment
 };
 

@@ -22,32 +22,35 @@ namespace gru {
     glm::vec4 emitterPosition; // base emitter position
     float lifetime;
     int type;
+    bool loop;
     glm::vec2 padding;   // to align size to 16-byte multiples
   };
 
-  // class Particle {
-  // public:
-  //   glm::vec3 accel;
-  //   glm::vec3 location;
-  //   glm::vec3 scale;
-  //   glm::vec3 rotation;
-  //   glm::vec3 direction = {0, 1, 0};
-  //   glm::vec4 color = {1, 1, 1, 1};
-  //   float lifeTime = 0;
-  //   bool remove = false;
-  //
-  // };
+  enum class EmitterType {
+    SMOKE,
+    FIRE,
+    EXPLOSION,
+    TRAIL
+  };
 
-  class ParticleSystem {
+
+  class ParticleEmitter {
   public:
     void initMegaBuffer();
 
     void disable();
+    void enable();
+
+    bool isActive();
+
+    Shader * getShaderByType(EmitterType type) const;
+
+    static ComputeShader * getComputeShader(EmitterType type);
 
     /**
     * If mesh is a nullptr, a quad will be used.
     */
-    ParticleSystem(Mesh* mesh, Texture* texture, glm::vec3 location = {0,0, 0}, int numParticles = 5000, bool useInstancing = true);
+    ParticleEmitter(Mesh* mesh, Texture* texture, EmitterType type, glm::vec3 location = {0,0, 0}, int numParticles = 5000, bool useInstancing = true, bool loop = false);
     void reset();
     void update();
     void draw(Camera* camera) const;
@@ -75,14 +78,15 @@ namespace gru {
     std::vector<Particle> particles;
 
     Shader * particleShader = nullptr;
-    ComputeShader* positionComputeShader = nullptr;
+    ComputeShader* computeShader = nullptr;
 
     // This holds vertices, uvs, normals, tangents for every particle.
     // UVs and normals don't change per frame, but the position does,
     // so we calculate the world positions on the CPU and update the VBO per frame.
     Mesh * compoundMesh = nullptr;
     int numParticles = 0;
-    bool active = true;
+    bool active = false;
+    EmitterType type;
 
     /**
     * Updates the respective position vertex buffer for the given particle (by its index)
@@ -95,6 +99,40 @@ namespace gru {
     std::vector<glm::vec3> instancedNormals;
     std::vector<glm::vec2> instancedUVs;
     std::vector<uint32_t> instancedIndices;
+  };
+
+  /**
+  * Describes how an emitter should be executed within
+  * a particle system. This ties an emitter to a given system,
+  * so the emitter can be reused and parameterized for different
+  * systems with this rule set.
+  */
+  class EmitterExecutionRule {
+  public:
+    float startDelay = 0;
+    glm::vec3 locationOffset;
+    bool loop = false;
+    float maxDuration = 1;
+  };
+
+  /**
+  * A ParticleSystem contains n ParticleEmitters and
+  * coordinates the running of these emitters.
+  * These might run the same time or delayed etc.
+  * One emitter can be reused with different parameters
+  * in different systems.
+  */
+  class ParticleSystem {
+  public:
+    void addEmitter(ParticleEmitter* emitter, EmitterExecutionRule emitterRule);
+    void update();
+    void render(Camera* camera);
+
+  private:
+    std::vector<ParticleEmitter*> emitters;
+    std::map<ParticleEmitter*, EmitterExecutionRule> ruleMap;
+    bool initialized = false;
+    float timeElapsed = 0;
   };
 }
 

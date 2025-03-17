@@ -1,0 +1,52 @@
+
+
+void reset(inout Particle p, uint idx) {
+    // Start at emitter position, with a small optional jitter offset
+    float jitter = random(idx) * 0.1; // tweak this for a small offset
+    float angle = random(idx + 1) * 6.2831;
+    vec3 offset = vec3(jitter * cos(angle), jitter * sin(angle), 0.0);
+    p.position.xyz = p.emitterPosition.xyz + offset;
+
+    // Generate a random direction in all axes
+    vec3 randomVec = vec3(
+    random(idx + 10) * 2.0 - 1.0,
+    random(idx + 11) * 2.0 - 1.0,
+    random(idx + 12) * 2.0 - 1.0
+    );
+
+    vec3 direction = normalize(randomVec);
+
+    // Set a high explosion speed (tweak these values as needed)
+    float speed = 40.0 + random(idx + 20) * 40.0;  // speed between 20 and 50 units
+    p.velocity.xyz = direction * speed;
+    //p.velocity.y *= 0.0012;
+
+    // Short explosion lifetime (e.g., between 1 and 2 seconds)
+    p.lifetime = 1.0 + random(idx + 30) * .5;
+
+    p.velocity.xyz = vec3(1, 1, -1);
+}
+
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= particles.length()) return;
+
+    Particle p = particles[idx];
+    p.position.xyz += p.velocity.xyz * deltaTime * 0.8;
+
+    p.lifetime -= deltaTime * 0.99;            // faster decay
+    if (p.lifetime <= 0.0) {
+        if (p.loop) {
+            //reset(p, idx);
+        }  else {
+//            p.position.xyz = vec3(0, 0, 0);
+//            p.velocity.xyz = vec3(0, 0, 0);
+        }
+    }
+
+    p.position.xyz = vec3(-4, 2, -1);
+
+    // Write modified particle back into SSBO
+    particles[idx] = p;
+}

@@ -18,7 +18,7 @@ public:
    void render(Camera* camera);
 
 private:
-   gru::ParticleSystem* smokeEmitter;
+   gru::ParticleEmitter* smokeEmitter;
    glm::vec3 location;
    Texture* texture = nullptr;
    Mesh * mesh = nullptr;
