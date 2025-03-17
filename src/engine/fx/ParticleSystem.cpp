@@ -189,7 +189,7 @@ gru::ParticleEmitter::ParticleEmitter(Mesh *mesh, Texture *texture, EmitterType 
         // Initialize the particles
         for (int i = 0; i < numParticles; i++) {
             auto p = Particle();
-            p.position = {0, 0, 0, 0};
+            p.position = glm::vec4(location, 0);
             p.velocity = {2, 0.5, -3, 0};
             p.emitterPosition = glm::vec4(location, 0);
             p.lifetime = float(rand()%1200) / 1000.0f; // random 0–.2 sec;
@@ -240,9 +240,9 @@ void gru::ParticleEmitter::draw(Camera* camera) const {
     mdd.instanceCount = numParticles;
     computeShader->bindSSBO();
 
-    //glDepthMask(GL_FALSE);
+    glDepthMask(GL_FALSE);
     drawMesh(mdd);
-    //glDepthMask(GL_TRUE);
+    glDepthMask(GL_TRUE);
 
 
 }
