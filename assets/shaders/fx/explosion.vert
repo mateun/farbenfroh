@@ -12,8 +12,8 @@ struct Particle {
     vec4 emitterPosition;
     float lifetime;
     int type;
-    bool loop;
-    vec2 padding;    // alignment
+    int loop;
+    int padding;    // alignment
 };
 
 // Bind SSBO containing particles (must match compute shader binding)
@@ -77,7 +77,7 @@ void main() {
     vec3 worldPos = particles[int(particleID)].position.xyz;
 
     // Billboard alignment (camera-facing quad):
-    float particleSize = 1;
+    float particleSize = 0.15;
 
     // Random rotation based on particleID:
     float angle = random(float(particleID)) * 6.2831;

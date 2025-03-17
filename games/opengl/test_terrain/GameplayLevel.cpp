@@ -70,7 +70,7 @@ namespace ttg {
         scene->render();
 
 
-        psystem0->render(inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera());
+        //psystem0->render(inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera());
         // peSmoke0->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
         // peSmoke1->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
         // peSmoke2->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
@@ -128,7 +128,7 @@ namespace ttg {
                 if (distance < 2) {
                     b->disable();
                     e->disable();
-                    auto explosionComp = (EnemyExplosionComponent*) e->getExtraData();
+                    auto explosionComp = (gru::ParticleSystem*) e->getExtraData();
                     activeExplosions.push_back(explosionComp);
                 }
             }
@@ -202,7 +202,7 @@ namespace ttg {
 
             updatePlayerBullets();
             updateActiveEnemyExplosions();
-            psystem0->update();
+            //psystem0->update();
             //peSmoke0->update();
             //peSmoke1->update();
             //peSmoke2->update();
@@ -377,17 +377,34 @@ namespace ttg {
         padMeshData.shader = heroMeshData.shader;
         padNode->initAsMeshNode(padMeshData);
 
+        // Prepare emitters for enemy explosions:
+
 
         // Enemies
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 25; i++) {
             auto targetDummy = new SceneNode("targetDummy_" + std::to_string(i));
-            targetDummy->setLocation({-15 + (i*5), 0, -6});
+            targetDummy->setLocation({-25 + (i*5), 0, -6});
             MeshDrawData targetDummyMeshData;
             targetDummyMeshData.shader = basicShader;
             targetDummyMeshData.mesh = game->getMeshByName("target_dummy");
             targetDummyMeshData.texture = game->getTextureByName("dummy-target-diffuse");
             targetDummy->initAsMeshNode(targetDummyMeshData);
-            targetDummy->setExtraData(new EnemyExplosionComponent(nullptr, game->getTextureByName("smoke_diffuse"), targetDummy->getLocation()));
+            {
+                auto peSmoke = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, targetDummy->getLocation(), 200, true, false);
+                auto peExplosion = new gru::ParticleEmitter(game->getMeshByName("cubby"), game->getTextureByName("color_grid"), gru::EmitterType::EXPLOSION, targetDummy->getLocation(), 30, true, false);
+                gru::EmitterExecutionRule rule;
+                rule.loop = false;
+                rule.startDelay = .1;
+                rule.maxDuration = 1.50;
+                rule.locationOffset = targetDummy->getLocation();   // TODO actually apply this somewhere
+                auto psystem = new gru::ParticleSystem();
+                psystem->addEmitter(peSmoke, rule);
+                rule.startDelay = 0.0;
+                rule.maxDuration = .50;
+                psystem->addEmitter(peExplosion, rule);
+                targetDummy->setExtraData(psystem);
+            }
+
             enemyList.push_back(targetDummy);
         }
 
@@ -435,21 +452,10 @@ namespace ttg {
             playerBulletPool.push_back(bulletNode);
             scene->addNode(bulletNode);
         }
-        //peSmoke0 = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, {10, 0.5, -4}, 200);
-        peExplosion0 = new gru::ParticleEmitter(game->getMeshByName("cubby"), game->getTextureByName("color_grid"), gru::EmitterType::EXPLOSION, {-0, 5, 1}, 1, true, true);
+
         //peSmoke2 = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, {-3, 0.5, 7}, 200);
 
-        gru::EmitterExecutionRule rule;
-        rule.loop = false;
-        rule.startDelay = 1.5;
-        rule.locationOffset = {0, 0, 0};
-        psystem0 = new gru::ParticleSystem();
-        //psystem0->addEmitter(peSmoke0, rule);
 
-        rule.startDelay = 0.0;
-        rule.maxDuration = -1.00;
-
-        psystem0->addEmitter(peExplosion0, rule);
 
     }
 } // ttg

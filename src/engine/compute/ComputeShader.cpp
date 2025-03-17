@@ -103,7 +103,7 @@ void ComputeShader::initWithShaderStorageBuffer(std::vector<T>& data) {
     glBufferData(GL_SHADER_STORAGE_BUFFER, size, data.data(), GL_DYNAMIC_COPY);
 }
 
-void ComputeShader::bindSSBO() {
+void ComputeShader::bindSSBO() const {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
 }
 
@@ -111,7 +111,7 @@ void ComputeShader::dispatch(DispatchOutput dispatchOutput, glm::ivec3 groupSize
 
     glUseProgram(handle);
     if (dispatchOutput == DispatchOutput::Buffer) {
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+        bindSSBO();
     } else {
         glBindImageTexture(0, outputTexture->handle, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     }

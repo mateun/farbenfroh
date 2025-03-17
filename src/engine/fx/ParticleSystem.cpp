@@ -190,12 +190,11 @@ gru::ParticleEmitter::ParticleEmitter(Mesh *mesh, Texture *texture, EmitterType 
         for (int i = 0; i < numParticles; i++) {
             auto p = Particle();
             p.position = {0, 0, 0, 0};
-            p.velocity = {0, 0.5, 0, 0};
+            p.velocity = {2, 0.5, -3, 0};
             p.emitterPosition = glm::vec4(location, 0);
-            p.lifetime = float(rand()%200) / 1000.0f; // random 0–.2 sec;
-            p.lifetime = 0; // to provoke immediate reset in the shader
-            p.type = 0; // smoke
-            p.loop = loop;
+            p.lifetime = float(rand()%1200) / 1000.0f; // random 0–.2 sec;
+            //p.lifetime = 0; // to provoke immediate reset in the shader
+            p.loop = loop ? 1 : 0;
             particles.push_back(p);
         }
         computeShader->initWithShaderStorageBuffer(particles);
@@ -217,8 +216,8 @@ void gru::ParticleEmitter::reset() {
 void gru::ParticleEmitter::update() {
     if (!active) return;
 
-    // Computeshader to update all particles
-    // Bind and dispatch compute shader
+
+    // Use a ComputeShader to update all particles
     computeShader->setFloat("deltaTime", ftSeconds);
     GL_ERROR_EXIT(556688)
     GLuint numWorkGroups = (numParticles + 255) / 256;
@@ -236,15 +235,14 @@ void gru::ParticleEmitter::draw(Camera* camera) const {
     mdd.mesh = mesh;
     mdd.texture = texture;
     mdd.shader = particleShader;
-    mdd.location = {0, 1, -10};
-    mdd.scale = glm::vec3(.2f, .2f, .2f);
+
     mdd.camera = camera;
     mdd.instanceCount = numParticles;
     computeShader->bindSSBO();
 
-    glDepthMask(GL_FALSE);
+    //glDepthMask(GL_FALSE);
     drawMesh(mdd);
-    glDepthMask(GL_TRUE);
+    //glDepthMask(GL_TRUE);
 
 
 }

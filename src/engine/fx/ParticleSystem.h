@@ -22,8 +22,8 @@ namespace gru {
     glm::vec4 emitterPosition; // base emitter position
     float lifetime;
     int type;
-    bool loop;
-    glm::vec2 padding;   // to align size to 16-byte multiples
+    int loop;
+    int padding;   // to align size to 16-byte multiples
   };
 
   enum class EmitterType {

@@ -66,7 +66,7 @@ public:
     gru::ParticleEmitter * peSmoke0 = nullptr;
     gru::ParticleEmitter * peExplosion0 = nullptr;
     gru::ParticleEmitter * peSmoke2 = nullptr;
-    std::vector<EnemyExplosionComponent*> activeExplosions;
+    std::vector<gru::ParticleSystem*> activeExplosions;
     gru::ParticleSystem * psystem0 = nullptr;
 };
 

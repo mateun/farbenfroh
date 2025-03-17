@@ -10,8 +10,8 @@ struct Particle {
     vec4 emitterPosition; // base emitter position
     float lifetime; // remaining particle lifetime
     int type;       // 0 = smoke, 1 = explosion, etc.
-    bool loop;
-    vec2 padding;   // ensures 16-byte alignment (total size = 48 bytes)
+    int loop;       // 1 = true, 0 = false
+    int padding;   // ensures 16-byte alignment (total size = 48 bytes)
 };
 
 // SSBO binding to store particles on GPU (matches CPU buffer binding point)

@@ -19,7 +19,7 @@ public:
     template<class T>
     void initWithShaderStorageBuffer(std::vector<T>& data);
 
-    void bindSSBO();
+    void bindSSBO() const;
 
     void dispatch(DispatchOutput dispatchOutput, glm::ivec3 groupSize) const;
 
