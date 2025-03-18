@@ -50,6 +50,7 @@ public:
     SceneNode * terrainNode = nullptr;
     SceneNode * shotCursorNode = nullptr;
     Shader * basicShader = nullptr;
+    Shader * basicShaderUnlit = nullptr;
     CameraMover * cameraMover = nullptr;
     Camera* debugFlyCam = nullptr;
     CameraMover* flyCamMover = nullptr;
@@ -68,6 +69,7 @@ public:
     gru::ParticleEmitter * peSmoke2 = nullptr;
     std::vector<gru::ParticleSystem*> activeExplosions;
     gru::ParticleSystem * psystem0 = nullptr;
+
 };
 
 } // ttg

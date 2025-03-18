@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <Windows.h>
 #include <string>
 #include <vector>
@@ -52,14 +53,13 @@ enum class PlanePivot {
 struct Shader {
     GLuint handle;
 
-    void setFloatValue(float uv_scale, const std::string& name);
+    void setIntValue(int val, const std::string &name);
+    void setFloatValue(float value, const std::string& name);
     void setVec2Value(glm::vec<2, float> vec, const std::string &name);
     void setVec3Value(glm::vec<3, float> vec, const std::string& name);
-    void setVec4Value(const glm::vec4 vec, const std::string& name);
+    void setVec4Value(glm::vec4 vec, const std::string& name);
     void setMat4Value(glm::mat4 mat, const std::string& str);
-    void setMat4Array(const std::vector<glm::mat4> mats, const std::string& name);
-
-    void setIntValue(int val, const std::string &name);
+    void setMat4Array(std::vector<glm::mat4> mats, const std::string& name);
 
     void initFromFiles(const std::string& vertexShader, const std::string& fragmentShader);
 
@@ -692,6 +692,7 @@ struct MeshDrawData {
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
     glm::vec4 color = {1, 0, 1, 1}; // Nice magenta if we have no texture set.
+    glm::vec4 tint = {1, 1,1,1};
     std::vector<Light*> directionalLights;
     std::vector<Light*> pointLights;
     std::vector<Light*> spotLights;
@@ -704,6 +705,11 @@ struct MeshDrawData {
     std::string subroutineFragBind = "";
     bool castShadow = true;
     uint32_t instanceCount = 0;
+
+    // This is a customizable callback which will be called when the scene is rendered.
+    // E.g. for setting specific shader variables.
+    std::function<void(MeshDrawData mdd)> onRender;
+
 };
 
 GridData* createGrid(int lines = 100);

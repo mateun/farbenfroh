@@ -64,6 +64,7 @@ float ftMicros = 0;
 float ftMicrosAvg = 0;
 float ftSeconds = 0;
 float ftSecondsAvg = 0;
+int currentFrame = 0;
 int lastAvgFPS = 0;
 bool gldirect = true;
 int mouse_x = 0;
@@ -767,6 +768,7 @@ void mainLoop(HWND hwnd, DefaultGame* game, VulkanRenderer* vulkanRenderer) {
         auto ticks = endticks.QuadPart - startticks.QuadPart;
         ftSeconds = ticks / (float) freq.QuadPart;
         ftMicros = (float) ftSeconds * 1000.0f * 1000.0f;
+	    currentFrame++;
 
         // Calculate average frametimes and fps.
 	    // Every 1000 frames we take the average.

@@ -6,8 +6,8 @@ layout(binding = 3) uniform sampler2D shadowMapsPoint[6];
 layout(binding = 9) uniform sampler2D shadowMapsSpot[4];
 layout(binding = 13) uniform sampler2D normalMap;
 
-layout (location = 15) uniform float overrideAlpha = 1.0f;
-layout (location = 16) uniform vec4 tint = vec4(1, 1, 1, 1);
+uniform float overrideAlpha = 1.0f;
+uniform vec4 tint = vec4(1, 1, 1, 1);
 
 const int MAX_DIR_LIGHTS = 2;
 struct DirectionalLightData {
@@ -164,8 +164,8 @@ void main() {
 
     //color.rgb = normal;
 
-    //color.a *= overrideAlpha;
-    //color *= tint;
+    color.a *= overrideAlpha;
+    color.rgb *= tint.rgb;
 
     //color = fog(color);
 

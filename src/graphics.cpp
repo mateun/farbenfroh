@@ -2025,13 +2025,13 @@ void drawMesh(const MeshDrawData &drawData) {
         }
         drawData.shader->setIntValue(drawData.pointLights.size(), "numPointLights");
 
-
         // TODO Spot
 
 
     }
 
 
+    drawData.shader->setVec4Value(drawData.tint, "tint");
     drawData.shader->setVec2Value(drawData.uvPan, "uvPan");
     drawData.shader->setVec2Value(drawData.uvScale2, "uvScale2");
     drawData.shader->setFloatValue(drawData.uvScale, "uvScale");
@@ -2113,8 +2113,9 @@ void drawMesh(const MeshDrawData &drawData) {
 
 void drawMeshIntoShadowMap(const MeshDrawData& drawData, Light* directionalLight) {
     glBindVertexArray(drawData.mesh->vao);
-
+    GL_ERROR_EXIT(1234);
     bindShader(drawData.shader);
+    GL_ERROR_EXIT(1235);
 
     glViewport(0, 0, drawData.viewPortDimensions.value().x, drawData.viewPortDimensions.value().y);
     {
@@ -4725,6 +4726,7 @@ void Scene::render() {
         mdd.rotationEulers = degrees(eulerAngles(worldOrientation));
 
         mdd.mesh = m->mesh;
+        mdd.tint = m->meshData.tint;
         mdd.texture = m->texture;
         mdd.normalMap = m->normalMap;
         mdd.shader = m->shader;
@@ -4739,6 +4741,11 @@ void Scene::render() {
         if (m->skinnedMesh) {
             mdd.skinnedDraw = m->skinnedMesh;
             mdd.boneMatrices = m->boneMatrices();
+        }
+
+        // Invoke custom onRender callback functions
+        if (m->meshData.onRender) {
+            m->meshData.onRender(m->meshData);
         }
 
         drawMesh(mdd);
@@ -5243,6 +5250,7 @@ void Shader::setVec4Value(const glm::vec4 vec, const std::string& name) {
 void Shader::setFloatValue(float val, const std::string &name) {
     auto loc = glGetUniformLocation(this->handle, name.c_str());
     glUniform1f(loc, val);
+    GL_ERROR_EXIT(4430);
 }
 
 void Shader::setVec2Value(glm::vec<2, float> vec, const std::string &name) {
@@ -5266,12 +5274,14 @@ void Shader::setVec3Value(glm::vec<3, float> vec, const std::string &name) {
 }
 
 void Shader::setMat4Value(glm::mat4 mat, const std::string &name) {
+    auto e = glGetError();
     auto loc = glGetUniformLocation(this->handle, name.c_str());
 #ifdef _STRICT_SHADER_LOCATION_
     if (loc == -1) throw std::runtime_error("Could not get uniform location");
 #endif
     glUniformMatrix4fv(loc,1,  GL_FALSE, glm::value_ptr(mat));
     std::string errorInfo = name + " loc: " + std::to_string(loc);
+
     GL_ERROR_EXIT_INFO(444, errorInfo);
 }
 
@@ -5285,7 +5295,9 @@ void Shader::setMat4Array(const std::vector<glm::mat4> mats, const std::string &
 }
 
 void Shader::setIntValue(int val, const std::string &name) {
+    GL_ERROR_EXIT(4450);
     auto loc = glGetUniformLocation(this->handle, name.c_str());
+    GL_ERROR_EXIT(4451);
 #ifdef _STRICT_SHADER_LOCATION_
     if (loc == -1) throw std::runtime_error("Could not get uniform for int value: " + name);
 #endif

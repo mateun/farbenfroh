@@ -214,6 +214,8 @@ namespace ttg {
 
         basicShader = new Shader();
         basicShader->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert", "../games/opengl/test_terrain/assets/shaders/basic.frag");
+        basicShaderUnlit = new Shader();
+        basicShaderUnlit->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert", "../games/opengl/test_terrain/assets/shaders/basic_unlit.frag");
 
         terrain = new Terrain(50, 50);
 
@@ -221,14 +223,31 @@ namespace ttg {
 
         terrainNode = new SceneNode("terrain");
         //terrainNode->disable();
-        smd.mesh = terrain->getMesh();
-        terrainNode->setScale({1, 1, 20});
+        //smd.mesh = terrain->getMesh();
+        smd.mesh = game->getMeshByName("cube_ground");
+        terrainNode->setScale({1, 1, 1});
+        terrainNode->setLocation({0, -1, 0});
         smd.shader = basicShader;
         smd.texture = game->getTextureByName("ground_albedo");
         smd.normalMap = game->getTextureByName("ground_normal");
-        smd.uvScale2 = {100, 2000};
+        smd.uvScale2 = {6, 7};
         smd.uvScale = 1;
         terrainNode->initAsMeshNode(smd);
+
+        auto subTerrain = new SceneNode("terrain");
+        //terrainNode->disable();
+        //smd.mesh = terrain->getMesh();
+        smd.mesh = game->getMeshByName("cube_ground");
+        subTerrain->setScale({0.5, 2, 0.5});
+        subTerrain->setLocation({28, -8.5, -20});
+        smd.shader = basicShader;
+        smd.texture = game->getTextureByName("ground_albedo");
+        smd.tint = {1.5, 0.5, 1, 1};
+        smd.color = {0,0, 1, 1};
+        smd.normalMap = game->getTextureByName("ground_normal");
+        smd.uvScale2 = {1, 1};
+        smd.uvScale = 1;
+        subTerrain->initAsMeshNode(smd);
 
         auto roadNode = new SceneNode("road");
         smd.mesh = game->getMeshByName("road_plane");
@@ -236,6 +255,7 @@ namespace ttg {
         smd.normalMap = game->getTextureByName("asphalt_normal");
         smd.uvScale2 = {1, 5};
         smd.uvScale = 1;
+        smd.tint = {1,1, 1, 1};
         smd.uvPan = {0, 0};
         roadNode->setScale({1, 1, 5});
         roadNode->setLocation({0, 0.001, -1});
@@ -391,7 +411,7 @@ namespace ttg {
             targetDummy->initAsMeshNode(targetDummyMeshData);
             {
                 auto peSmoke = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, targetDummy->getLocation(), 200, true, false);
-                auto peExplosion = new gru::ParticleEmitter(game->getMeshByName("cubby"), game->getTextureByName("color_grid"), gru::EmitterType::EXPLOSION, targetDummy->getLocation(), 30, true, false);
+                auto peExplosion = new gru::ParticleEmitter(game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), gru::EmitterType::EXPLOSION, targetDummy->getLocation(), 100, true, false);
                 gru::EmitterExecutionRule rule;
                 rule.loop = false;
                 rule.startDelay = .1;
@@ -408,12 +428,37 @@ namespace ttg {
             enemyList.push_back(targetDummy);
         }
 
+        auto quadMesh = createQuadMesh(PlanePivot::center);
+        std::vector<SceneNode*> spawnDecals;
+        // Spawn decals
+        for (int i = 0; i < 3; i++) {
+            auto spawnDecal = new SceneNode("spawnDecal_" + std::to_string(i));
+            spawnDecal->setLocation({-18 + (i*8), 0.25, 5});
+            spawnDecal->setOrientation(glm::angleAxis<float>(glm::radians(-90.0f), glm::vec3{1, 0, 0}));
+            spawnDecal->setScale({4, 4, 1});
+            MeshDrawData mdd;
+            mdd.shader = basicShaderUnlit;
+            mdd.mesh = quadMesh;
+            mdd.castShadow = false;
+            mdd.texture = game->getTextureByName("spawn_decal");
+            mdd.onRender = [](MeshDrawData md) {
+                // TODO Not sure about the "out of band" binding of the shader here.
+                glUseProgram(md.shader->handle);
+                // This changes the frame uniform which changes the color, making it pulse.
+                // Turn off for now:
+                //md.shader->setFloatValue(currentFrame, "frame");
+            };
+            spawnDecal->initAsMeshNode(mdd);
+            spawnDecals.push_back(spawnDecal);
+        }
+
 
         scene = new Scene();
         scene->addNode(cameraNode);
         scene->addNode(terrainNode);
         scene->addNode(wall1Node);
         scene->addNode(wall2Node);
+        scene->addNode(subTerrain);
         //scene->addNode(hydrantdNode);
         //scene->addNode(roadNode);
         //scene->addNode(roadNode2);
@@ -424,6 +469,9 @@ namespace ttg {
         scene->addNode(padNode);
         for (auto e : enemyList) {
             scene->addNode(e);
+        }
+        for (auto sd : spawnDecals) {
+            scene->addNode(sd);
         }
 
 
