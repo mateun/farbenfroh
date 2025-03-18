@@ -33,8 +33,6 @@ public:
 
     SceneNode* findFirstInactive(const std::vector<SceneNode *> & nodeList);
 
-    void updateActiveEnemyExplosions();
-
     void updatePlayerBullets();
 
     void checkPlayerCollision();
@@ -51,6 +49,7 @@ public:
     SceneNode * shotCursorNode = nullptr;
     Shader * basicShader = nullptr;
     Shader * basicShaderUnlit = nullptr;
+    Shader * emissiveShader = nullptr;
     CameraMover * cameraMover = nullptr;
     Camera* debugFlyCam = nullptr;
     CameraMover* flyCamMover = nullptr;
@@ -67,7 +66,7 @@ public:
     gru::ParticleEmitter * peSmoke0 = nullptr;
     gru::ParticleEmitter * peExplosion0 = nullptr;
     gru::ParticleEmitter * peSmoke2 = nullptr;
-    std::vector<gru::ParticleSystem*> activeExplosions;
+    std::vector<SceneNode*> enemyExplosionParticles;
     gru::ParticleSystem * psystem0 = nullptr;
 
 };

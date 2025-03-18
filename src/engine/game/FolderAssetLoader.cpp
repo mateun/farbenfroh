@@ -4,6 +4,7 @@
 
 #include "FolderAssetLoader.h"
 #include <filesystem>
+
 #include <iostream>
 
 extern HWND getWindow();
@@ -20,8 +21,16 @@ void FolderAssetLoader::load(const std::string &assetFolder) {
                 if (extension == ".png" ||
                     extension == ".bmp" ||
                     extension == ".jpg" ) {
-                    auto texture = createTextureFromFile(entry.path().string(), ColorFormat::RGBA);
-                    _textureMap[entry.path().filename().stem().string()] = texture;
+                    std::string pureName = entry.path().filename().stem().string();
+                    Texture* texture = nullptr;
+                    if (pureName.contains("_n") || pureName.contains("_norm")) {
+                        // We use linear color space for normal maps, instead of sRGB for albedos.
+                        texture = createTextureFromFile(entry.path().string(), GL_RGBA, GL_RGBA8);
+                    } else {
+                        texture = createTextureFromFile(entry.path().string(), GL_RGBA, GL_SRGB8_ALPHA8);
+                    }
+
+                    _textureMap[pureName] = texture;
                 }
                 else if (extension == ".fbx" ||
                          extension == ".FBX" ||

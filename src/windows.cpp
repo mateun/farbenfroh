@@ -372,10 +372,6 @@ void initGLContext(HWND hwnd, HDC hdc) {
     // 3. Get the DC for the dummy window
     HDC dummyDC = GetDC(dummyWnd);
 
-
-
-
-
     int windowsChosenFormat = ChoosePixelFormat(dummyDC, &pfd);
     SetPixelFormat(dummyDC, windowsChosenFormat, &pfd);
 
@@ -400,7 +396,7 @@ void initGLContext(HWND hwnd, HDC hdc) {
     auto createContextAttribsProc = (PFNWGLCREATECONTEXTATTRIBSARBPROC ) wglGetProcAddress("wglCreateContextAttribsARB");
 
     int pixelAttribs[] =
-{
+    {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
         WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
         WGL_DOUBLE_BUFFER_ARB,  GL_TRUE,
@@ -408,6 +404,7 @@ void initGLContext(HWND hwnd, HDC hdc) {
         WGL_COLOR_BITS_ARB,     32,
         WGL_DEPTH_BITS_ARB,     24,
         WGL_STENCIL_BITS_ARB,   8,
+        WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, GL_TRUE, // <--- Enable sRGB framebuffer
         WGL_SAMPLE_BUFFERS_ARB, 1,      // <-- Enable multi-sample buffer
         WGL_SAMPLES_ARB,        4,      // <-- # of samples
         0                       // End
@@ -504,6 +501,7 @@ void initGLContext(HWND hwnd, HDC hdc) {
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST );
     //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST );
     glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_FRAMEBUFFER_SRGB);
     //glEnable(GL_POLYGON_SMOOTH);
     glViewport(0, 0, window_width, window_height);
     enableVsync(false);

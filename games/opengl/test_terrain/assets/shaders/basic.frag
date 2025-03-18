@@ -40,6 +40,9 @@ in vec2 fs_uvs;
 in vec3 viewPos;
 in mat3 tbn;
 in vec3 tangentFragPos;
+in vec3 t;
+in vec3 b;
+in vec3 n;
 
 out vec4 color;
 
@@ -166,6 +169,14 @@ void main() {
 
     color.a *= overrideAlpha;
     color.rgb *= tint.rgb;
+
+    // Debug tangent space
+    //normal.g = -normal.g;
+    //normal = tbn * normal;
+    //color.rgb = (normal * 0.5) + 0.5;
+    //color.rgb = vec3(t.b, 0, 1);
+    //color.rgb = t;
+    // End debug
 
     //color = fog(color);
 

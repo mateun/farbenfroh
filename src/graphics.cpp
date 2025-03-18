@@ -1483,10 +1483,8 @@ void location(glm::vec3 loc) {
 
 
 GLenum toGLColorFormat(ColorFormat cf) {
-    if (cf == ColorFormat::RGBA) return GL_RGBA;
-    else if (cf == ColorFormat::BGRA) return GL_BGRA;
-    else if (cf == ColorFormat::RGB) return GL_RGB;
-    else return GL_R;
+    if (cf == ColorFormat::RGBA) return GL_SRGB8_ALPHA8;
+    return GL_R;
 }
 
 Texture *createTextureFromBitmap(Bitmap *bm, ColorFormat colorFormat) {
@@ -1500,13 +1498,12 @@ Texture *createTextureFromBitmap(Bitmap *bm, ColorFormat colorFormat) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-
     glTexImage2D(GL_TEXTURE_2D,
                  0,
-                 GL_RGBA,
+                 GL_SRGB8_ALPHA8,
                  bm->width, bm->height,
                  0,
-                 toGLColorFormat(colorFormat),
+                 GL_RGBA,
                  GL_UNSIGNED_BYTE, bm->pixels);
 
     auto target = new Texture();
@@ -1543,8 +1540,8 @@ Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorForm
         if (bm)
         {
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-                         0, GL_RGBA, bm->width, bm->height, 0,
-                         toGLColorFormat(colorFormat),
+                         0, GL_SRGB8_ALPHA8, bm->width, bm->height, 0,
+                         GL_RGBA,
                          GL_UNSIGNED_BYTE,
                          bm->pixels
             );
@@ -1590,7 +1587,7 @@ glm::mat4 getWorldMatrixFromGlobalState() {
 
 }
 
-Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFormat, ColorFormat internalColorFormat) {
+Texture *createTextureFromFile(const std::string &fileName, GLenum colorFormat, GLint internalColorFormat) {
     Bitmap* bm;
     loadBitmap(fileName.c_str(), &bm);
     GLuint handle;
@@ -1602,11 +1599,11 @@ Texture *createTextureFromFile(const std::string &fileName, ColorFormat colorFor
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexImage2D(GL_TEXTURE_2D,
                  0,
-                 toGLColorFormat(internalColorFormat),
+                 internalColorFormat,
                  bm->width,
                  bm->height,
                  0,
-                 toGLColorFormat(colorFormat),
+                 colorFormat,
                  GL_UNSIGNED_BYTE,
                  bm->pixels);
 
@@ -3241,10 +3238,11 @@ Texture * createEmptyFloatTexture(int w, int h) {
     //              GL_RGBA,
     //              GL_UNSIGNED_BYTE, bm->pixels);
 
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB32F, w, h);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, w, h);
 
     auto target = new Texture();
     target->handle = handle;
+    target->bitmap = bm;
     return target;
 
 }
@@ -3869,11 +3867,13 @@ Mesh *MeshImporter::importMesh(const std::string &filePath, bool debugPrintSkele
                                  mesh->mVertices[i].y,
                                  mesh->mVertices[i].z});
 
-        tangentMasterList.push_back({
-            mesh->mTangents[i].x,
-            mesh->mTangents[i].y,
-            mesh->mTangents[i].z
-        });
+        if (mesh->mTangents) {
+            tangentMasterList.push_back({
+                mesh->mTangents[i].x,
+                mesh->mTangents[i].y,
+                mesh->mTangents[i].z,
+            });
+        }
 
         if (mesh->HasNormals()) {
             normalMasterList.push_back({mesh->mNormals[i].x,
@@ -4368,6 +4368,11 @@ void SceneNode::initAsMeshNode(const MeshDrawData& meshData) {
     this->meshData = meshData;
 }
 
+void SceneNode::initAsParticleSystemNode(gru::ParticleSystem *particleSystem) {
+    this->_type = SceneNodeType::ParticleSystem;
+    this->particleSystem = particleSystem;
+}
+
 // void SceneNode::initAsMeshNode(const SceneMeshData& sceneMeshData) {
 //     this->_type = SceneNodeType::Mesh;
 //     this->mesh = sceneMeshData.mesh;
@@ -4418,7 +4423,8 @@ Scene::Scene() {
     debugFlyCam->lookAtTarget = glm::vec3(0, 0, 0);
     debugFlyCam->updateNearFar(0.1, 400);
     flyCamMover = new CameraMover(debugFlyCam);
-    fullScreenFBO = createFrameBuffer(scaled_width, scaled_height);
+    fullScreenFBO = createFrameBuffer(scaled_width, scaled_height, true, false);
+
 
 
 
@@ -4435,6 +4441,10 @@ void Scene::setUICamera(Camera *cam) {
 void Scene::addNode(SceneNode *node) {
     if (node->_type == SceneNodeType::Mesh) {
         meshNodes.push_back(node);
+    }
+
+    if (node->_type == SceneNodeType::ParticleSystem) {
+        particleSystemNodes.push_back(node);
     }
 
     if (node->_type == SceneNodeType::Text) {
@@ -4460,6 +4470,13 @@ void Scene::addNode(SceneNode *node) {
 void Scene::update() {
     if (debugFlyCamActive) {
         flyCamMover->update();
+    }
+
+    for (auto ps: particleSystemNodes) {
+        if (!ps->isActive()) {
+            continue;
+        }
+        ps->particleSystem->update();
     }
 }
 
@@ -4728,7 +4745,7 @@ void Scene::render() {
     }
 
 
-    // 2. Actual render pass
+    // 2. Render meshes
     for (auto m : flatMeshNodes) {
 
         if (!m->isActive()) {
@@ -4771,22 +4788,39 @@ void Scene::render() {
 
     }
 
+    // 3. Render particles
+    std::vector<SceneNode*> flatParticleNodes;
+    flattenNodes(particleSystemNodes, flatParticleNodes);
+    for (auto ps : flatParticleNodes) {
+        if (!ps->isActive()) {
+            continue;
+        }
+        ps->particleSystem->render(activeCamera);
+
+    }
+
     // Postprocessing, if active:
+    // First, apply all post effects:
     if (!activeCamera->getPostProcessEffects().empty()) {
         FrameBuffer* currentFB = fullScreenFBO;
         for (auto pp : activeCamera->getPostProcessEffects()) {
             currentFB = pp->apply(currentFB, uiCamera);
         }
 
+
+
+
         activateFrameBuffer(nullptr);
         MeshDrawData mdd;
         mdd.camera = uiCamera;
         mdd.mesh = quadMesh;
         mdd.shader = quadShader;
-        mdd.location = { scaled_width/2, scaled_height/2, -1};
+        mdd.location = { scaled_width/2, scaled_height/2, -5};
         mdd.scale = { scaled_width, scaled_height, 1};
         mdd.texture = currentFB->texture;
         drawMesh(mdd);
+
+
     }
 
     // Render some debug stuff:
@@ -4870,6 +4904,83 @@ FrameBuffer* GammaCorrectionEffect::apply(FrameBuffer *sourceFrameBuffer, Camera
 
 }
 
+BloomEffect::BloomEffect() {
+    bloomShader = new Shader();
+    bloomShader->initFromFiles("../src/engine/fx/shaders/bloom.vert", "../src/engine/fx/shaders/bloom.frag");
+    quadShader = new Shader();
+    quadShader->initFromFiles("../src/engine/fx/shaders/quad.vert", "../src/engine/fx/shaders/quad.frag");
+    gaussShader = new Shader();
+    gaussShader->initFromFiles("../src/engine/fx/shaders/gauss.vert", "../src/engine/fx/shaders/gauss.frag");
+    effectFrameBuffer = createFrameBuffer(scaled_width, scaled_height, true);
+    bloomFBO = createFrameBuffer(scaled_width, scaled_height, true, true);
+    auto blurFBO0 = createFrameBuffer(scaled_width, scaled_height, true, false);
+    auto blurFBO1 = createFrameBuffer(scaled_width, scaled_height, true, false);
+    blurFBOs.push_back(blurFBO0);
+    blurFBOs.push_back(blurFBO1);
+
+}
+
+FrameBuffer * BloomEffect::apply(FrameBuffer *sourceFrameBuffer, Camera *camera) {
+    // 1. render the bright parts of the source framebuffer into a separate framebuffer
+    // 2. gaussian blur this (horizontal and vertical)
+    // 3. Add the blured texture to the source texture.
+
+    // Step 1
+    activateFrameBuffer(bloomFBO);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    MeshDrawData mdd;
+    mdd.camera = camera;
+    mdd.mesh = quadMesh;
+    mdd.shader = quadShader;
+    mdd.location = { scaled_width/2, scaled_height/2, -5};
+    mdd.scale = { scaled_width, scaled_height, 1};
+    mdd.texture = sourceFrameBuffer->texture;
+    drawMesh(mdd);
+
+    // Step 2
+    mdd.camera = camera;
+    mdd.mesh = quadMesh;
+    mdd.shader = gaussShader;
+    mdd.location = { scaled_width/2, scaled_height/2, -5};
+    mdd.scale = { scaled_width, scaled_height, 1};
+    mdd.texture = bloomFBO->texture2;
+
+    glUseProgram(gaussShader->handle);
+    bool horizontal = true, first_iteration = true;
+    // Clear both blur framebuffers before first usage
+    for (int i = 0; i < 2; i++) {
+        activateFrameBuffer(blurFBOs[i]);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+    int amount = 20;
+    for (unsigned int i = 0; i < amount; i++)
+    {
+        activateFrameBuffer(blurFBOs[horizontal]);
+        gaussShader->setIntValue(horizontal, "horizontal");
+        mdd.texture = first_iteration ? bloomFBO->texture2 : blurFBOs[!horizontal]->texture;
+        drawMesh(mdd);;
+        horizontal = !horizontal;
+        if (first_iteration)
+            first_iteration = false;
+    }
+
+    activateFrameBuffer(effectFrameBuffer);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    mdd.mesh = quadMesh;
+    mdd.shader = bloomShader;
+    mdd.location = { scaled_width/2, scaled_height/2, -5};
+    mdd.scale = { scaled_width, scaled_height, 1};
+    mdd.texture = sourceFrameBuffer->texture;
+    // This should be the last texture written to, index 0
+    blurFBOs[0]->texture->bindAt(1);
+    drawMesh(mdd);
+
+    return effectFrameBuffer;
+
+
+}
+
 Camera::Camera() {
 }
 
@@ -4922,7 +5033,7 @@ glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera
     return ss;
 }
 
-FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorTexture) {
+FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorTexture, Texture* colorTexture2) {
     GLuint fbo;
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -4930,19 +5041,26 @@ FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorT
     // Attach the texture to the framebuffer's color attachment point
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture->handle, 0);
 
+    if (colorTexture2) {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colorTexture2->handle, 0);
+    }
+
     GLuint depthRenderbuffer;
     // Step 3: Create a renderbuffer for depth attachment
     glGenRenderbuffers(1, &depthRenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, depthRenderbuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
 
-
     // Attach the renderbuffer to the framebuffer's depth attachment point
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderbuffer);
 
     // Step 4: Set the list of draw buffers.
-    GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, drawBuffers);  // Only one draw buffer (color attachment)
+    std::vector<GLenum> drawBuffers;
+    drawBuffers.push_back(GL_COLOR_ATTACHMENT0);
+    if (colorTexture2) {
+        drawBuffers.push_back(GL_COLOR_ATTACHMENT1);
+    }
+    glDrawBuffers(drawBuffers.size(), drawBuffers.data());
 
     // Step 5: Check if framebuffer is complete
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -4954,11 +5072,21 @@ FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorT
     // Unbind the framebuffer to avoid rendering to it accidentally
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    return new FrameBuffer { fbo, colorTexture };
+    return new FrameBuffer { fbo, colorTexture, colorTexture2 };
 }
 
-FrameBuffer *createFrameBuffer(int width, int height) {
-    return createFrameBufferWithTexture(width, height, createEmptyTexture(width, height));
+FrameBuffer *createFrameBuffer(int width, int height, bool hdr, bool additionalColorBuffer) {
+    Texture* texture = nullptr;
+    Texture* texture2 = nullptr;
+    if (hdr) {
+        texture =  createEmptyFloatTexture(width, height);
+    } else {
+        texture =  createEmptyTexture(width, height);
+    }
+    if (additionalColorBuffer) {
+        texture2 = createEmptyFloatTexture(width, height);
+    }
+    return createFrameBufferWithTexture(width, height, texture, texture2);
 
 }
 

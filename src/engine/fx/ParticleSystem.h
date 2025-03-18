@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+struct MeshDrawData;
 class ComputeShader;
 class Mesh;
 class Texture;

@@ -44,6 +44,9 @@ out vec4 fragPosPointLightSpace[MAX_POINT_LIGHTS];
 out mat3 tbn;
 out vec3 tangentFragPos;
 out vec3 tangentViewPos;
+out vec3 t;
+out vec3 b;
+out vec3 n;
 
 void uvPanning();
 
@@ -66,6 +69,13 @@ void main() {
     vec3 T = normalize(vec3(mat_world * vec4(tangent, 0)));
     vec3 N = normalize(vec3(mat_world * vec4(normals, 0)));
     vec3 B = cross(N, T);
+    t = T;
+    b = B;
+    n = N;
+//    T = (inverse(transpose(mat_world)) * vec4(T,1)).xyz;
+//    N = (inverse(transpose(mat_world)) * vec4(N,1)).xyz;
+//    B = (inverse(transpose(mat_world)) * vec4(B,1)).xyz;
+
     tbn = transpose(mat3(T, B, N));
     tangentFragPos = tbn * vec3(mat_world * vec4(pos, 1.0));
 

@@ -6,6 +6,7 @@
 #include <vector>
 #include <optional>
 #include <engine/algo/Bvh.h>
+#include <engine/fx/ParticleSystem.h>
 #include <GL/glew.h>
 #include <engine/input/UpdateSwitcher.h>
 #include <engine/lighting/Light.h>
@@ -146,6 +147,7 @@ struct Skeleton {
 struct FrameBuffer {
     GLuint handle;
     Texture* texture;
+    Texture* texture2;
 };
 
 /**
@@ -227,7 +229,16 @@ private:
 };
 
 class BloomEffect : public PostProcessEffect {
+public:
+    BloomEffect();
+    FrameBuffer* apply(FrameBuffer *sourceFrameBuffer, Camera* camera) override;
 
+private:
+    Shader* bloomShader = nullptr;
+    Shader * quadShader = nullptr;
+    Shader * gaussShader = nullptr;
+    FrameBuffer * bloomFBO = nullptr;
+    std::vector<FrameBuffer*> blurFBOs;
 };
 
 
@@ -760,7 +771,7 @@ void drawParticleEffect(bool instancedRender = false);
 void drawGrid(GridData* gridData = {}, glm::ivec2 viewPortDimensions = glm::ivec2{scaled_width, scaled_height}, bool blurred = false);
 void drawBitmap(int x, int y, uint8_t* bitmapPixels);
 glm::mat4 getWorldMatrixFromGlobalState();
-Texture* createTextureFromFile(const std::string& fileName, ColorFormat colorFormat = ColorFormat::RGBA, ColorFormat internalColorFormat = ColorFormat::RGBA);
+Texture* createTextureFromFile(const std::string& fileName, GLenum colorFormat = GL_RGBA, GLint internalColorFormat = GL_SRGB8_ALPHA8);
 Texture* createTextureFromBitmap(Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
 Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType = "png");
 FrameBuffer* createShadowMapFramebufferObject(glm::vec2 size);
@@ -836,10 +847,11 @@ void prepareTransformationMatrices(glm::mat4 matworld, Camera* camera, Camera* s
 void updateAndDrawText(const char *text, Texture *pTexture, int screenPosX, int screenPosY, int screenPosZ = -0.7);
 
 // Creates a color framebuffer incl. depthbuffer
-FrameBuffer* createFrameBuffer(int width, int height);
+FrameBuffer* createFrameBuffer(int width, int height, bool hdr = false, bool additionalColorBuffer = false);
 
 // Creates a color framebuffer based on the given texture and a default depthtexture.
-FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorTexture);
+// An additional color texture can be used to create a second color attachment, e.g. for bloom effects.
+FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorTexture, Texture* colorTexture2 = nullptr);
 
 bool keyPressed(int key);
 
@@ -901,7 +913,8 @@ enum class SceneNodeType {
     Light,
     Camera,
     Text,
-    Mesh
+    Mesh,
+    ParticleSystem,
 };
 
 struct SceneMeshData {
@@ -924,6 +937,7 @@ public:
     ~SceneNode();
 
     void initAsMeshNode(const MeshDrawData& meshData);
+    void initAsParticleSystemNode(gru::ParticleSystem* particleSystem);
     void initAsCameraNode(Camera* camera);
     void initAsLightNode(Light* light);
     void initAsTextNode();  // TODO
@@ -976,6 +990,7 @@ private:
     // These are type specific fields and can be null
     std::string id;
     Mesh* mesh = nullptr;
+    gru::ParticleSystem* particleSystem = nullptr;
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
     Shader* shader = nullptr;
@@ -1036,15 +1051,21 @@ private:
     std::vector<SceneNode*> meshNodes;
     std::vector<SceneNode*> textNodes;
     std::vector<SceneNode*> cameraNodes;
+    std::vector<SceneNode*> particleSystemNodes;
     std::vector<SceneNode*> directionalLightNodes;
     std::vector<SceneNode*> pointLightNodes;
     std::vector<SceneNode*> spotLightNodes;
 
     Texture* rayTraceWorldPosTexture = nullptr;
+
     FrameBuffer* raytracedShadowPositionFBO = nullptr;
+    FrameBuffer * fullScreenFBO = nullptr;
+
+
     Shader * worldPosShader = nullptr;
     Shader * shadowMapShader = nullptr;
     Shader * quadShader = nullptr;
-    FrameBuffer * fullScreenFBO = nullptr;
+
     Mesh * quadMesh = nullptr;
+
 };

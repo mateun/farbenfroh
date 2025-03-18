@@ -255,7 +255,6 @@ void gru::ParticleSystem::addEmitter(ParticleEmitter *emitter, EmitterExecutionR
 void gru::ParticleSystem::update() {
     timeElapsed += ftSeconds;
 
-
     // If this is the first time around, we need to check if any of the emitters have a startup delay defined.
     // So we only are allowed to start (update) them if the time is right.
     for (auto e : emitters) {
@@ -283,5 +282,6 @@ void gru::ParticleSystem::render(Camera *camera) {
         }
     }
 }
+
 
 

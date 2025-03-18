@@ -75,12 +75,12 @@ namespace ttg {
         // peSmoke1->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
         // peSmoke2->draw((inFlyCamDebugMode ? scene->getDebugFlyCam() : game->getGameplayCamera()));
 
-        // Active enemy explosions
-        {
-            for (auto ee: activeExplosions) {
-                ee->render(game->getGameplayCamera());
-            }
-        }
+        // // Active enemy explosions
+        // {
+        //     for (auto ee: enemyExplosionParticles) {
+        //         ee->render(game->getGameplayCamera());
+        //     }
+        // }
 
         game->renderFPS();
         renderShadowBias();
@@ -97,11 +97,11 @@ namespace ttg {
         return nullptr;
     }
 
-    void GameplayLevel::updateActiveEnemyExplosions() {
-        for (auto ee: activeExplosions) {
-            ee->update();
-        }
-    }
+    // void GameplayLevel::updateActiveEnemyExplosions() {
+    //     for (auto ee: enemyExplosionParticles) {
+    //         ee->update();
+    //     }
+    // }
 
     void GameplayLevel::updatePlayerBullets() {
         for (auto b : playerBulletPool) {
@@ -128,8 +128,8 @@ namespace ttg {
                 if (distance < 2) {
                     b->disable();
                     e->disable();
-                    auto explosionComp = (gru::ParticleSystem*) e->getExtraData();
-                    activeExplosions.push_back(explosionComp);
+                    auto explosionComp = (SceneNode*) e->getExtraData();
+                    explosionComp->enable();
                 }
             }
 
@@ -178,6 +178,10 @@ namespace ttg {
             //cameraMover->update();
             characterController->update();
 
+
+            // TODO: do we check against invisible walls on our floating platforms?!
+            // Currently this is somewhere checked, not specifically the bounds of a platform,
+            // but this would be a good idea, I guess.
             checkPlayerCollision();
             cameraUpdate();
 
@@ -201,11 +205,7 @@ namespace ttg {
             }
 
             updatePlayerBullets();
-            updateActiveEnemyExplosions();
-            //psystem0->update();
-            //peSmoke0->update();
-            //peSmoke1->update();
-            //peSmoke2->update();
+
         }
 
     }
@@ -216,6 +216,8 @@ namespace ttg {
         basicShader->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert", "../games/opengl/test_terrain/assets/shaders/basic.frag");
         basicShaderUnlit = new Shader();
         basicShaderUnlit->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert", "../games/opengl/test_terrain/assets/shaders/basic_unlit.frag");
+        emissiveShader = new Shader();
+        emissiveShader->initFromFiles("../src/engine/fx/shaders/emissive.vert", "../src/engine/fx/shaders/emissive.frag");
 
         terrain = new Terrain(50, 50);
 
@@ -230,7 +232,7 @@ namespace ttg {
         smd.shader = basicShader;
         smd.texture = game->getTextureByName("ground_albedo");
         smd.normalMap = game->getTextureByName("ground_normal");
-        smd.uvScale2 = {6, 7};
+        smd.uvScale2 = {20, 20};
         smd.uvScale = 1;
         terrainNode->initAsMeshNode(smd);
 
@@ -245,7 +247,7 @@ namespace ttg {
         smd.tint = {1.5, 0.5, 1, 1};
         smd.color = {0,0, 1, 1};
         smd.normalMap = game->getTextureByName("ground_normal");
-        smd.uvScale2 = {1, 1};
+        smd.uvScale2 = {30, 30};
         smd.uvScale = 1;
         subTerrain->initAsMeshNode(smd);
 
@@ -313,14 +315,16 @@ namespace ttg {
         hydrantdNode->initAsMeshNode(smd);
 
         auto wall1Node = new SceneNode("wall_left");
-        smd.mesh = game->getMeshByName("wall");
-        smd.texture = game->getTextureByName("color_grid");
-        smd.normalMap = nullptr;
-        smd.uvScale2 = {1, 10};
+        wall1Node->setOrientation(glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0)));
+        smd.mesh = game->getMeshByName("round_wall");
+        smd.texture = game->getTextureByName("ground_albedo");
+        smd.normalMap = game->getTextureByName("ground_normal");
+        smd.uvScale2 = {5, 5};
+        smd.tint = {.5, 1.5, 1, 1};
         smd.uvScale = 1;
         smd.uvPan = {0, 0};
-        wall1Node->setScale({2, 1, 10});
-        wall1Node->setLocation({-25, 0.0, 40});
+        wall1Node->setScale({2,2, 2});
+        wall1Node->setLocation({-25, 0.0, -20});
         wall1Node->initAsMeshNode(smd);
 
         auto wall2Node = new SceneNode("wall_right");
@@ -364,7 +368,7 @@ namespace ttg {
         cameraNode->setLocation({0, 34, 8});
         cam->updateLookupTarget({0, 0, 1});
         cam->updateNearFar(0.5, 60);
-        cam->addPostProcessEffect(new GammaCorrectionEffect());
+        cam->addPostProcessEffect(new BloomEffect());
         cameraMover = new CameraMover(cameraNode->getCamera());
 
 
@@ -424,7 +428,12 @@ namespace ttg {
                 rule.startDelay = 0.0;
                 rule.maxDuration = .50;
                 psystem->addEmitter(peExplosion, rule);
-                targetDummy->setExtraData(psystem);
+                auto particleSystemNode = new SceneNode("particleSystem_" + std::to_string(i));
+                particleSystemNode->disable();
+                particleSystemNode->initAsParticleSystemNode(psystem);
+                // TODO could also be a child of the enemy?!
+                targetDummy->setExtraData(particleSystemNode);
+                enemyExplosionParticles.push_back(particleSystemNode);
             }
 
             enemyList.push_back(targetDummy);
@@ -439,7 +448,7 @@ namespace ttg {
             spawnDecal->setOrientation(glm::angleAxis<float>(glm::radians(-90.0f), glm::vec3{1, 0, 0}));
             spawnDecal->setScale({4, 4, 1});
             MeshDrawData mdd;
-            mdd.shader = basicShaderUnlit;
+            mdd.shader = basicShader;;
             mdd.mesh = quadMesh;
             mdd.castShadow = false;
             mdd.texture = game->getTextureByName("spawn_decal");
@@ -460,7 +469,7 @@ namespace ttg {
         scene->addNode(cameraNode);
         scene->addNode(terrainNode);
         scene->addNode(wall1Node);
-        scene->addNode(wall2Node);
+        // scene->addNode(wall2Node);
         scene->addNode(subTerrain);
         //scene->addNode(hydrantdNode);
         //scene->addNode(roadNode);
@@ -476,6 +485,9 @@ namespace ttg {
         for (auto sd : spawnDecals) {
             scene->addNode(sd);
         }
+        for (auto psn : enemyExplosionParticles) {
+            scene->addNode(psn);
+        }
 
 
         characterController = new CharacterController(padNode);
@@ -489,9 +501,13 @@ namespace ttg {
         playerBulletMeshData = new MeshDrawData();
         playerBulletMeshData->texture = game->getTextureByName("planar_bullet_diffuse");
         playerBulletMeshData->mesh = game->getMeshByName("planar_bullet");
-        playerBulletMeshData->shader = basicShader;
+        playerBulletMeshData->shader = emissiveShader;
         playerBulletMeshData->castShadow = false;
         playerBulletMeshData->subroutineFragBind = "calculateSingleColor";
+        playerBulletMeshData->onRender = [](MeshDrawData md) {
+            glUseProgram(md.shader->handle);
+            md.shader->setFloatValue(20.0f, "emissionFactor");
+        };
         //playerBulletMeshData->lit = false;
         for (int i = 0; i< 50; i++) {
             auto bulletNode = new SceneNode("playerBullet_" + std::to_string(i));

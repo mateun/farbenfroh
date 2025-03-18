@@ -32,7 +32,7 @@ void DefaultGame::renderFPS() {
     sprintf_s(buf, 160, "FT:%6.1fmcs (%d) %4d/%4d",
               ftMicrosAvg, lastAvgFPS, mouse_x, mouse_y);
     flipUvs(false);
-    fpsFont->renderText(buf, {2, -16, 0.9});
+    fpsFont->renderText(buf, {2, -16, 0.1});
 
 
 }
