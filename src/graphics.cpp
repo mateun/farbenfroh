@@ -4408,6 +4408,9 @@ Scene::Scene() {
     worldPosShader->initFromFiles("../assets/shaders/world_pos.vert", "../assets/shaders/world_pos.frag");
     shadowMapShader = new Shader();
     shadowMapShader->initFromFiles("../assets/shaders/shadow_map.vert", "../assets/shaders/shadow_map.frag");
+    quadShader = new Shader();
+    quadShader->initFromFiles("../src/engine/fx/shaders/quad.vert", "../src/engine/fx/shaders/quad.frag");
+    quadMesh = createQuadMesh(PlanePivot::center);
 
     debugFlyCam = new Camera();
     debugFlyCam->type = CameraType::Perspective;
@@ -4415,10 +4418,17 @@ Scene::Scene() {
     debugFlyCam->lookAtTarget = glm::vec3(0, 0, 0);
     debugFlyCam->updateNearFar(0.1, 400);
     flyCamMover = new CameraMover(debugFlyCam);
+    fullScreenFBO = createFrameBuffer(scaled_width, scaled_height);
+
+
 
 }
 
 Scene::~Scene() {
+}
+
+void Scene::setUICamera(Camera *cam) {
+    this->uiCamera = cam;
 }
 
 
@@ -4705,8 +4715,17 @@ void Scene::render() {
 
 #endif
 
-    // Back to our "normal" framebuffer
-    activateFrameBuffer(nullptr);
+    // Back to our "normal" framebuffer or to another offscreen buffer in case we have activated post
+    // processing effects:
+    if (!activeCamera->getPostProcessEffects().empty()) {
+        activateFrameBuffer(fullScreenFBO);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glViewport(0, 0, fullScreenFBO->texture->bitmap->width, fullScreenFBO->texture->bitmap->height);
+    } else {
+        // Render directly to standard framebuffer.
+        activateFrameBuffer(nullptr);
+        glViewport(0, 0, scaled_width, scaled_height);
+    }
 
 
     // 2. Actual render pass
@@ -4752,7 +4771,25 @@ void Scene::render() {
 
     }
 
-    // Render some debug things:
+    // Postprocessing, if active:
+    if (!activeCamera->getPostProcessEffects().empty()) {
+        FrameBuffer* currentFB = fullScreenFBO;
+        for (auto pp : activeCamera->getPostProcessEffects()) {
+            currentFB = pp->apply(currentFB, uiCamera);
+        }
+
+        activateFrameBuffer(nullptr);
+        MeshDrawData mdd;
+        mdd.camera = uiCamera;
+        mdd.mesh = quadMesh;
+        mdd.shader = quadShader;
+        mdd.location = { scaled_width/2, scaled_height/2, -1};
+        mdd.scale = { scaled_width, scaled_height, 1};
+        mdd.texture = currentFB->texture;
+        drawMesh(mdd);
+    }
+
+    // Render some debug stuff:
     if (debugFlyCamActive) {
         for (auto dl : directionalLightNodes) {
             dl->light->renderWorldFrustum(debugFlyCam, cameraNode->getCamera());
@@ -4806,6 +4843,33 @@ std::vector<Centroid *> Mesh::calculateCentroids() {
     return centroids;
 }
 
+PostProcessEffect::PostProcessEffect() {
+    quadMesh = createQuadMesh(PlanePivot::center);
+}
+
+GammaCorrectionEffect::GammaCorrectionEffect(): PostProcessEffect() {
+    gammaCorrectionShader = new Shader();
+    gammaCorrectionShader->initFromFiles("../src/engine/fx/shaders/gamma.vert", "../src/engine/fx/shaders/gamma.frag");
+    effectFrameBuffer = createFrameBuffer(scaled_width, scaled_height);
+}
+
+FrameBuffer* GammaCorrectionEffect::apply(FrameBuffer *sourceFrameBuffer, Camera* camera) {
+    MeshDrawData mdd;
+    mdd.mesh = quadMesh;
+    mdd.camera = camera;
+    mdd.location = { scaled_width/2, scaled_height/2, -1};
+    mdd.scale = { scaled_width, scaled_height, 1};
+    mdd.texture = sourceFrameBuffer->texture;
+    mdd.shader = gammaCorrectionShader;
+    activateFrameBuffer( effectFrameBuffer);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    drawMesh(mdd);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return effectFrameBuffer;
+
+}
+
 Camera::Camera() {
 }
 
@@ -4837,6 +4901,14 @@ float Camera::getMaxFrustumDiagonal() {
 
     return distance(ltnw, rbfw);
 
+}
+
+void Camera::addPostProcessEffect(PostProcessEffect *effect) {
+    postProcessEffects.push_back(effect);
+}
+
+std::vector<PostProcessEffect *> Camera::getPostProcessEffects() {
+    return postProcessEffects;
 }
 
 // Sets up the internal frustum based VAO

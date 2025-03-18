@@ -364,7 +364,9 @@ namespace ttg {
         cameraNode->setLocation({0, 34, 8});
         cam->updateLookupTarget({0, 0, 1});
         cam->updateNearFar(0.5, 60);
+        cam->addPostProcessEffect(new GammaCorrectionEffect());
         cameraMover = new CameraMover(cameraNode->getCamera());
+
 
         heroNode = new SceneNode("hero");
         heroNode->setLocation({0, 0.2, 0});
@@ -454,6 +456,7 @@ namespace ttg {
 
 
         scene = new Scene();
+        scene->setUICamera(game->getUICamera());
         scene->addNode(cameraNode);
         scene->addNode(terrainNode);
         scene->addNode(wall1Node);

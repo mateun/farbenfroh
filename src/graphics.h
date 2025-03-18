@@ -206,6 +206,31 @@ enum class CameraType {
     OrthoGameplay,
 };
 
+class PostProcessEffect {
+public:
+    PostProcessEffect();
+    virtual FrameBuffer* apply(FrameBuffer * frame_buffer, Camera* camera) = 0;
+
+protected:
+    Mesh * quadMesh;
+    FrameBuffer* effectFrameBuffer;
+};
+
+class GammaCorrectionEffect : public PostProcessEffect {
+public:
+    GammaCorrectionEffect();
+    FrameBuffer* apply(FrameBuffer *sourceFrameBuffer, Camera* camera) override;
+
+private:
+    Shader* gammaCorrectionShader = nullptr;
+
+};
+
+class BloomEffect : public PostProcessEffect {
+
+};
+
+
 
 class Camera {
 
@@ -216,6 +241,8 @@ public:
     std::vector<glm::vec3> getFrustumWorldCorners();
 
     float getMaxFrustumDiagonal();
+    void addPostProcessEffect(PostProcessEffect* effect);
+    std::vector<PostProcessEffect*> getPostProcessEffects();
 
     CameraType type;
     glm::vec3 location;
@@ -264,6 +291,8 @@ private:
     // Holds the positions of the shadow camera frustum, mainly for debug
     // drawing.
     GLuint shadowCamFrustumVAO = 0;
+
+    std::vector<PostProcessEffect*> postProcessEffects;
 };
 
 /**
@@ -982,6 +1011,8 @@ public:
     Scene();
     ~Scene();
 
+    void setUICamera(Camera* cam);
+
     void addNode(SceneNode* node);
     void update();
 
@@ -1013,4 +1044,7 @@ private:
     FrameBuffer* raytracedShadowPositionFBO = nullptr;
     Shader * worldPosShader = nullptr;
     Shader * shadowMapShader = nullptr;
+    Shader * quadShader = nullptr;
+    FrameBuffer * fullScreenFBO = nullptr;
+    Mesh * quadMesh = nullptr;
 };
