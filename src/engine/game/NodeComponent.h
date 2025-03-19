@@ -11,12 +11,14 @@ enum class Space {
 };
 
 class NodeTransform {
+  friend class NodeComponent;
 public:
 
   glm::vec3 localPosition();
   glm::vec3 localScale();
   glm::vec3 localOrientation();
   glm::vec3 worldPosition();
+  glm::vec3 localForward();
 
 private:
   glm::vec3 _position;
@@ -41,6 +43,8 @@ public:
   // Some shortcut convenience functions which allow acces to the node transform
   NodeTransform getTransform();
   void setPosition(glm::vec3 position);
+
+  void disable();
 
 
 private:

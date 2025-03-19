@@ -11,6 +11,9 @@ class PlayerBulletComp : public ScriptComponent{
 public:
     void update() override;
 
+private:
+    float lifeTime = 0.0f;
+    float maxLifeInSeconds = 2;
 };
 
 

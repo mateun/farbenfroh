@@ -5,17 +5,21 @@
 #include "PlayerBulletComp.h"
 
 void PlayerBulletComp::update() {
-    auto pos = getTransform().position;
-    pos += getTransform().forward * ftSeconds * 45.0f;
-    b->setLocation(pos);
-    BulletData* bd = (BulletData*) b->getExtraData();
-    bd->currentLifeInSeconds += ftSeconds;
-    if (bd->currentLifeInSeconds >= bd->maxLifeInSeconds) {
-        b->disable();
-        bd->currentLifeInSeconds = 0;
+    auto pos = getTransform().worldPosition();
+    pos += getTransform().localForward() * ftSeconds * 45.0f;
+
+
+    lifeTime += ftSeconds;
+    if (lifeTime >= maxLifeInSeconds) {
+
+        //b->disable();
+        //bd->currentLifeInSeconds = 0;
     }
 
     // Check for collision with enemies
+    // TODO how to get an object such as the enemy list?
+    // How to "pass" this to the script compoenent?
+    // Or allow the script component to get it somehow.
     for (auto e: enemyList) {
         if (!e->isActive()) {
             continue;
