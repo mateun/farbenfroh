@@ -10,6 +10,7 @@ uniform mat4 mat_view;
 uniform mat4 mat_projection;
 
 uniform vec2 uvScale2 = {1, 1};
+uniform vec2 normalUVScale2 = {1, 1};
 uniform float uvScale = 1;
 uniform vec2 uvPan = {0,0};
 
@@ -35,6 +36,7 @@ uniform PointLightData pointLightData[MAX_POINT_LIGHTS];
 uniform int numPointLights = 0;
 
 out vec2 fs_uvs;
+out vec2 fs_normal_uvs;
 out vec3 fs_normals;
 out vec3 fsFogCameraPos;
 out vec3 fsWorldPos;
@@ -55,6 +57,10 @@ void main() {
     gl_Position = mat_projection * mat_view * mat_world* vec4(pos, 1);
     fs_uvs = uvs;
     fs_uvs.y = 1- uvs.y;
+
+    fs_normal_uvs = uvs;
+    fs_normal_uvs *= normalUVScale2;
+
 
     fs_uvs *= uvScale;
     fs_uvs *= uvScale2;
@@ -94,5 +100,6 @@ void main() {
 
 void uvPanning() {
     fs_uvs += uvPan;
+    fs_normal_uvs += uvPan;
 
 }

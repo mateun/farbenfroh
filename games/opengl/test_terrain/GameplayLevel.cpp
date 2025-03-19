@@ -14,6 +14,8 @@ namespace ttg {
     }
 
     void GameplayLevel::renderShadowBias() {
+        if (scene->getLightsOfType(LightType::Directional).empty()) return;
+
         static FBFont* font;
         if (!font) {
             font = new FBFont("../assets/font.bmp");
@@ -168,6 +170,15 @@ namespace ttg {
     }
 
     void GameplayLevel::update() {
+
+        // TODO maybe move this into the actual node, so
+        // each node has some logic component which takes over the actual movement etc.
+        // Or we do it externally.. not sure, what is actually better. Encapsulation favors
+        // the script component.
+        static float timePassed= 0;
+        timePassed += ftSeconds;
+        plNode1->setLocation({-5 + (10 * sinf(timePassed)), 5, 2});
+
         scene->update();
         if (keyPressed(VK_F11)) {
             inFlyCamDebugMode = !inFlyCamDebugMode;
@@ -226,13 +237,14 @@ namespace ttg {
         terrainNode = new SceneNode("terrain");
         //terrainNode->disable();
         //smd.mesh = terrain->getMesh();
-        smd.mesh = game->getMeshByName("cube_ground");
-        terrainNode->setScale({1, 1, 1});
+        smd.mesh = game->getMeshByName("cube_ground2");
+        terrainNode->setScale({2, 1, 2});
         terrainNode->setLocation({0, -1, 0});
         smd.shader = basicShader;
         smd.texture = game->getTextureByName("ground_albedo");
         smd.normalMap = game->getTextureByName("ground_normal");
-        smd.uvScale2 = {20, 20};
+        smd.uvScale2 = {60, 60};
+        smd.normalUVScale2 = {200, 200};
         smd.uvScale = 1;
         terrainNode->initAsMeshNode(smd);
 
@@ -250,6 +262,41 @@ namespace ttg {
         smd.uvScale2 = {30, 30};
         smd.uvScale = 1;
         subTerrain->initAsMeshNode(smd);
+
+        auto grassNode1 = new SceneNode("grassPart1");
+        smd.mesh = game->getMeshByName("grass_field");
+        grassNode1->setScale({4, 5,4});
+        grassNode1->setLocation({4, -0.15, -3});
+        smd.shader = basicShader;
+        smd.texture = game->getTextureByName("grass_diffuse");
+        smd.uvScale2 = {4, 4};
+        smd.uvScale = 1;
+        grassNode1->initAsMeshNode(smd);
+
+        auto grassNode2 = new SceneNode("grassPart2");
+        smd.mesh = game->getMeshByName("grass_field");
+        grassNode2->setScale({4, 4.2,4});
+        grassNode2->setLocation({-14, -0.15, 2});
+        grassNode2->setOrientation(glm::angleAxis(glm::radians(14.0f), glm::vec3(0, 1, 0)));
+        grassNode2->initAsMeshNode(smd);
+
+        auto stoneFieldNode1 = new SceneNode("grassPart1");
+        stoneFieldNode1->setScale({1, 1,1 });
+        stoneFieldNode1->setLocation({-8, -0.12, 0});
+        //grassNode2->setOrientation(glm::angleAxis(glm::radians(34.0f), glm::vec3(0, 1, 0)));
+        smd.mesh = game->getMeshByName("stone_field");
+        smd.tint = {1, 1, 1, 1};
+        smd.texture = game->getTextureByName("asphalt_albedo");
+        smd.normalMap = game->getTextureByName("asphalt_normal");
+        smd.shader = basicShader;
+        smd.uvScale2 = {1, 1};
+        smd.uvScale = 1;
+        stoneFieldNode1->initAsMeshNode(smd);
+
+        auto stoneFieldNode2 = new SceneNode("grassPart1");
+        stoneFieldNode2->setScale({1, 1,1 });
+        stoneFieldNode2->setLocation({8, -0.12, 3});
+        stoneFieldNode2->initAsMeshNode(smd);
 
         auto roadNode = new SceneNode("road");
         smd.mesh = game->getMeshByName("road_plane");
@@ -334,31 +381,35 @@ namespace ttg {
 
 
         auto sunNode = new SceneNode("sun");
+        //sunNode->disable();
         auto sun = new Light();
         sun->type = LightType::Directional;
-        sun->color = glm::vec4(.9, .9, .9, 1);
-        sun->location = glm::vec3(4,5, 2);
+        sun->color = glm::vec4(.615, .615, .718, 1);
+        sun->location = glm::vec3(6,5, 2.5);
         sun->lookAtTarget = glm::vec3(0, 0, 0);
         sun->shadowBias = 0.001;
         sun->calculateDirectionFromCurrentLocationLookat();
         sun->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
         sunNode->initAsLightNode(sun);
 
-        // auto pointLight1 = new Light();
-        // pointLight1->type = LightType::Point;
-        // pointLight1->color = glm::vec3(0.8, 0.1, 0.1);
-        // pointLight1->location = {4, 4,0};
-        // pointLight1->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
-        // auto plNode1 = new SceneNode();
-        // plNode1->initAsLightNode(pointLight1);
-        //
-        // auto pointLight2 = new Light();
-        // pointLight2->type = LightType::Point;
-        // pointLight2->color = glm::vec3(0.0, 0.0, 1);
-        // pointLight2->location = {-3, 4,0};
-        // pointLight2->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
-        // auto plNode2 = new SceneNode();
-        // plNode2->initAsLightNode(pointLight2);
+
+        auto pointLight1 = new Light();
+        pointLight1->type = LightType::Point;
+        pointLight1->color = glm::vec3(1.2, 1.1, 1.1);
+        pointLight1->location = {4, 4,0};
+        pointLight1->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+        plNode1 = new SceneNode();
+        plNode1->initAsLightNode(pointLight1);
+
+        auto plNode2 = new SceneNode();
+        plNode2->setLocation({-13, 2,0});
+        auto pointLight2 = new Light();
+        pointLight2->type = LightType::Point;
+        pointLight2->color = glm::vec3(.1, 0.0, .2);
+        pointLight2->location = plNode2->getLocation();
+        pointLight2->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
+
+        plNode2->initAsLightNode(pointLight2);
 
         cameraNode = new SceneNode("camera");
         cameraNode->enable();
@@ -403,26 +454,24 @@ namespace ttg {
         padMeshData.shader = heroMeshData.shader;
         padNode->initAsMeshNode(padMeshData);
 
-        // Prepare emitters for enemy explosions:
-
-
         // Enemies
-        for (int i = 0; i < 25; i++) {
-            auto targetDummy = new SceneNode("targetDummy_" + std::to_string(i));
-            targetDummy->setLocation({-25 + (i*5), 0, -6});
+        for (int i = 0; i < 3; i++) {
+            auto enemy = new SceneNode("spiderbot1_" + std::to_string(i));
+            enemy->setLocation({-5 + (i*8), 0, -6});
             MeshDrawData targetDummyMeshData;
             targetDummyMeshData.shader = basicShader;
-            targetDummyMeshData.mesh = game->getMeshByName("target_dummy");
-            targetDummyMeshData.texture = game->getTextureByName("dummy-target-diffuse");
-            targetDummy->initAsMeshNode(targetDummyMeshData);
+            targetDummyMeshData.mesh = game->getMeshByName("spiderbot4");
+            targetDummyMeshData.texture = game->getTextureByName("spiderbot1_diffuse");
+            // targetDummyMeshData.normalMap = game->getTextureByName("ground_normal");
+            enemy->initAsMeshNode(targetDummyMeshData);
             {
-                auto peSmoke = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, targetDummy->getLocation(), 200, true, false);
-                auto peExplosion = new gru::ParticleEmitter(game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), gru::EmitterType::EXPLOSION, targetDummy->getLocation(), 100, true, false);
+                auto peSmoke = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, enemy->getLocation(), 200, true, false);
+                auto peExplosion = new gru::ParticleEmitter(game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), gru::EmitterType::EXPLOSION, enemy->getLocation(), 100, true, false);
                 gru::EmitterExecutionRule rule;
                 rule.loop = false;
                 rule.startDelay = .1;
                 rule.maxDuration = 1.50;
-                rule.locationOffset = targetDummy->getLocation();   // TODO actually apply this somewhere
+                rule.locationOffset = enemy->getLocation();   // TODO actually apply this somewhere
                 auto psystem = new gru::ParticleSystem();
                 psystem->addEmitter(peSmoke, rule);
                 rule.startDelay = 0.0;
@@ -432,11 +481,11 @@ namespace ttg {
                 particleSystemNode->disable();
                 particleSystemNode->initAsParticleSystemNode(psystem);
                 // TODO could also be a child of the enemy?!
-                targetDummy->setExtraData(particleSystemNode);
+                enemy->setExtraData(particleSystemNode);
                 enemyExplosionParticles.push_back(particleSystemNode);
             }
 
-            enemyList.push_back(targetDummy);
+            enemyList.push_back(enemy);
         }
 
         auto quadMesh = createQuadMesh(PlanePivot::center);
@@ -468,9 +517,13 @@ namespace ttg {
         scene->setUICamera(game->getUICamera());
         scene->addNode(cameraNode);
         scene->addNode(terrainNode);
-        scene->addNode(wall1Node);
-        // scene->addNode(wall2Node);
+        // scene->addNode(plNode1);
+        // scene->addNode(plNode2);
         scene->addNode(subTerrain);
+        scene->addNode(grassNode1);
+        scene->addNode(grassNode2);
+        scene->addNode(stoneFieldNode1);
+        scene->addNode(stoneFieldNode2);
         //scene->addNode(hydrantdNode);
         //scene->addNode(roadNode);
         //scene->addNode(roadNode2);
@@ -490,6 +543,8 @@ namespace ttg {
         }
 
 
+
+
         characterController = new CharacterController(padNode);
         characterController->setMovementSpeed(10);
         characterController->setRotationSpeed(400);
@@ -502,14 +557,14 @@ namespace ttg {
         playerBulletMeshData->texture = game->getTextureByName("planar_bullet_diffuse");
         playerBulletMeshData->mesh = game->getMeshByName("planar_bullet");
         playerBulletMeshData->shader = emissiveShader;
-        playerBulletMeshData->castShadow = false;
+        playerBulletMeshData->castShadow = true;
         playerBulletMeshData->subroutineFragBind = "calculateSingleColor";
         playerBulletMeshData->onRender = [](MeshDrawData md) {
             glUseProgram(md.shader->handle);
-            md.shader->setFloatValue(20.0f, "emissionFactor");
+            md.shader->setFloatValue(6.0f, "emissionFactor");
         };
         //playerBulletMeshData->lit = false;
-        for (int i = 0; i< 50; i++) {
+        for (int i = 0; i< 30; i++) {
             auto bulletNode = new SceneNode("playerBullet_" + std::to_string(i));
             bulletNode->disable();
             bulletNode->initAsMeshNode(*playerBulletMeshData);

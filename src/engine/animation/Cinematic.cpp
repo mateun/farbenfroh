@@ -3,7 +3,8 @@
 //
 
 #include "Cinematic.h"
-
+#include <engine/game/Scene.h>
+#include <engine/game/SceneNode.h>
 #include <ranges>
 
 Cinematic::Cinematic(Scene *scene, float duration) : _scene(scene) , _duration(duration) {

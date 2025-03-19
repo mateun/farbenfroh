@@ -58,6 +58,8 @@ public:
     SceneNode* heroNode = nullptr;
     SceneNode * padNode = nullptr;
     SceneNode* flyCamNode = nullptr;
+    SceneNode * plNode1 = nullptr;
+
     float shadowBias =0;
     CharacterController * characterController = nullptr;
     MeshDrawData * playerBulletMeshData = nullptr;

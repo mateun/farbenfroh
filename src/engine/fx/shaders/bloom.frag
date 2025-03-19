@@ -8,18 +8,18 @@ in vec2 bloom_uvs;
 
 out vec4 color;
 
+/*
+* Adding the bright bloom parts to the original image to have glow effect.
+*/
 void main() {
     vec3 hdrColor = texture(scene, fs_uvs).rgb;
     vec3 bloomColor = texture(bloomBlur, bloom_uvs).rgb;
 
-    float bloomIntensity = 2.2;
+    float bloomIntensity = 2.7f;
+    bloomColor.rgb *= bloomIntensity; // TODO make tint parameterized?
 
-    hdrColor += bloomColor * bloomIntensity;; // additive blending
-    // tone mapping
-    vec3 result = vec3(1.0) - exp(-hdrColor * 2);
-    // for now no gamma...
-    float gamma = 2.2f;
-    result = pow(result, vec3(1.0 / gamma));
+    hdrColor += bloomColor; // additive blending
+
     color = vec4(hdrColor, 1.0);
 
 }

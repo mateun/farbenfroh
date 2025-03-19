@@ -35,6 +35,9 @@
 #include <engine/fx/ParticleSystem.cpp>
 #include <engine/compute/ComputeShader.cpp>
 #include <engine/profiling/PerformanceTimer.cpp>
+#include <engine/game/SceneNode.cpp>
+#include <engine/game/Scene.cpp>
+#include <engine/game/NodeComponent.cpp>
 
 //#include "../games/simple_king/king_main.cpp"
 
@@ -90,6 +93,7 @@
 #include "../games/opengl/test_terrain/GameplayLevel.cpp"
 #include "../games/opengl/test_terrain/LevelEditor.cpp"
 #include "../games/opengl/test_terrain/EnemyExplosionComponent.cpp"
+#include "../games/opengl/test_terrain/PlayerBulletComp.cpp"
 
 //#include "../src/engine/editor/shadergraph/ShaderGraph.cpp"
 

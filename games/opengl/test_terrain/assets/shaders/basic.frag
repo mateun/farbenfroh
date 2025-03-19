@@ -37,6 +37,7 @@ in vec4 fragPosPointLightSpace[MAX_POINT_LIGHTS];
 in vec3 fsFogCameraPos;
 in vec3 fsWorldPos;
 in vec2 fs_uvs;
+in vec2 fs_normal_uvs;
 in vec3 viewPos;
 in mat3 tbn;
 in vec3 tangentFragPos;
@@ -158,7 +159,7 @@ void main() {
     vec4 albedo = texture(diffuseTexture, fs_uvs);
 
     //Extract normal from map
-    vec3 normal = texture(normalMap, fs_uvs).rgb;
+    vec3 normal = texture(normalMap, fs_normal_uvs).rgb;
     normal = normalize(normal * 2.0 - 1.0);
 
     color = calculateDirectionalLight(albedo, normal);
