@@ -215,7 +215,8 @@ namespace ttg {
                 bd->currentLifeInSeconds = 0;
             }
 
-            updatePlayerBullets();
+            // TODO actually implement the movment code within the PlayerBulletComponent!
+            //updatePlayerBullets();
 
         }
 

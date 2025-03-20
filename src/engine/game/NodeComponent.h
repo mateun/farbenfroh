@@ -10,23 +10,40 @@ enum class Space {
   LOCAL,
 };
 
-class NodeTransform {
-  friend class NodeComponent;
-public:
+#define DEFAULT_TRANSFORM std::make_shared<NodeTransform>()
 
-  glm::vec3 localPosition();
-  glm::vec3 localScale();
-  glm::vec3 localOrientation();
-  glm::vec3 worldPosition();
-  glm::vec3 localForward();
+class NodeTransform {
+
+public:
+  NodeTransform();
+  NodeTransform(std::shared_ptr<NodeTransform> parent);
+  glm::vec3 localPosition() const;
+  glm::vec3 localScale() const;
+  glm::quat localOrientation() const;
+
+
+  glm::vec3 forward();
+  glm::vec3 position() const;
+
+  void collectParents(std::vector<std::shared_ptr<NodeTransform>> &parents) const;
+
+  glm::quat orientation() const;
+
+  std::shared_ptr<NodeTransform> parent() const;
 
 private:
-  glm::vec3 _position;
-  glm::quat _orientation;
-  glm::vec3 _scale;
-  glm::vec3 _forward;
-  glm::vec3 _right;
-  glm::vec3 _up;
+  glm::vec3 _position = {0, 0, 0} ;
+  glm::vec3 _localPosition = {0, 0, 0};
+  glm::quat _orientation = {0, 0, 0, 1};
+  glm::quat _localOrientation = {0, 0, 0, 1};
+  glm::vec3 _scale = {1, 1, 1};
+  glm::vec3 _localScale = {1, 1, 1};
+
+  glm::vec3 _forward = {0, 0, -1};
+  glm::vec3 _right = {1, 0, 0};
+  glm::vec3 _up = {0, 1, 0};
+
+  std::shared_ptr<NodeTransform> _parent;
 
 };
 
@@ -40,20 +57,16 @@ class NodeComponent {
 public:
   virtual void invoke() = 0;
 
-  // Some shortcut convenience functions which allow acces to the node transform
-  NodeTransform getTransform();
-  void setPosition(glm::vec3 position);
+  SceneNode* getNode();
 
   void disable();
+  void enable();
 
 
 private:
-  void setNode(SceneNode* node) {
-    this->node = node;
-  }
-
+  void setNode(SceneNode* node);
   SceneNode* node = nullptr;
-
+  bool enabled = true;
 };
 
 /**

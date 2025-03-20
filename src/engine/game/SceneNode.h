@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <string>
 #include "graphics.h"
+#include "NodeComponent.h"
 
 class NodeComponent;
 class MeshDrawData;
@@ -23,7 +24,8 @@ class SceneNode {
     friend class Scene;
 
 public:
-    SceneNode(const std::string& nodeId = "undefined");
+    SceneNode();
+    SceneNode(const std::string& nodeId, std::shared_ptr<NodeTransform> transform = DEFAULT_TRANSFORM);
     ~SceneNode();
 
     void initAsMeshNode(const MeshDrawData& meshData);
@@ -61,11 +63,11 @@ public:
 
     const std::vector<glm::mat4>& boneMatrices();
 
+    void udpate();
     void disable();
     void enable();
 
     void setParent(SceneNode * scene_node);
-
     void addChild(SceneNode *child);
 
     MeshDrawData getMeshData();
@@ -73,13 +75,16 @@ public:
     void setExtraData(void* data);
     void* getExtraData();
 
-    void udpate();
-    void addComponent(NodeComponent * component);
+    template <typename T>
+    std::vector<std::shared_ptr<T> > getComponents() const;
+    void addComponent(std::shared_ptr<NodeComponent> component);
 
     glm::quat getOrientation();
 
+    std::shared_ptr<NodeTransform> transform();
+
 private:
-    std::vector<NodeComponent*> components;
+    std::vector<std::shared_ptr<NodeComponent>> _components;
 
     // These are type specific fields and can be null
     std::string id;
@@ -92,6 +97,7 @@ private:
     Light* light = nullptr;
     MeshDrawData meshData;
 
+    std::shared_ptr<NodeTransform> _transform;
     glm::vec3 _location = glm::vec3(0);
     glm::vec3 _velocity = glm::vec3(0);
     glm::vec3 _scale = glm::vec3(1.0f);
@@ -107,6 +113,7 @@ private:
     std::vector<glm::mat4> _boneMatrices;
     SceneNodeType _type;
     bool _active = true;
+
     SceneNode * parent = nullptr;
     std::vector<SceneNode*> children;
 
@@ -114,7 +121,17 @@ private:
 
 };
 
-
+template<typename T>
+std::vector<std::shared_ptr<T>> SceneNode::getComponents() const {
+    std::vector<std::shared_ptr<T> > components;
+    for (const auto& comp : _components) {
+        // Use dynamic_cast to check if the component is of type T
+        if (auto specific = std::dynamic_pointer_cast<T>(comp)) {
+            components.push_back(specific);
+        }
+    }
+    return components;
+}
 
 
 #endif //SCENENODE_H

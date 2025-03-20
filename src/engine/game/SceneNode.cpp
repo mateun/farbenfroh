@@ -6,7 +6,13 @@
 
 #include "NodeComponent.h"
 
-SceneNode::SceneNode(const std::string &nodeId) : id(nodeId){
+
+SceneNode::SceneNode() {
+    id = "anonymous";
+    _transform = DEFAULT_TRANSFORM;
+}
+
+SceneNode::SceneNode(const std::string &nodeId, std::shared_ptr<NodeTransform> transform) : id (nodeId), _transform(transform){
 }
 
 SceneNode::~SceneNode() {
@@ -124,18 +130,22 @@ void * SceneNode::getExtraData() {
 }
 
 void SceneNode::udpate() {
-    for (auto nc : components) {
+    for (auto nc : _components) {
         nc->invoke();
     }
 }
 
-void SceneNode::addComponent(NodeComponent *component) {
-    components.push_back(component);
+void SceneNode::addComponent(std::shared_ptr<NodeComponent> component) {
+    _components.push_back(component);
     component->setNode(this);
 }
 
 glm::quat SceneNode::getOrientation() {
     return orientation;
+}
+
+std::shared_ptr<NodeTransform> SceneNode::transform() {
+    return _transform;
 }
 
 

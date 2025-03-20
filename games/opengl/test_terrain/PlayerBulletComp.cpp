@@ -3,11 +3,14 @@
 //
 
 #include "PlayerBulletComp.h"
+#include "EnemyHitManager.h"
+
+PlayerBulletComp::PlayerBulletComp(const std::vector<std::shared_ptr<SceneNode>> &enemyNodes) : _enemyNodes(enemyNodes) {
+}
 
 void PlayerBulletComp::update() {
-    auto pos = getTransform().worldPosition();
-    pos += getTransform().localForward() * ftSeconds * 45.0f;
-
+    auto pos = getNode()->transform()->position();
+    pos += getNode()->transform()->forward() * ftSeconds * 45.0f;
 
     lifeTime += ftSeconds;
     if (lifeTime >= maxLifeInSeconds) {
@@ -17,16 +20,25 @@ void PlayerBulletComp::update() {
     }
 
     // Check for collision with enemies
-    // TODO how to get an object such as the enemy list?
-    // How to "pass" this to the script compoenent?
-    // Or allow the script component to get it somehow.
-    for (auto e: enemyList) {
+    for (auto e: _enemyNodes) {
         if (!e->isActive()) {
             continue;
         }
         float distance = glm::distance(pos, e->getLocation());
         if (distance < 2) {
-            b->disable();
+            // Instead of disabling directly the node (why would we know to do this?)
+            // we should call a better api on the enemy nodes bulletHit component.
+            // This is better encapsulation, and we do not forcefully just disable the
+            // other node directly.
+            auto hitManagers = e->getComponents<EnemyHitManager>();
+            if (hitManagers.empty()) {
+                throw std::runtime_error("expectint at least one EnemyHitManager in Enemy Scene Node, but none found!");
+            }
+
+            for (auto hitManager: hitManagers) {
+                hitManager->reportBulletHit(this);
+            }
+
             e->disable();
             auto explosionComp = (SceneNode*) e->getExtraData();
             explosionComp->enable();
