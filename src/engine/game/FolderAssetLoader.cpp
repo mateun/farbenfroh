@@ -22,7 +22,7 @@ void FolderAssetLoader::load(const std::string &assetFolder) {
                     extension == ".bmp" ||
                     extension == ".jpg" ) {
                     std::string pureName = entry.path().filename().stem().string();
-                    Texture* texture = nullptr;
+                    std::shared_ptr<Texture> texture = nullptr;
                     if (pureName.contains("_n") || pureName.contains("_norm")) {
                         // We use linear color space for normal maps, instead of sRGB for albedos.
                         texture = createTextureFromFile(entry.path().string(), GL_RGBA, GL_RGBA8);
@@ -54,14 +54,14 @@ void FolderAssetLoader::load(const std::string &assetFolder) {
     }
 }
 
-Texture *FolderAssetLoader::getTexture(const std::string name) {
+std::shared_ptr<Texture> FolderAssetLoader::getTexture(const std::string& name) {
     return _textureMap[name];
 }
 
-Sound * FolderAssetLoader::getSound(const std::string name) {
+Sound * FolderAssetLoader::getSound(const std::string& name) {
     return _soundMap[name];
 }
 
-Mesh *FolderAssetLoader::getMesh(const std::string name) {
+Mesh *FolderAssetLoader::getMesh(const std::string& name) {
     return _meshMap[name];
 }

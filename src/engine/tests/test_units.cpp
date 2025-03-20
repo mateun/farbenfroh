@@ -4,25 +4,34 @@
 
 // All the files we need as the framework needed for testing
 #include "../../windows.cpp"
-#include "../io/io.cpp"
-#include "../io/json.cpp"
-#include "../sound/sound.cpp"
-#include "../math/math3d.cpp"
-#include "../game/game_model.cpp"
-#include "../game/default_game.cpp"
-#include "../game/FolderAssetLoader.cpp"
-#include "../editor/editor.cpp"
-#include "../animation/AnimationPlayer.cpp"
-#include "../algo/Bvh.cpp"
-#include "../input/UpdateSwitcher.cpp"
-#include "../vulkan/VulkanRenderer.cpp"
-#include "..//lighting/Light.cpp"
-#include "../../graphics.cpp"
-#include "../animation/CharacterController.cpp"
-#include "../animation/AnimationBlender.cpp"
-#include "../animation/AnimationState.cpp"
-#include "../animation/AnimationController.cpp"
-#include "../animation/AnimationTransition.cpp"
-#include "../animation/BoneMatrixCalculator.cpp"
-#include "../animation/Pose.cpp"
+
+#include <engine/io/io.cpp>
+#include <engine/io/json.cpp>
+#include <engine/sound/sound.cpp>
+#include <engine/math/math3d.cpp>
+#include <engine/game/game_model.cpp>
+#include <engine/game/default_game.cpp>
+#include <engine/game/FolderAssetLoader.cpp>
+#include <engine/editor/editor.cpp>
+#include <engine/animation/AnimationPlayer.cpp>
+#include <engine/algo/Bvh.cpp>
+#include <engine/input/UpdateSwitcher.cpp>
+#include <engine/vulkan/VulkanRenderer.cpp>
+#include <engine//lighting/Light.cpp>
+#include <engine/../graphics.cpp>
+
+#include <engine/animation/CharacterController.cpp>
+#include <engine/animation/AnimationBlender.cpp>
+#include <engine/animation/AnimationState.cpp>
+#include <engine/animation/Animation.cpp>
+
+#include <engine/animation/JointMask.cpp>
+#include <engine/animation/AnimationController.cpp>
+#include <engine/animation/AnimationTransition.cpp>
+#include <engine/animation/BoneMatrixCalculator.cpp>
+#include <engine/animation/Pose.cpp>
+#include <engine/algo/VectorUtils.cpp>
+#include <engine/game/SceneNode.cpp>
+#include <engine/game/NodeComponent.cpp>
+#include <engine/animation/PerBoneBlendData.cpp>
 

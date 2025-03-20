@@ -26,7 +26,7 @@ namespace editor {
         Level* level;
         GameObject* currentSelectedGameObjectInTree = nullptr;
         FolderAssetLoader *assetLoader = nullptr;
-        FrameBuffer* skeletalMeshWindowFrameBuffer = nullptr;
+        std::unique_ptr<FrameBuffer> skeletalMeshWindowFrameBuffer = nullptr;
         Animation* currentAnimation = nullptr;
         float blendTimestamp = 0;
         float blendWeight = 0.5;
@@ -35,7 +35,7 @@ namespace editor {
         bool animationPlaying = false;
         Camera* _meshViewerCamera = nullptr;
         Mesh* importedMesh = nullptr;
-        Texture* importedTexture = nullptr;
+        std::unique_ptr<Texture> importedTexture = nullptr;
         std::map<std::string, Animation*> importedAnimations;
         CameraMover* cameraMover = nullptr;
         std::string lastImportedMeshFileName = "";

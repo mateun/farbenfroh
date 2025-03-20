@@ -115,7 +115,7 @@ Sound * DefaultGame::getSoundByName(const std::string &name) {
 }
 
 Texture* DefaultGame::getTextureByName(const std::string &name) {
-    return folderAssetLoader->getTexture(name);
+    return folderAssetLoader->getTexture(name).get();
 
 }
 

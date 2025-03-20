@@ -7,6 +7,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <map>
 
 struct MeshDrawData;
 class ComputeShader;
@@ -34,6 +35,21 @@ namespace gru {
     TRAIL
   };
 
+  class ShaderFactory {
+  public:
+    static std::shared_ptr<Shader> getShaderByType(EmitterType type);
+    static std::shared_ptr<ComputeShader> getComputeShaderByType(EmitterType type);
+
+  private:
+    static std::shared_ptr<Shader> smokeShader;
+    static std::shared_ptr<Shader> explosionShader;
+    static std::shared_ptr<ComputeShader> smokeComputeShader;
+    static std::shared_ptr<ComputeShader> fireComputeShader;
+    static std::shared_ptr<ComputeShader> trailComputeShader;
+    static std::shared_ptr<ComputeShader> explosionComputeShader;
+
+
+  };
 
   class ParticleEmitter {
   public:
@@ -44,9 +60,6 @@ namespace gru {
 
     bool isActive();
 
-    Shader * getShaderByType(EmitterType type) const;
-
-    static ComputeShader * getComputeShader(EmitterType type);
 
     /**
     * If mesh is a nullptr, a quad will be used.
@@ -54,7 +67,7 @@ namespace gru {
     ParticleEmitter(Mesh* mesh, Texture* texture, EmitterType type, glm::vec3 location = {0,0, 0}, int numParticles = 5000, bool useInstancing = true, bool loop = false);
     void reset();
     void update();
-    void draw(Camera* camera) const;
+    void draw(const Camera* camera) const;
 
   private:
     bool initialized = false;
@@ -74,12 +87,12 @@ namespace gru {
     bool done = false;
     float gravityValue = -9.81f;
     float initialSpeed = 1;
-    Mesh* mesh = nullptr;
-    Texture* texture =nullptr;
+    std::shared_ptr<Mesh> mesh = nullptr;
+    std::shared_ptr<Texture> texture =nullptr;
     std::vector<Particle> particles;
 
-    Shader * particleShader = nullptr;
-    ComputeShader* computeShader = nullptr;
+    std::shared_ptr<Shader> particleShader = nullptr;
+    std::shared_ptr<ComputeShader> computeShader = nullptr;
 
     // This holds vertices, uvs, normals, tangents for every particle.
     // UVs and normals don't change per frame, but the position does,
@@ -127,7 +140,7 @@ namespace gru {
   public:
     void addEmitter(ParticleEmitter* emitter, EmitterExecutionRule emitterRule);
     void update();
-    void render(Camera* camera);
+    void render(const Camera* camera);
 
   private:
     std::vector<ParticleEmitter*> emitters;

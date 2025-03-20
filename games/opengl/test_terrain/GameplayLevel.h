@@ -45,8 +45,7 @@ public:
 
     Terrain * terrain = nullptr;
     Scene * scene = nullptr;
-    SceneNode * terrainNode = nullptr;
-    SceneNode * shotCursorNode = nullptr;
+
     Shader * basicShader = nullptr;
     Shader * basicShaderUnlit = nullptr;
     Shader * emissiveShader = nullptr;
@@ -54,21 +53,18 @@ public:
     Camera* debugFlyCam = nullptr;
     CameraMover* flyCamMover = nullptr;
     bool inFlyCamDebugMode = false;
-    SceneNode * cameraNode = nullptr;
-    SceneNode* heroNode = nullptr;
-    SceneNode * padNode = nullptr;
-    SceneNode* flyCamNode = nullptr;
-    SceneNode * plNode1 = nullptr;
+
+
 
     float shadowBias =0;
     CharacterController * characterController = nullptr;
     MeshDrawData * playerBulletMeshData = nullptr;
     std::vector<SceneNode*> playerBulletPool;
-    std::vector<SceneNode*> enemyList;
+
     gru::ParticleEmitter * peSmoke0 = nullptr;
     gru::ParticleEmitter * peExplosion0 = nullptr;
     gru::ParticleEmitter * peSmoke2 = nullptr;
-    std::vector<SceneNode*> enemyExplosionParticles;
+
     gru::ParticleSystem * psystem0 = nullptr;
 
 };

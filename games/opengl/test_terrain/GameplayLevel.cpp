@@ -50,6 +50,9 @@ namespace ttg {
         flipUvs(false);
         font->renderText(buf, {2, scaled_height - 40, 0.88});
 
+        auto padNode = scene->findNodeById("heroPad");
+        auto cameraNode = scene->findNodeById("camera");
+
         sprintf_s(buf, 160, "# player location:%3.2f/%3.2f/%3.2f",
                   padNode->getLocation().x, padNode->getLocation().y, padNode->getLocation().z);
         font->renderText(buf, {2, scaled_height - 102, 0.87});
@@ -105,41 +108,45 @@ namespace ttg {
     //     }
     // }
 
-    void GameplayLevel::updatePlayerBullets() {
-        for (auto b : playerBulletPool) {
-            if (!b->isActive()) {
-                continue;
-            }
-
-            auto pos = b->getLocation();
-            pos += b->getForwardVector() * ftSeconds * 45.0f;
-            b->setLocation(pos);
-            BulletData* bd = (BulletData*) b->getExtraData();
-            bd->currentLifeInSeconds += ftSeconds;
-            if (bd->currentLifeInSeconds >= bd->maxLifeInSeconds) {
-                b->disable();
-                bd->currentLifeInSeconds = 0;
-            }
-
-            // Check for collision with enemies
-            for (auto e: enemyList) {
-                if (!e->isActive()) {
-                    continue;
-                }
-                float distance = glm::distance(pos, e->getLocation());
-                if (distance < 2) {
-                    b->disable();
-                    e->disable();
-                    auto explosionComp = (SceneNode*) e->getExtraData();
-                    explosionComp->enable();
-                }
-            }
-
-            // TODO check wall collision
-        }
-    }
+    // Should no longer be needed, only kept for reference
+    // until playerBulletComponent is fully ready.
+    // void GameplayLevel::updatePlayerBullets() {
+    //     for (auto b : playerBulletPool) {
+    //         if (!b->isActive()) {
+    //             continue;
+    //         }
+    //
+    //         auto pos = b->getLocation();
+    //         pos += b->getForwardVector() * ftSeconds * 45.0f;
+    //         b->setLocation(pos);
+    //         BulletData* bd = (BulletData*) b->getExtraData();
+    //         bd->currentLifeInSeconds += ftSeconds;
+    //         if (bd->currentLifeInSeconds >= bd->maxLifeInSeconds) {
+    //             b->disable();
+    //             bd->currentLifeInSeconds = 0;
+    //         }
+    //
+    //         // Check for collision with enemies
+    //         for (auto e: enemyList) {
+    //             if (!e->isActive()) {
+    //                 continue;
+    //             }
+    //             float distance = glm::distance(pos, e->getLocation());
+    //             if (distance < 2) {
+    //                 b->disable();
+    //                 e->disable();
+    //                 auto explosionComp = (SceneNode*) e->getExtraData();
+    //                 explosionComp->enable();
+    //             }
+    //         }
+    //
+    //         // TODO check wall collision
+    //     }
+    // }
 
     void GameplayLevel::checkPlayerCollision() {
+        auto padNode = scene->findNodeById("heroPad");
+
         // First check all walls
         // left
         if (padNode->getLocation().x < -22.5f) {
@@ -152,6 +159,9 @@ namespace ttg {
     }
 
     void GameplayLevel::cameraUpdate() {
+        auto padNode = scene->findNodeById("heroPad");
+        auto cameraNode = scene->findNodeById("camera");
+
         // We want the camera to follow the player, but with a smooth lag.
         // This is the ideal position we want to be in.
         // If the player moves away from us, we try to catch up to him.
@@ -170,6 +180,8 @@ namespace ttg {
     }
 
     void GameplayLevel::update() {
+
+        auto plNode1 = scene->findNodeById("pointLight1");
 
         // TODO maybe move this into the actual node, so
         // each node has some logic component which takes over the actual movement etc.
@@ -196,6 +208,8 @@ namespace ttg {
             checkPlayerCollision();
             cameraUpdate();
 
+            auto padNode = scene->findNodeById("heroPad");
+
 
             // Player shooting
             // TODO move into own "controller" class?
@@ -214,6 +228,7 @@ namespace ttg {
                 BulletData* bd = (BulletData*)bulletNode->getExtraData();
                 bd->currentLifeInSeconds = 0;
             }
+
 
             // TODO actually implement the movment code within the PlayerBulletComponent!
             //updatePlayerBullets();
@@ -235,7 +250,7 @@ namespace ttg {
 
         MeshDrawData smd;
 
-        terrainNode = new SceneNode("terrain");
+        auto terrainNode = std::make_unique<SceneNode>("terrain");
         //terrainNode->disable();
         //smd.mesh = terrain->getMesh();
         smd.mesh = game->getMeshByName("cube_ground2");
@@ -249,7 +264,7 @@ namespace ttg {
         smd.uvScale = 1;
         terrainNode->initAsMeshNode(smd);
 
-        auto subTerrain = new SceneNode("terrain");
+        auto subTerrain = std::make_unique<SceneNode>("terrain");
         //terrainNode->disable();
         //smd.mesh = terrain->getMesh();
         smd.mesh = game->getMeshByName("cube_ground");
@@ -264,7 +279,7 @@ namespace ttg {
         smd.uvScale = 1;
         subTerrain->initAsMeshNode(smd);
 
-        auto grassNode1 = new SceneNode("grassPart1");
+        auto grassNode1 = std::make_unique<SceneNode>("grassPart1");
         smd.mesh = game->getMeshByName("grass_field");
         grassNode1->setScale({4, 5,4});
         grassNode1->setLocation({4, -0.15, -3});
@@ -274,14 +289,14 @@ namespace ttg {
         smd.uvScale = 1;
         grassNode1->initAsMeshNode(smd);
 
-        auto grassNode2 = new SceneNode("grassPart2");
+        auto grassNode2 = std::make_unique<SceneNode>("grassPart2");
         smd.mesh = game->getMeshByName("grass_field");
         grassNode2->setScale({4, 4.2,4});
         grassNode2->setLocation({-14, -0.15, 2});
         grassNode2->setOrientation(glm::angleAxis(glm::radians(14.0f), glm::vec3(0, 1, 0)));
         grassNode2->initAsMeshNode(smd);
 
-        auto stoneFieldNode1 = new SceneNode("grassPart1");
+        auto stoneFieldNode1 = std::make_unique<SceneNode>("grassPart1");
         stoneFieldNode1->setScale({1, 1,1 });
         stoneFieldNode1->setLocation({-8, -0.12, 0});
         //grassNode2->setOrientation(glm::angleAxis(glm::radians(34.0f), glm::vec3(0, 1, 0)));
@@ -294,12 +309,12 @@ namespace ttg {
         smd.uvScale = 1;
         stoneFieldNode1->initAsMeshNode(smd);
 
-        auto stoneFieldNode2 = new SceneNode("grassPart1");
+        auto stoneFieldNode2 = std::make_unique<SceneNode>("grassPart1");
         stoneFieldNode2->setScale({1, 1,1 });
         stoneFieldNode2->setLocation({8, -0.12, 3});
         stoneFieldNode2->initAsMeshNode(smd);
 
-        auto roadNode = new SceneNode("road");
+        auto roadNode = std::make_unique<SceneNode>("road");
         smd.mesh = game->getMeshByName("road_plane");
         smd.texture = game->getTextureByName("asphalt_albedo");
         smd.normalMap = game->getTextureByName("asphalt_normal");
@@ -381,7 +396,7 @@ namespace ttg {
         wall2Node->initAsMeshNode(smd);
 
 
-        auto sunNode = new SceneNode("sun");
+        auto sunNode = std::make_unique<SceneNode>("sun");
         //sunNode->disable();
         auto sun = new Light();
         sun->type = LightType::Directional;
@@ -399,10 +414,10 @@ namespace ttg {
         pointLight1->color = glm::vec3(1.2, 1.1, 1.1);
         pointLight1->location = {4, 4,0};
         pointLight1->shadowMapFBO = createShadowMapFramebufferObject({1024, 1024});
-        plNode1 = new SceneNode();
+        auto plNode1 = std::make_unique<SceneNode>("pointLight1");
         plNode1->initAsLightNode(pointLight1);
 
-        auto plNode2 = new SceneNode();
+        auto plNode2 = std::make_unique<SceneNode>();
         plNode2->setLocation({-13, 2,0});
         auto pointLight2 = new Light();
         pointLight2->type = LightType::Point;
@@ -412,7 +427,7 @@ namespace ttg {
 
         plNode2->initAsLightNode(pointLight2);
 
-        cameraNode = new SceneNode("camera");
+        auto cameraNode = std::make_unique<SceneNode>("camera");
         cameraNode->enable();
         cameraNode->initAsCameraNode(game->getGameplayCamera());
         auto cam = cameraNode->getCamera();
@@ -424,7 +439,7 @@ namespace ttg {
         cameraMover = new CameraMover(cameraNode->getCamera());
 
 
-        heroNode = new SceneNode("hero");
+        auto heroNode = std::make_unique<SceneNode>("hero");
         heroNode->setLocation({0, 0.2, 0});
         MeshDrawData heroMeshData;
         heroMeshData.mesh = game->getMeshByName("hero_small");
@@ -434,7 +449,7 @@ namespace ttg {
         heroMeshData.shader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
         heroNode->initAsMeshNode(heroMeshData);
 
-        shotCursorNode = new SceneNode("shotCursor");
+        auto shotCursorNode = new SceneNode("shotCursor");
         shotCursorNode->setLocation({0, 0.2, 0});
         shotCursorNode->setScale({0.5, 1, 0.5});
         MeshDrawData cursorMeshData;
@@ -444,9 +459,9 @@ namespace ttg {
         cursorMeshData.castShadow = false;
         shotCursorNode->initAsMeshNode(cursorMeshData);
 
-        padNode = new SceneNode("heroPad");
+        auto padNode = std::make_unique<SceneNode>("heroPad");
         padNode->setLocation({0, 0.5, 5});
-        padNode->addChild(heroNode);
+        padNode->addChild(heroNode.get());
         padNode->addChild(shotCursorNode);
         padNode->setScale({0.6, 0.6, 0.6});
         MeshDrawData padMeshData;
@@ -456,6 +471,7 @@ namespace ttg {
         padNode->initAsMeshNode(padMeshData);
 
         // Enemies
+        std::vector<SceneNode*> enemyList;
         for (int i = 0; i < 3; i++) {
             auto enemy = new SceneNode("spiderbot1_" + std::to_string(i));
             enemy->setLocation({-5 + (i*8), 0, -6});
@@ -483,7 +499,9 @@ namespace ttg {
                 particleSystemNode->initAsParticleSystemNode(psystem);
                 // TODO could also be a child of the enemy?!
                 enemy->setExtraData(particleSystemNode);
-                enemyExplosionParticles.push_back(particleSystemNode);
+
+                // Set this system as a child of the respective enemy.
+                //enemyExplosionParticles.push_back(particleSystemNode);
             }
 
             enemyList.push_back(enemy);
@@ -499,7 +517,7 @@ namespace ttg {
             spawnDecal->setScale({4, 4, 1});
             MeshDrawData mdd;
             mdd.shader = basicShader;;
-            mdd.mesh = quadMesh;
+            mdd.mesh = quadMesh.get();
             mdd.castShadow = false;
             mdd.texture = game->getTextureByName("spawn_decal");
             mdd.onRender = [](MeshDrawData md) {
@@ -516,37 +534,35 @@ namespace ttg {
 
         scene = new Scene();
         scene->setUICamera(game->getUICamera());
-        scene->addNode(cameraNode);
-        scene->addNode(terrainNode);
-        // scene->addNode(plNode1);
-        // scene->addNode(plNode2);
-        scene->addNode(subTerrain);
-        scene->addNode(grassNode1);
-        scene->addNode(grassNode2);
-        scene->addNode(stoneFieldNode1);
-        scene->addNode(stoneFieldNode2);
-        //scene->addNode(hydrantdNode);
-        //scene->addNode(roadNode);
-        //scene->addNode(roadNode2);
-        //scene->addNode(roadBarrier);
-        //scene->addNode(roadBarrier2);
-        //scene->addNode(shrub);
-        scene->addNode(sunNode);
-        scene->addNode(padNode);
+        scene->addNode(std::move(cameraNode));
+        scene->addNode(std::move(terrainNode));
+        scene->addNode(std::move(plNode1));
+        scene->addNode(std::move(plNode2));
+        scene->addNode(std::move(subTerrain));
+        scene->addNode(std::move(grassNode1));
+        scene->addNode(std::move(grassNode2));
+        scene->addNode(std::move(stoneFieldNode1));
+        scene->addNode(std::move(stoneFieldNode2));
+        scene->addNode(std::move(sunNode));
+        scene->addNode(std::move(padNode));
         for (auto e : enemyList) {
-            scene->addNode(e);
+            scene->addNode(std::unique_ptr<SceneNode>(e));
         }
         for (auto sd : spawnDecals) {
-            scene->addNode(sd);
-        }
-        for (auto psn : enemyExplosionParticles) {
-            scene->addNode(psn);
+            scene->addNode(std::unique_ptr<SceneNode>(sd));
         }
 
+        // The explosion particle systems should be part of each enemy node, which will then
+        // activate them on demand.
+        // Better than this sidetracked list here.
+        // for (auto psn : enemyExplosionParticles) {
+        //     scene->addNode(psn);
+        // }
 
 
 
-        characterController = new CharacterController(padNode);
+
+        characterController = new CharacterController(scene->findNodeById("heroPad"));
         characterController->setMovementSpeed(10);
         characterController->setRotationSpeed(400);
 
@@ -566,14 +582,16 @@ namespace ttg {
         };
         //playerBulletMeshData->lit = false;
         for (int i = 0; i< 30; i++) {
-            auto bulletNode = new SceneNode("playerBullet_" + std::to_string(i));
+            auto bulletNode = std::make_unique<SceneNode>("playerBullet_" + std::to_string(i));
             bulletNode->disable();
             bulletNode->initAsMeshNode(*playerBulletMeshData);
             bulletNode->setScale({1, 1, 1});
             bulletNode->setExtraData(new BulletData());
 
-            playerBulletPool.push_back(bulletNode);
-            scene->addNode(bulletNode);
+            // TODO find alternative for this bulletpool - very probably this should move into
+            // the PlayerBullet component.
+            //playerBulletPool.push_back(bulletNode);
+            scene->addNode(std::move(bulletNode));
         }
 
         //peSmoke2 = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, {-3, 0.5, 7}, 200);

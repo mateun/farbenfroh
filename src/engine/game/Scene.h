@@ -23,45 +23,47 @@ public:
 
     void setUICamera(Camera* cam);
 
-    void addNode(SceneNode* node);
+    void addNode(std::unique_ptr<SceneNode> node);
     void update();
 
     void activateDebugFlyCam(bool value);
-    Camera* getDebugFlyCam();
-    SceneNode* findActiveCameraNode();
+    Camera* getDebugFlyCam() const;
+    const SceneNode* findActiveCameraNode() const;
 
-    std::vector<Light *> getLightsOfType(LightType type);
+    std::vector<Light*> getLightsOfType(LightType type) const;
 
-    void flattenNodes(const std::vector<SceneNode*>& sourceNodeTree, std::vector<SceneNode*>& targetList);
+    void flattenNodes(const std::vector<std::shared_ptr<SceneNode>>& sourceNodeTree, std::vector<SceneNode*>& targetList) const;
 
-    void render();
+    void render() const;
+
+    SceneNode* findNodeById(const std::string& id);
 
 private:
-    std::vector<Light*> pointLights;
-    Camera* uiCamera = nullptr;
-    Camera* debugFlyCam = nullptr;
-    CameraMover * flyCamMover = nullptr;
+    std::vector<std::shared_ptr<Light>> pointLights;
+    std::shared_ptr<Camera> uiCamera = nullptr;
+    std::unique_ptr<Camera> debugFlyCam = nullptr;
+    std::unique_ptr<CameraMover> flyCamMover = nullptr;
     bool debugFlyCamActive = false;
 
-    std::vector<SceneNode*> meshNodes;
-    std::vector<SceneNode*> textNodes;
-    std::vector<SceneNode*> cameraNodes;
-    std::vector<SceneNode*> particleSystemNodes;
-    std::vector<SceneNode*> directionalLightNodes;
-    std::vector<SceneNode*> pointLightNodes;
-    std::vector<SceneNode*> spotLightNodes;
+    std::vector<std::shared_ptr<SceneNode>> _meshNodes;
+    std::vector<std::shared_ptr<SceneNode>> _textNodes;
+    std::vector<std::shared_ptr<SceneNode>> _cameraNodes;
+    std::vector<std::shared_ptr<SceneNode>> _particleSystemNodes;
+    std::vector<std::shared_ptr<SceneNode>> _directionalLightNodes;
+    std::vector<std::shared_ptr<SceneNode>> _pointLightNodes;
+    std::vector<std::shared_ptr<SceneNode>> _spotLightNodes;
+    std::vector<std::shared_ptr<SceneNode>> _allNodes;
 
-    Texture* rayTraceWorldPosTexture = nullptr;
+    std::shared_ptr<Texture> rayTraceWorldPosTexture = nullptr;
 
-    FrameBuffer* raytracedShadowPositionFBO = nullptr;
-    FrameBuffer * fullScreenFBO = nullptr;
+    std::shared_ptr<FrameBuffer> raytracedShadowPositionFBO = nullptr;
+    std::shared_ptr<FrameBuffer> fullScreenFBO = nullptr;
 
+    std::unique_ptr<Shader> worldPosShader = nullptr;
+    std::unique_ptr<Shader> shadowMapShader = nullptr;
+    std::unique_ptr<Shader> quadShader = nullptr;
 
-    Shader * worldPosShader = nullptr;
-    Shader * shadowMapShader = nullptr;
-    Shader * quadShader = nullptr;
-
-    Mesh * quadMesh = nullptr;
+    std::unique_ptr<Mesh> quadMesh = nullptr;
 
 };
 

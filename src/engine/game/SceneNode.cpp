@@ -18,7 +18,7 @@ SceneNode::SceneNode(const std::string &nodeId, std::shared_ptr<NodeTransform> t
 SceneNode::~SceneNode() {
 }
 
-Camera * SceneNode::getCamera() {
+Camera * SceneNode::getCamera() const {
     return camera;
 }
 
@@ -79,7 +79,6 @@ void SceneNode::setRotation(glm::vec3 rotationInEulers, AngleUnit unit) {
     }
 
     if (_type == SceneNodeType::Camera) {
-        auto camera = getCamera();
         glm::qua rotQ = glm::qua(rotationInEulers);
         glm::mat3 rotMat = glm::toMat3(rotQ);
         auto newFwd = (normalize(rotMat * camera->_initialForward));
@@ -110,7 +109,7 @@ void SceneNode::enable() {
 
 void SceneNode::setParent(SceneNode *parent) {
     this->parent = parent;
-    parent->children.push_back(this);
+    parent->children.push_back(std::shared_ptr<SceneNode>(this));
 }
 
 void SceneNode::addChild(SceneNode* child) {
@@ -129,7 +128,7 @@ void * SceneNode::getExtraData() {
     return extraData;
 }
 
-void SceneNode::udpate() {
+void SceneNode::update() {
     for (auto nc : _components) {
         nc->invoke();
     }

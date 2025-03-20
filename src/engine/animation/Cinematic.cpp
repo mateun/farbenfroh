@@ -140,8 +140,8 @@ Channel * CineTrack::getChannel(ChannelType type) {
     return _channels[type];
 }
 
-SceneNode * CineTrack::getNode() {
-    return _sceneNode;
+SceneNode* CineTrack::getNode() const {
+    return _sceneNode.get();
 }
 
 void CineTrack::applyInterpolatedTransform(float localTime, float normalizedTime) {

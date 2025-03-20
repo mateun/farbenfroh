@@ -13,7 +13,7 @@ public:
     };
     virtual void render() {
         MeshDrawData mdd;
-        mdd.mesh = quadMesh;
+        mdd.mesh = quadMesh.get();
         mdd.shader = _shader;
         mdd.location = position;
         mdd.scale = {scale.x, scale.y, 1};
@@ -41,7 +41,7 @@ public:
 protected:
     glm::vec3 position = {0, 0, -1};
     glm::vec2 scale = {64, 64};
-    Mesh * quadMesh = nullptr;
+    std::unique_ptr<Mesh>  quadMesh = nullptr;
     Camera * _uiCamera = nullptr;
     Shader * _shader = nullptr;
 
@@ -104,7 +104,7 @@ public:
     void init() override;
 
 private:
-    Mesh * quadMesh = nullptr;
+    std::unique_ptr<Mesh> quadMesh = nullptr;
     Widget * baseWidget = nullptr;
 };
 

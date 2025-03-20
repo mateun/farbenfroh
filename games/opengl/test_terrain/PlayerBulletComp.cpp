@@ -14,9 +14,8 @@ void PlayerBulletComp::update() {
 
     lifeTime += ftSeconds;
     if (lifeTime >= maxLifeInSeconds) {
-
-        //b->disable();
-        //bd->currentLifeInSeconds = 0;
+        getNode()->disable();
+        lifeTime = 0;
     }
 
     // Check for collision with enemies
@@ -32,7 +31,7 @@ void PlayerBulletComp::update() {
             // other node directly.
             auto hitManagers = e->getComponents<EnemyHitManager>();
             if (hitManagers.empty()) {
-                throw std::runtime_error("expectint at least one EnemyHitManager in Enemy Scene Node, but none found!");
+                throw std::runtime_error("expected at least one EnemyHitManager component in Enemy Scene Node, but none found!");
             }
 
             for (auto hitManager: hitManagers) {

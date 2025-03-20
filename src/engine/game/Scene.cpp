@@ -8,20 +8,20 @@
 Scene::Scene() {
     rayTraceWorldPosTexture = createEmptyFloatTexture(scaled_width, scaled_height);
     raytracedShadowPositionFBO =  createFrameBufferWithTexture(scaled_width, scaled_height, rayTraceWorldPosTexture);
-    worldPosShader = new Shader();
+    worldPosShader = std::make_unique<Shader>();
     worldPosShader->initFromFiles("../assets/shaders/world_pos.vert", "../assets/shaders/world_pos.frag");
-    shadowMapShader = new Shader();
+    shadowMapShader = std::make_unique<Shader>();
     shadowMapShader->initFromFiles("../assets/shaders/shadow_map.vert", "../assets/shaders/shadow_map.frag");
-    quadShader = new Shader();
+    quadShader = std::make_unique<Shader>();
     quadShader->initFromFiles("../src/engine/fx/shaders/quad.vert", "../src/engine/fx/shaders/quad.frag");
     quadMesh = createQuadMesh(PlanePivot::center);
 
-    debugFlyCam = new Camera();
+    debugFlyCam = std::make_unique<Camera>();
     debugFlyCam->type = CameraType::Perspective;
     debugFlyCam->location = glm::vec3(10, 10, -5);
     debugFlyCam->lookAtTarget = glm::vec3(0, 0, 0);
     debugFlyCam->updateNearFar(0.1, 400);
-    flyCamMover = new CameraMover(debugFlyCam);
+    flyCamMover = std::make_unique<CameraMover>(debugFlyCam.get());
     fullScreenFBO = createFrameBuffer(scaled_width, scaled_height, true, false);
 
 
@@ -32,20 +32,20 @@ Scene::Scene() {
 Scene::~Scene() {
 }
 
-std::vector<Light *> Scene::getLightsOfType(LightType type) {
+std::vector<Light *> Scene::getLightsOfType(LightType type) const {
     std::vector<Light*> ls;
     if (type == LightType::Directional) {
-        for (auto ln : directionalLightNodes) {
+        for (auto ln : _directionalLightNodes) {
             ls.push_back(ln->light);
         }
     }
     else if (type == LightType::Point) {
-        for (auto ln : pointLightNodes) {
+        for (auto ln : _pointLightNodes) {
             ls.push_back(ln->light);
         }
     }
     else if (type == LightType::Spot) {
-        for (auto ln : spotLightNodes) {
+        for (auto ln : _spotLightNodes) {
             ls.push_back(ln->light);
         }
     }
@@ -57,19 +57,19 @@ std::vector<Light *> Scene::getLightsOfType(LightType type) {
 /**
 * Returns the first active camera it finds.
 */
-SceneNode* Scene::findActiveCameraNode() {
-    for (auto camNode : cameraNodes) {
+const SceneNode* Scene::findActiveCameraNode() const {
+    for (auto camNode : _cameraNodes) {
         if (camNode->isActive()) {
-            return camNode;
+            return camNode.get();
         }
     }
     return nullptr;
 }
 
 
-void Scene::flattenNodes(const std::vector<SceneNode*>& sourceNodeTree, std::vector<SceneNode*>& targetList) {
+void Scene::flattenNodes(const std::vector<std::shared_ptr<SceneNode>>& sourceNodeTree, std::vector<SceneNode*>& targetList) const {
     for (auto n : sourceNodeTree) {
-        targetList.push_back(n);
+        targetList.push_back(n.get());
         flattenNodes(n->children, targetList);
     }
 }
@@ -77,35 +77,38 @@ void Scene::flattenNodes(const std::vector<SceneNode*>& sourceNodeTree, std::vec
 
 
 void Scene::setUICamera(Camera *cam) {
-    this->uiCamera = cam;
+    this->uiCamera = std::shared_ptr<Camera>(cam);
 }
 
 
-void Scene::addNode(SceneNode *node) {
-    if (node->_type == SceneNodeType::Mesh) {
-        meshNodes.push_back(node);
+void Scene::addNode(std::unique_ptr<SceneNode> node) {
+    const std::shared_ptr sharedNode = std::move(node);
+    _allNodes.push_back(sharedNode);
+
+    if (sharedNode->_type == SceneNodeType::Mesh) {
+        _meshNodes.push_back(sharedNode);
     }
 
-    if (node->_type == SceneNodeType::ParticleSystem) {
-        particleSystemNodes.push_back(node);
+    if (sharedNode->_type == SceneNodeType::ParticleSystem) {
+        _particleSystemNodes.push_back(sharedNode);
     }
 
-    if (node->_type == SceneNodeType::Text) {
-        textNodes.push_back(node);
+    if (sharedNode->_type == SceneNodeType::Text) {
+        _textNodes.push_back(sharedNode);
     }
 
-    if (node->_type == SceneNodeType::Camera) {
-        cameraNodes.push_back(node);
+    if (sharedNode->_type == SceneNodeType::Camera) {
+        _cameraNodes.push_back(sharedNode);
     }
-    if (node->_type == SceneNodeType::Light) {
-        if (node->light->type == LightType::Directional) {
-            directionalLightNodes.push_back(node);
+    if (sharedNode->_type == SceneNodeType::Light) {
+        if (sharedNode->light->type == LightType::Directional) {
+            _directionalLightNodes.push_back(sharedNode);
         }
-        else if (node->light->type == LightType::Point) {
-            pointLightNodes.push_back(node);
+        else if (sharedNode->light->type == LightType::Point) {
+            _pointLightNodes.push_back(sharedNode);
         }
-        else if (node->light->type == LightType::Spot) {
-            spotLightNodes.push_back(node);
+        else if (sharedNode->light->type == LightType::Spot) {
+            _spotLightNodes.push_back(sharedNode);
         }
     }
 }
@@ -115,11 +118,15 @@ void Scene::update() {
         flyCamMover->update();
     }
 
-    for (auto ln : pointLightNodes) {
+    for (auto n : _allNodes) {
+        n->update();
+    }
+
+    for (auto ln : _pointLightNodes) {
         ln->light->location = ln->getLocation();
     }
 
-    for (auto ps: particleSystemNodes) {
+    for (auto ps: _particleSystemNodes) {
         if (!ps->isActive()) {
             continue;
         }
@@ -130,7 +137,7 @@ void Scene::update() {
 void Scene::activateDebugFlyCam(bool value) {
     debugFlyCamActive = value;
     if (value == true) {
-        for (auto dl : directionalLightNodes) {
+        for (auto dl : _directionalLightNodes) {
             dl->light->initFrustumDebugging(findActiveCameraNode()->camera);
             dl->light->updateFrustumDebugging(findActiveCameraNode()->camera);
         }
@@ -139,8 +146,8 @@ void Scene::activateDebugFlyCam(bool value) {
 
 }
 
-Camera * Scene::getDebugFlyCam() {
-    return debugFlyCam;
+Camera * Scene::getDebugFlyCam() const {
+    return debugFlyCam.get();
 }
 
 
@@ -169,7 +176,7 @@ Camera * Scene::getDebugFlyCam() {
 //     }
 // }
 
-void Scene::render() {
+void Scene::render() const {
     // 1. Shadow pass
     // Check all lights which cast a shadow
     // These need to be used to for the shadowpass.
@@ -250,15 +257,15 @@ void Scene::render() {
         throw std::runtime_error("Could not find active camera node.");
     }
 
-    auto activeCamera = debugFlyCamActive ? debugFlyCam : cameraNode->getCamera();
+    auto activeCamera = debugFlyCamActive ? debugFlyCam.get() : cameraNode->getCamera();
 
     std::vector<SceneNode*> flatMeshNodes;
-    flattenNodes(meshNodes, flatMeshNodes);
+    flattenNodes(_meshNodes, flatMeshNodes);
 
     // First, our directional lights
     {
 
-        for (auto l: directionalLightNodes) {
+        for (auto l: _directionalLightNodes) {
             glBindFramebuffer(GL_FRAMEBUFFER, l->light->shadowMapFBO->handle);
             glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -271,7 +278,7 @@ void Scene::render() {
                 dd.location = m->getHierarchicalWorldLocation(m->_location);
                 dd.scale = m->_scale;
                 dd.color == m->foregroundColor;
-                dd.shader = shadowMapShader;
+                dd.shader = shadowMapShader.get();
                 auto worldOrientation = m->getWorldOrientation();
                 dd.rotationEulers = degrees(eulerAngles(worldOrientation));
                 dd.mesh = m->mesh;
@@ -341,7 +348,7 @@ void Scene::render() {
     // Back to our "normal" framebuffer or to another offscreen buffer in case we have activated post
     // processing effects:
     if (!activeCamera->getPostProcessEffects().empty()) {
-        activateFrameBuffer(fullScreenFBO);
+        activateFrameBuffer(fullScreenFBO.get());
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glViewport(0, 0, fullScreenFBO->texture->bitmap->width, fullScreenFBO->texture->bitmap->height);
     } else {
@@ -397,7 +404,7 @@ void Scene::render() {
 
     // 3. Render particles
     std::vector<SceneNode*> flatParticleNodes;
-    flattenNodes(particleSystemNodes, flatParticleNodes);
+    flattenNodes(_particleSystemNodes, flatParticleNodes);
     for (auto ps : flatParticleNodes) {
         if (!ps->isActive()) {
             continue;
@@ -409,9 +416,9 @@ void Scene::render() {
     // Postprocessing, if active:
     // First, apply all post effects:
     if (!activeCamera->getPostProcessEffects().empty()) {
-        FrameBuffer* currentFB = fullScreenFBO;
+        const FrameBuffer* currentFB = fullScreenFBO.get();
         for (auto pp : activeCamera->getPostProcessEffects()) {
-            currentFB = pp->apply(currentFB, uiCamera);
+            currentFB = pp->apply(currentFB, uiCamera.get());
         }
 
 
@@ -419,12 +426,12 @@ void Scene::render() {
 
         activateFrameBuffer(nullptr);
         MeshDrawData mdd;
-        mdd.camera = uiCamera;
-        mdd.mesh = quadMesh;
-        mdd.shader = quadShader;
+        mdd.camera = uiCamera.get();
+        mdd.mesh = quadMesh.get();
+        mdd.shader = quadShader.get();
         mdd.location = { scaled_width/2, scaled_height/2, -5};
         mdd.scale = { scaled_width, scaled_height, 1};
-        mdd.texture = currentFB->texture;
+        mdd.texture = currentFB->texture.get();
         drawMesh(mdd);
 
 
@@ -432,10 +439,19 @@ void Scene::render() {
 
     // Render some debug stuff:
     if (debugFlyCamActive) {
-        for (auto dl : directionalLightNodes) {
-            dl->light->renderWorldFrustum(debugFlyCam, cameraNode->getCamera());
+        for (auto dl : _directionalLightNodes) {
+            dl->light->renderWorldFrustum(debugFlyCam.get(), cameraNode->getCamera());
         }
 
     }
 
+}
+
+SceneNode * Scene::findNodeById(const std::string &id) {
+    for (auto n : _allNodes) {
+        if (n->getId() == id) {
+            return n.get();
+        }
+    }
+    return nullptr;
 }

@@ -58,9 +58,9 @@ struct GLDefaultObjects {
     GLuint quadPosBuffer = 0;
     GLuint quadIndexBuffer = 0;
     GLuint quadUVBuffer = 0;
-    Texture *shadowMap = nullptr;
+    std::unique_ptr<Texture> shadowMap = nullptr;
     RenderState* currentRenderState = nullptr;
-    FrameBuffer* gridFBO = nullptr;
+    std::unique_ptr<FrameBuffer> gridFBO = nullptr;
     Camera* defaultUICamera = nullptr;
     bool inBatchMode = false;
     std::vector<glm::mat4> boneMatrices;
@@ -180,9 +180,9 @@ void initDefaultGLObjects() {
 
 
 
-Texture* createShadowMapTexture(int width, int height) {
+std::unique_ptr<Texture> createShadowMapTexture(int width, int height) {
     auto err = glGetError();
-    auto target = new Texture();
+    auto target = std::make_unique<Texture>();
     glGenTextures(1, &target->handle);
     glBindTexture(GL_TEXTURE_2D, target->handle);
      glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32, width, height);
@@ -221,7 +221,7 @@ void clearDepthBuffer() {
     glClearBufferfv(GL_DEPTH, 0, &d);
 }
 
-FrameBuffer* createShadowMapFramebufferObject(glm::vec2 size) {
+std::unique_ptr<FrameBuffer> createShadowMapFramebufferObject(glm::vec2 size) {
     GLuint handle;
     glGenFramebuffers(1, &handle);
     glBindFramebuffer(GL_FRAMEBUFFER, handle);
@@ -237,9 +237,9 @@ FrameBuffer* createShadowMapFramebufferObject(glm::vec2 size) {
         exit(1);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    auto fbo = new FrameBuffer();
+    auto fbo = std::make_unique<FrameBuffer>();
     fbo->handle = handle;
-    fbo->texture = texture;
+    fbo->texture = std::move(texture);
     return fbo;
 
 }
@@ -423,8 +423,8 @@ bool isJpgFile(const std::string& fileName) {
             fileName[len-4] == '.' );
 }
 
-void loadBitmap(const char* fileName, Bitmap** bitmap) {
-    *bitmap = new Bitmap();
+std::unique_ptr<Bitmap> loadBitmap(const char* fileName) {
+    auto bitmap = std::make_unique<Bitmap>();
     if (isPngFile(fileName) || isJpgFile(fileName)) {
         int imageChannels;
         int w, h;
@@ -432,9 +432,9 @@ void loadBitmap(const char* fileName, Bitmap** bitmap) {
                 fileName, &w, &h,
                 &imageChannels,
                 4);
-        (*bitmap)->pixels = pixels;
-        (*bitmap)->width = w;
-        (*bitmap)->height = h;
+        bitmap->pixels = pixels;
+        bitmap->width = w;
+        bitmap->height = h;
     }
     else {
         int file;
@@ -458,12 +458,14 @@ void loadBitmap(const char* fileName, Bitmap** bitmap) {
         }
 
         _lseek(file, bmf.bmfileHeader.bfOffBits, SEEK_SET);
-        (*bitmap)->pixels = (uint8_t*) malloc(bmf.bminfoHeader.biSizeImage);
-        _read(file, (*bitmap)->pixels, bmf.bminfoHeader.biSizeImage);
+        bitmap->pixels = (uint8_t*) malloc(bmf.bminfoHeader.biSizeImage);
+        _read(file, bitmap->pixels, bmf.bminfoHeader.biSizeImage);
         _close(file);
-        (*bitmap)->width = bmf.bminfoHeader.biWidth;
-        (*bitmap)->height = bmf.bminfoHeader.biHeight;
+        bitmap->width = bmf.bminfoHeader.biWidth;
+        bitmap->height = bmf.bminfoHeader.biHeight;
     }
+
+    return bitmap;
 
 }
 
@@ -691,10 +693,8 @@ void unbindVAO() {
 }
 
 
-Mesh* createQuadMesh(PlanePivot pivot) {
-
-
-    auto mesh = new Mesh();
+std::unique_ptr<Mesh> createQuadMesh(PlanePivot pivot) {
+    auto mesh = std::make_unique<Mesh>();
     std::vector<glm::vec3> basePositions = {
         {-0.5, 0.5, 0},      // tl
     {-0.5, -0.5, 0},        // bl
@@ -1486,7 +1486,7 @@ GLenum toGLColorFormat(ColorFormat cf) {
     return GL_R;
 }
 
-Texture *createTextureFromBitmap(Bitmap *bm, ColorFormat colorFormat) {
+std::unique_ptr<Texture> createTextureFromBitmap(Bitmap *bm, ColorFormat colorFormat) {
     GLuint handle;
     glGenTextures(1, &handle);
 
@@ -1505,7 +1505,7 @@ Texture *createTextureFromBitmap(Bitmap *bm, ColorFormat colorFormat) {
                  GL_RGBA,
                  GL_UNSIGNED_BYTE, bm->pixels);
 
-    auto target = new Texture();
+    auto target = std::make_unique<Texture>();
     target->handle = handle;
     target->bitmap = bm;
     return target;
@@ -1515,7 +1515,7 @@ Texture *createTextureFromBitmap(Bitmap *bm, ColorFormat colorFormat) {
 * Expects a directory which contains 6 files, named top, bottom, back, left, right, front.
 * The filetype (extension can be given)
 */
-Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType) {
+std::unique_ptr<Texture> createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType) {
     unsigned int textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
@@ -1532,9 +1532,9 @@ Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorForm
 
     for (unsigned int i = 0; i < faces.size(); i++)
     {
-        Bitmap* bm;
+
         auto fileName = (dirName + "/" + faces[i]);
-        loadBitmap(fileName.c_str(), &bm);
+        auto bm = loadBitmap(fileName.c_str());
 
         if (bm)
         {
@@ -1557,7 +1557,7 @@ Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorForm
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    auto target = new Texture();
+    auto target = std::make_unique<Texture>();
     target->handle = textureID;
     return target;
 }
@@ -1586,9 +1586,9 @@ glm::mat4 getWorldMatrixFromGlobalState() {
 
 }
 
-Texture *createTextureFromFile(const std::string &fileName, GLenum colorFormat, GLint internalColorFormat) {
-    Bitmap* bm;
-    loadBitmap(fileName.c_str(), &bm);
+std::unique_ptr<Texture> createTextureFromFile(const std::string &fileName, GLenum colorFormat, GLint internalColorFormat) {
+
+    auto bm = loadBitmap(fileName.c_str());
     GLuint handle;
     glGenTextures(1, &handle);
     glBindTexture(GL_TEXTURE_2D, handle);
@@ -1621,9 +1621,9 @@ Texture *createTextureFromFile(const std::string &fileName, GLenum colorFormat, 
 
     }
 
-    Texture* target = new Texture();
+    auto target = std::make_unique<Texture>();
     target->handle = handle;
-    target->bitmap = bm;
+    target->bitmap = bm.get();
     return target;
 
 }
@@ -2367,28 +2367,12 @@ void drawGrid(GridData* gridData, glm::ivec2 viewPortDimensions, bool blurred) {
     glDefaultObjects->gridShader->setMat4Value(gridData->camera->getProjectionMatrix(viewPortDimensions), "mat_projection");
     glDefaultObjects->gridShader->setVec4Value(gridData->color, "singleColor");
 
-    if (blurred) {
-        activateFrameBuffer(glDefaultObjects->gridFBO);
-        glViewport(0, 0, scaled_width/2, scaled_height/2);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawArrays(GL_LINES, 0, (gridData->numLines * 2) + (gridData->numLines * 2));
-        activateFrameBuffer(nullptr);
-        bindTexture(glDefaultObjects->gridFBO->texture);
-        bindCamera(glDefaultObjects->defaultUICamera);
-        scale({scaled_width, scaled_height, 1});
-        location({scaled_width/2, scaled_height/2, -3});
-        forceShader(glDefaultObjects->gridPostProcessShader);
-        setUniformFloat(10, ftSeconds, glDefaultObjects->gridPostProcessShader);
-        glViewport(0, 0, scaled_width, scaled_height);
-        drawPlane();
-        forceShader(nullptr);
-    } else {
-        glDisable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
 
-        glDrawArrays(GL_LINES, 0, (gridData->numLines * 2) + (gridData->numLines * 2));
-        GL_ERROR_EXIT(7654)
-        glEnable(GL_DEPTH_TEST);
-    }
+    glDrawArrays(GL_LINES, 0, (gridData->numLines * 2) + (gridData->numLines * 2));
+    GL_ERROR_EXIT(7654)
+    glEnable(GL_DEPTH_TEST);
+
 
 
     glBindVertexArray(0);
@@ -2574,7 +2558,7 @@ std::string getFileEnding(const std::string& fileName) {
     return ending;
 }
 
-Mesh *loadMeshFromFile(const std::string &fileName) {
+std::unique_ptr<Mesh> loadMeshFromFile(const std::string &fileName) {
     auto ending = getFileEnding(fileName);
     if (ending.c_str() == std::string("gltf")) {
         return parseGLTF(parseJson(readFile(fileName)));
@@ -2672,7 +2656,7 @@ Mesh *loadMeshFromFile(const std::string &fileName) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndices);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesFlat.size() * 4, indicesFlat.data(), GL_DYNAMIC_DRAW);
 
-    Mesh* mesh = new Mesh();
+    auto mesh = std::make_unique<Mesh>();
     mesh->vao = vao;
     mesh->numberOfIndices = indicesFlat.size();
     mesh->instanceOffsetVBO = instanceVBO;
@@ -2863,7 +2847,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
  * @param gltfJson the parsed json of the gltf
  * @return A Pointer to a newly created mesh object.
  */
-Mesh* parseGLTF(JsonElement* gltfJson) {
+std::unique_ptr<Mesh> parseGLTF(JsonElement* gltfJson) {
 
     // This is the embeddes binary data.
     // It is a base64 encoded string.
@@ -3145,7 +3129,7 @@ Mesh* parseGLTF(JsonElement* gltfJson) {
     glBindBuffer(indicesGlTargetType, indexBuffer);
     glBufferData(indicesGlTargetType, indicesBufferLen, dataBinary.data() + indicesBufferByteOffset, GL_STATIC_DRAW);
 
-    Mesh* mesh = new Mesh();
+    auto mesh = std::make_unique<Mesh>();
     mesh->skeleton = skeleton;
     mesh->vao = vao;
     mesh->instanceOffsetVBO = instanceVBO;
@@ -3210,11 +3194,11 @@ void deferredEnd() {
     glDefaultObjects->currentRenderState->drawCalls.clear();
 }
 
-Texture* createEmptyTexture(int w, int h) {
+std::unique_ptr<Texture> createEmptyTexture(int w, int h) {
     return createTextTexture(w, h);
 }
 
-Texture * createEmptyFloatTexture(int w, int h) {
+std::unique_ptr<Texture> createEmptyFloatTexture(int w, int h) {
     auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 32);
     auto bm = new Bitmap();
     bm->width = w;
@@ -3240,14 +3224,14 @@ Texture * createEmptyFloatTexture(int w, int h) {
 
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, w, h);
 
-    auto target = new Texture();
+    auto target = std::make_unique<Texture>();
     target->handle = handle;
     target->bitmap = bm;
     return target;
 
 }
 
-Texture* createTextTexture(int w, int h) {
+std::unique_ptr<Texture> createTextTexture(int w, int h) {
 
     auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 32);
     auto bm = new Bitmap();
@@ -3417,8 +3401,8 @@ void tint(glm::vec4 col) {
 * Can be used if no real normal map is available and we
 * avoid shader branching.
 */
-Texture * getDefaultNormalMap() {
-    static Texture* normalMap = nullptr;
+std::shared_ptr<Texture> getDefaultNormalMap() {
+    static std::shared_ptr<Texture> normalMap = nullptr;
     if (!normalMap) {
         // 1-pixel default normal map (0,0,1)
         GLubyte defaultNormalPixel[] = {128, 128, 255}; // RGB = (0.5, 0.5, 1.0)
@@ -3435,7 +3419,7 @@ Texture * getDefaultNormalMap() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-        normalMap = new Texture();
+        normalMap = std::make_shared<Texture>();
         normalMap->bitmap = new Bitmap();
         normalMap->bitmap->height = 1;
         normalMap->bitmap->width = 1;
@@ -4264,20 +4248,20 @@ GammaCorrectionEffect::GammaCorrectionEffect(): PostProcessEffect() {
     effectFrameBuffer = createFrameBuffer(scaled_width, scaled_height);
 }
 
-FrameBuffer* GammaCorrectionEffect::apply(FrameBuffer *sourceFrameBuffer, Camera* camera) {
+const FrameBuffer* GammaCorrectionEffect::apply(const FrameBuffer *sourceFrameBuffer, const Camera* camera) {
     MeshDrawData mdd;
-    mdd.mesh = quadMesh;
+    mdd.mesh = quadMesh.get();
     mdd.camera = camera;
     mdd.location = { scaled_width/2, scaled_height/2, -1};
     mdd.scale = { scaled_width, scaled_height, 1};
-    mdd.texture = sourceFrameBuffer->texture;
+    mdd.texture = sourceFrameBuffer->texture.get();
     mdd.shader = gammaCorrectionShader;
-    activateFrameBuffer( effectFrameBuffer);
+    activateFrameBuffer( effectFrameBuffer.get());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     drawMesh(mdd);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return effectFrameBuffer;
+    return effectFrameBuffer.get();
 
 }
 
@@ -4292,50 +4276,50 @@ BloomEffect::BloomEffect() {
     bloomFBO = createFrameBuffer(scaled_width, scaled_height, true, true);
     auto blurFBO0 = createFrameBuffer(scaled_width, scaled_height, true, false);
     auto blurFBO1 = createFrameBuffer(scaled_width, scaled_height, true, false);
-    blurFBOs.push_back(blurFBO0);
-    blurFBOs.push_back(blurFBO1);
+    blurFBOs.push_back(std::move(blurFBO0));
+    blurFBOs.push_back(std::move(blurFBO1));
 
 }
 
-FrameBuffer * BloomEffect::apply(FrameBuffer *sourceFrameBuffer, Camera *camera) {
+const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, const Camera *camera) {
     // 1. render the bright parts of the source framebuffer into a separate framebuffer
     // 2. gaussian blur this (horizontal and vertical)
     // 3. Add the blurred texture to the source texture.
 
     // Step 1
-    activateFrameBuffer(bloomFBO);
+    activateFrameBuffer(bloomFBO.get());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     MeshDrawData mdd;
     mdd.camera = camera;
-    mdd.mesh = quadMesh;
+    mdd.mesh = quadMesh.get();
     mdd.shader = quadShader;
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
-    mdd.texture = sourceFrameBuffer->texture;
+    mdd.texture = sourceFrameBuffer->texture.get();
     drawMesh(mdd);
 
     // Step 2: Do a gaussian blur on the brightness Framebuffer.
     // We alternate between horizontal and vertical blurs.
     mdd.camera = camera;
-    mdd.mesh = quadMesh;
+    mdd.mesh = quadMesh.get();
     mdd.shader = gaussShader;
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
-    mdd.texture = bloomFBO->texture2;
+    mdd.texture = bloomFBO->texture2.get();
 
     glUseProgram(gaussShader->handle);
     bool horizontal = true, first_iteration = true;
     // Clear both blur framebuffers before first usage
     for (int i = 0; i < 2; i++) {
-        activateFrameBuffer(blurFBOs[i]);
+        activateFrameBuffer(blurFBOs[i].get());
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
     int amount = 30;
     for (unsigned int i = 0; i < amount; i++)
     {
-        activateFrameBuffer(blurFBOs[horizontal]);
+        activateFrameBuffer(blurFBOs[horizontal].get());
         gaussShader->setIntValue(horizontal, "horizontal");
-        mdd.texture = first_iteration ? bloomFBO->texture2 : blurFBOs[!horizontal]->texture;
+        mdd.texture = first_iteration ? bloomFBO->texture2.get() : blurFBOs[!horizontal]->texture.get();
         drawMesh(mdd);;
         horizontal = !horizontal;
         if (first_iteration)
@@ -4345,19 +4329,19 @@ FrameBuffer * BloomEffect::apply(FrameBuffer *sourceFrameBuffer, Camera *camera)
     // Step 3: addtivie blend the last blurred texture with the
     // incoming fullscreen texture. Return the resulting framebuffer as
     // our endresult.
-    activateFrameBuffer(effectFrameBuffer);
+    activateFrameBuffer(effectFrameBuffer.get());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    mdd.mesh = quadMesh;
+    mdd.mesh = quadMesh.get();
     mdd.shader = bloomShader;
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
-    mdd.texture = sourceFrameBuffer->texture;
+    mdd.texture = sourceFrameBuffer->texture.get();
     // Index 0 is the last texturen written to, if the amount is even!
     blurFBOs[0]->texture->bindAt(1);
     drawMesh(mdd);
 
-    return effectFrameBuffer;
+    return effectFrameBuffer.get();
 
 }
 
@@ -4367,7 +4351,7 @@ Camera::Camera() {
 /**
 * Returns the 8 corners of this cameras view frustum in world coordinates.
 */
-std::vector<glm::vec3> Camera::getFrustumWorldCorners() {
+std::vector<glm::vec3> Camera::getFrustumWorldCorners() const {
     auto ltnw = frustumToWorld(     glm::vec4{-1,1,-1, 1});
     auto rtnw = frustumToWorld(    glm::vec4{1,1,-1, 1});
     auto lbnw = frustumToWorld(  glm::vec4{-1,-1,-1, 1});
@@ -4398,7 +4382,7 @@ void Camera::addPostProcessEffect(PostProcessEffect *effect) {
     postProcessEffects.push_back(effect);
 }
 
-std::vector<PostProcessEffect *> Camera::getPostProcessEffects() {
+std::vector<PostProcessEffect *> Camera::getPostProcessEffects() const {
     return postProcessEffects;
 }
 
@@ -4413,7 +4397,7 @@ glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera
     return ss;
 }
 
-FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorTexture, Texture* colorTexture2) {
+std::unique_ptr<FrameBuffer> createFrameBufferWithTexture(int width, int height, std::shared_ptr<Texture> colorTexture, std::shared_ptr<Texture> colorTexture2) {
     GLuint fbo;
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -4452,12 +4436,13 @@ FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorT
     // Unbind the framebuffer to avoid rendering to it accidentally
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    return new FrameBuffer { fbo, colorTexture, colorTexture2 };
+    auto frameBuffer =  std::make_unique<FrameBuffer>(fbo, colorTexture, colorTexture2);
+    return frameBuffer;
 }
 
-FrameBuffer *createFrameBuffer(int width, int height, bool hdr, bool additionalColorBuffer) {
-    Texture* texture = nullptr;
-    Texture* texture2 = nullptr;
+std::unique_ptr<FrameBuffer> createFrameBuffer(int width, int height, bool hdr, bool additionalColorBuffer) {
+    std::unique_ptr<Texture> texture = nullptr;
+    std::unique_ptr<Texture> texture2 = nullptr;
     if (hdr) {
         texture =  createEmptyFloatTexture(width, height);
     } else {
@@ -4466,17 +4451,15 @@ FrameBuffer *createFrameBuffer(int width, int height, bool hdr, bool additionalC
     if (additionalColorBuffer) {
         texture2 = createEmptyFloatTexture(width, height);
     }
-    return createFrameBufferWithTexture(width, height, texture, texture2);
+    return createFrameBufferWithTexture(width, height, std::move(texture), std::move(texture2));
 
 }
 
-void activateFrameBuffer(FrameBuffer* fb) {
+void activateFrameBuffer(const FrameBuffer* fb) {
     if (fb) {
         glBindFramebuffer(GL_FRAMEBUFFER, fb->handle);
-        glDefaultObjects->currentRenderState->renderToFrameBuffer = fb;
-    } else {
+   } else {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDefaultObjects->currentRenderState->renderToFrameBuffer = nullptr;
     }
 
 }
@@ -4723,30 +4706,30 @@ void Camera::updateLookupTarget(glm::vec3 t) {
     lookAtTarget = t;
 }
 
-glm::mat4 Camera::getViewMatrix() {
+glm::mat4 Camera::getViewMatrix() const {
     return lookAt((location), (lookAtTarget), glm::vec3(0, 1,0));
 }
 
-glm::vec3 Camera::getInitialFoward() {
+glm::vec3 Camera::getInitialFoward() const {
     return _initialForward;
 }
 
-glm::vec3 Camera::getForward() {
+glm::vec3 Camera::getForward() const {
     return normalize(lookAtTarget - location);
 }
 
-glm::vec3 Camera::getRight() {
+glm::vec3 Camera::getRight() const {
     return normalize(cross( getForward(), {0, 1, 0}));
 }
 
-glm::vec3 Camera::getUp() {
+glm::vec3 Camera::getUp() const {
     return normalize(cross(getRight(), getForward() ));
 }
 
 /**
 * viewCamera    Is the camera of which
 */
-glm::vec4 Camera::frustumToWorld(glm::vec4 ndc) {
+glm::vec4 Camera::frustumToWorld(glm::vec4 ndc) const {
     // TODO prepare for cascading shadow maps, we need to be flexible with the near far plane of our camera.
     // We construct our own perspective matrix here for a range of test near/far plane combinations
     auto flexiProj = glm::perspectiveFov<float>(glm::radians(50.0f), scaled_width, scaled_height,nearPlane,farPlane);
@@ -4808,8 +4791,8 @@ CameraCollider::CameraCollider(std::vector<CollisionCandidate *> collisionCandid
 void FBFont::renderText(const std::string &text, glm::vec3 position) {
     char* buf = (char*) malloc(text.length()+1);
     sprintf_s(buf, text.length()+1, text.c_str());
-    font(bitmap);
-    updateAndDrawText(buf, texture, position.x,position.y, position.z);
+    font(bitmap.get());
+    updateAndDrawText(buf, texture.get(), position.x,position.y, position.z);
     free(buf);
 }
 
@@ -4969,7 +4952,7 @@ void Texture::bindAt(int unitIndex) {
 }
 
 FBFont::FBFont(const std::string &fileName) {
-    loadBitmap("../assets/font.bmp", &bitmap);
+    bitmap = loadBitmap("../assets/font.bmp");
 
     // TODO handle the size? What if this is not a good size?
     texture = createTextTexture(512, 32);

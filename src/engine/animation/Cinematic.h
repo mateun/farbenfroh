@@ -83,11 +83,11 @@ class CineTrack {
     std::vector<Channel*> getChannels();
     Channel* getChannel(ChannelType type);
 
-    SceneNode * getNode();
+    SceneNode* getNode() const;
 
     void applyInterpolatedTransform(float localTime, float normalizedTime);
 
-    SceneNode * _sceneNode = nullptr;
+    std::shared_ptr<SceneNode> _sceneNode = nullptr;
 
 private:
   std::map<ChannelType, Channel*> _channels;

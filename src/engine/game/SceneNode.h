@@ -57,13 +57,13 @@ public:
     glm::vec3 getLocation();
     glm::vec3 getScale();
 
-    Camera * getCamera();
+    Camera * getCamera() const;
 
     void updateBoneMatrices(std::vector<glm::mat4> get_bone_matrices);
 
     const std::vector<glm::mat4>& boneMatrices();
 
-    void udpate();
+    void update();
     void disable();
     void enable();
 
@@ -115,7 +115,7 @@ private:
     bool _active = true;
 
     SceneNode * parent = nullptr;
-    std::vector<SceneNode*> children;
+    std::vector<std::shared_ptr<SceneNode>> children;
 
     void* extraData = nullptr;
 

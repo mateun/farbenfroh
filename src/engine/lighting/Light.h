@@ -33,21 +33,21 @@ public:
   PointLightData pointLightData;
 
   // Stays zero if we do not cast shadows from this light
-  FrameBuffer* shadowMapFBO = nullptr;
+  std::unique_ptr<FrameBuffer> shadowMapFBO = nullptr;
   glm::vec3 _direction = {1, -1, -1};
 
   void quickDebugManipulation(float& left, float& right, float& bottom, float& top, float& x,
                              float& f) const;
 
-  glm::mat4 getShadowProjectionMatrix(Camera* fittingTarget = nullptr) const;
-  glm::mat4 getShadowViewMatrix(Camera* fittingTarget = nullptr) const;
-  glm::mat4 getShadowViewProjectionMatrix(Camera* fittingTarget = nullptr) const;
+  glm::mat4 getShadowProjectionMatrix(const Camera* fittingTarget = nullptr) const;
+  glm::mat4 getShadowViewMatrix(const Camera* fittingTarget = nullptr) const;
+  glm::mat4 getShadowViewProjectionMatrix(const Camera* fittingTarget = nullptr) const;
 
   // Shadowmap debugging related
   void initFrustumDebugging(Camera* fittingTarget);
   void updateFrustumDebugging(Camera *fittingTarget);
-  void renderWorldFrustum(Camera* viewCamera, Camera* fittingTarget);
-  std::vector<glm::vec3> getLightFrustumFittedToCamera(Camera* fittingTarget);
+  void renderWorldFrustum(Camera* viewCamera, const Camera* fittingTarget);
+  std::vector<glm::vec3> getLightFrustumFittedToCamera(const Camera* fittingTarget);
 
   // We need to bind the shadowmap of this light into
   // a texture unit slot, so while rendering

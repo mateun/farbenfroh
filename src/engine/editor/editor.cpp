@@ -117,7 +117,7 @@ namespace editor {
         cameraMover->update();
         ImGui::Begin("Mesh Viewer");
         //ImGui::SetWindowSize("Mesh Viewer", {1000, 600});
-        activateFrameBuffer(skeletalMeshWindowFrameBuffer);
+        activateFrameBuffer(skeletalMeshWindowFrameBuffer.get());
         bindCamera(getMeshViewerCamera());
         glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width,
                  skeletalMeshWindowFrameBuffer->texture->bitmap->height);
@@ -440,7 +440,7 @@ namespace editor {
                 doImportMeshAction();
             }
 
-            if (lastImportedMeshFileName != "") {
+            if (!lastImportedMeshFileName.empty()) {
                 if (ImGui::MenuItem("Reimport last mesh")) {
                     if (importedMesh) {
                         delete (importedMesh);
@@ -451,17 +451,14 @@ namespace editor {
 
             if (ImGui::MenuItem("Load Texture")) {
                 lastImporteTextureFileName = showFileDialog("All\0*.*\0png\0*.png\0jpg\0*.jpg\0bmp\0*.bmp");
-                if (lastImporteTextureFileName != "") {
-                    if (importedTexture) {
-                        delete (importedTexture);
-                    }
+                if (!lastImporteTextureFileName.empty()) {
                     importedTexture = createTextureFromFile(lastImporteTextureFileName);
                 }
             }
 
             if (ImGui::MenuItem("Import Animation")) {
                 auto fileName = showFileDialog("All\0*.*\0fbx\0*.fbx\0gltf\0*.glb");
-                if (fileName != "") {
+                if (!fileName.empty()) {
                     auto importedAnims = MeshImporter().importAnimations(fileName);
                     for (auto anim: importedAnims) {
                         importedAnimations[anim->name] = anim;

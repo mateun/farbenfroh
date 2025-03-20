@@ -125,26 +125,49 @@ void gru::ParticleEmitter::enable() {
     this->active = true;
 }
 
-bool gru::ParticleEmitter::isActive() {
-    return active;
-}
 
-Shader * gru::ParticleEmitter::getShaderByType(EmitterType type) const {
-    auto shader = new Shader();
+std::shared_ptr<Shader> gru::ShaderFactory::smokeShader = nullptr;
+std::shared_ptr<Shader> gru::ShaderFactory::explosionShader = nullptr;
+std::shared_ptr<ComputeShader> gru::ShaderFactory::smokeComputeShader = nullptr;
+std::shared_ptr<ComputeShader> gru::ShaderFactory::fireComputeShader = nullptr;
+std::shared_ptr<ComputeShader> gru::ShaderFactory::trailComputeShader = nullptr;
+std::shared_ptr<ComputeShader> gru::ShaderFactory::explosionComputeShader = nullptr;
+
+std::shared_ptr<Shader> gru::ShaderFactory::getShaderByType(EmitterType type) {
+    if (!smokeShader) {
+        smokeShader = std::make_shared<Shader>();
+        smokeShader->initFromFiles("../assets/shaders/fx/smoke.vert", "../assets/shaders/fx/smoke.frag");
+    }
+    if (!explosionShader) {
+        explosionShader = std::make_shared<Shader>();
+        explosionShader->initFromFiles("../assets/shaders/fx/explosion.vert", "../assets/shaders/fx/explosion.frag");
+    }
     switch (type) {
-        case EmitterType::SMOKE:   shader->initFromFiles("../assets/shaders/fx/smoke.vert", "../assets/shaders/fx/smoke.frag"); break;
-        case EmitterType::EXPLOSION: shader->initFromFiles("../assets/shaders/fx/explosion.vert", "../assets/shaders/fx/explosion.frag"); break;
+        case EmitterType::SMOKE: return smokeShader;
+        case EmitterType::EXPLOSION: ; return explosionShader;
         default: return nullptr;
     }
-    return shader;
+
 }
 
-ComputeShader * gru::ParticleEmitter::getComputeShader(EmitterType type) {
+std::shared_ptr<ComputeShader> gru::ShaderFactory::getComputeShaderByType(EmitterType type) {
+    if (!smokeComputeShader && type == EmitterType::SMOKE) {
+        smokeComputeShader = std::make_shared<ComputeShader>("../src/engine/fx/shaders/smoke.comp", std::vector<std::string>{"../src/engine/fx/shaders/helper_funcs.comp"});
+    }
+    else if (!explosionComputeShader && type == EmitterType::EXPLOSION) {
+        explosionComputeShader = std::make_shared<ComputeShader>("../src/engine/fx/shaders/explosion.comp", std::vector<std::string>{"../src/engine/fx/shaders/helper_funcs.comp"});
+    }
+    else if (!trailComputeShader && type == EmitterType::TRAIL) {
+        trailComputeShader = std::make_shared<ComputeShader>("../src/engine/fx/shaders/trail.comp", std::vector<std::string>{"../src/engine/fx/shaders/helper_funcs.comp"});
+    }
+    else if (!fireComputeShader && type == EmitterType::FIRE) {
+        fireComputeShader = std::make_shared<ComputeShader>("../src/engine/fx/shaders/fire.comp", std::vector<std::string>{"../src/engine/fx/shaders/helper_funcs.comp"});
+    }
     switch (type) {
-        case EmitterType::SMOKE:   return new ComputeShader("../src/engine/fx/shaders/smoke.comp", {"../src/engine/fx/shaders/helper_funcs.comp"});
-        case EmitterType::EXPLOSION: return new ComputeShader("../src/engine/fx/shaders/explosion.comp", {"../src/engine/fx/shaders/helper_funcs.comp"});
-        case EmitterType::TRAIL: return new ComputeShader("../src/engine/fx/shaders/trail.comp", {"../src/engine/fx/shaders/helper_funcs.comp"});
-        case EmitterType::FIRE: return new ComputeShader("../src/engine/fx/shaders/fire.comp", {"../src/engine/fx/shaders/helper_funcs.comp"});
+        case EmitterType::SMOKE:   return smokeComputeShader;
+        case EmitterType::EXPLOSION: return explosionComputeShader;
+        case EmitterType::TRAIL: return trailComputeShader;
+        case EmitterType::FIRE: return fireComputeShader;
         default: return nullptr;
     }
 
@@ -159,9 +182,9 @@ ComputeShader * gru::ParticleEmitter::getComputeShader(EmitterType type) {
 * If no specific mesh is passed in, a quad will be used as the mesh.
 */
 gru::ParticleEmitter::ParticleEmitter(Mesh *mesh, Texture *texture, EmitterType type, glm::vec3 location,
-    int numParticles, bool useInstancing, bool loop) : mesh(mesh), texture(texture), numParticles(numParticles), location(location), type(type) {
-    particleShader = getShaderByType(type);
-    computeShader = getComputeShader(type);
+                                      int numParticles, bool useInstancing, bool loop) : mesh(mesh), texture(texture), numParticles(numParticles), location(location), type(type) {
+    particleShader = ShaderFactory::getShaderByType(type);
+    computeShader = ShaderFactory::getComputeShaderByType(type);
 
     if (useInstancing) {
         std::vector<int> particleIDs(numParticles);
@@ -170,7 +193,7 @@ gru::ParticleEmitter::ParticleEmitter(Mesh *mesh, Texture *texture, EmitterType 
 
         if (!mesh) {
             auto quadMesh = createQuadMesh(PlanePivot::center);
-            this->mesh = quadMesh;
+            this->mesh = std::move(quadMesh);
         }
 
         // Attach a new buffer for the particle ids to the given mesh VAO:
@@ -228,13 +251,13 @@ void gru::ParticleEmitter::update() {
 }
 
 
-void gru::ParticleEmitter::draw(Camera* camera) const {
+void gru::ParticleEmitter::draw(const Camera* camera) const {
     if (!active) return;
 
     MeshDrawData mdd;
-    mdd.mesh = mesh;
-    mdd.texture = texture;
-    mdd.shader = particleShader;
+    mdd.mesh = mesh.get();
+    mdd.texture = texture.get();
+    mdd.shader = particleShader.get();
 
     mdd.camera = camera;
     mdd.instanceCount = numParticles;
@@ -275,7 +298,7 @@ void gru::ParticleSystem::update() {
 
 }
 
-void gru::ParticleSystem::render(Camera *camera) {
+void gru::ParticleSystem::render(const Camera *camera) {
     for (auto e : emitters) {
         if (e->isActive()) {
             e->draw(camera);
@@ -283,5 +306,6 @@ void gru::ParticleSystem::render(Camera *camera) {
     }
 }
 
-
-
+bool gru::ParticleEmitter::isActive() {
+    return active;
+}

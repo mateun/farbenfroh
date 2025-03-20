@@ -91,8 +91,8 @@ public:
     void renderText(const std::string& text, glm::vec3 position);
 
 private:
-    Texture* texture = nullptr;
-    Bitmap* bitmap = nullptr;
+    std::unique_ptr<Texture> texture = nullptr;
+    std::unique_ptr<Bitmap> bitmap = nullptr;
 };
 
 
@@ -146,8 +146,8 @@ struct Skeleton {
  */
 struct FrameBuffer {
     GLuint handle;
-    Texture* texture;
-    Texture* texture2;
+    std::shared_ptr<Texture> texture;
+    std::shared_ptr<Texture> texture2;
 };
 
 /**
@@ -211,17 +211,17 @@ enum class CameraType {
 class PostProcessEffect {
 public:
     PostProcessEffect();
-    virtual FrameBuffer* apply(FrameBuffer * frame_buffer, Camera* camera) = 0;
+    virtual const FrameBuffer* apply(const FrameBuffer* sourceFrameBuffer, const Camera* camera) = 0;
 
 protected:
-    Mesh * quadMesh;
-    FrameBuffer* effectFrameBuffer;
+    std::unique_ptr<Mesh> quadMesh;
+    std::unique_ptr<FrameBuffer> effectFrameBuffer;
 };
 
 class GammaCorrectionEffect : public PostProcessEffect {
 public:
     GammaCorrectionEffect();
-    FrameBuffer* apply(FrameBuffer *sourceFrameBuffer, Camera* camera) override;
+    const FrameBuffer* apply(const FrameBuffer* sourceFrameBuffer, const Camera* camera) override;
 
 private:
     Shader* gammaCorrectionShader = nullptr;
@@ -231,14 +231,14 @@ private:
 class BloomEffect : public PostProcessEffect {
 public:
     BloomEffect();
-    FrameBuffer* apply(FrameBuffer *sourceFrameBuffer, Camera* camera) override;
+    const FrameBuffer* apply(const FrameBuffer *sourceFrameBuffer, const Camera* camera) override;
 
 private:
     Shader* bloomShader = nullptr;
     Shader * quadShader = nullptr;
     Shader * gaussShader = nullptr;
-    FrameBuffer * bloomFBO = nullptr;
-    std::vector<FrameBuffer*> blurFBOs;
+    std::unique_ptr<FrameBuffer> bloomFBO = nullptr;
+    std::vector<std::unique_ptr<FrameBuffer>> blurFBOs;
 };
 
 
@@ -249,11 +249,11 @@ public:
 
     Camera();
 
-    std::vector<glm::vec3> getFrustumWorldCorners();
+    std::vector<glm::vec3> getFrustumWorldCorners() const;
 
     float getMaxFrustumDiagonal();
     void addPostProcessEffect(PostProcessEffect* effect);
-    std::vector<PostProcessEffect*> getPostProcessEffects();
+    std::vector<PostProcessEffect*> getPostProcessEffects() const;
 
     CameraType type;
     glm::vec3 location;
@@ -280,15 +280,15 @@ public:
 
     void updateLookupTarget(glm::vec3 t);
 
-    glm::mat4 getViewMatrix();
+    glm::mat4 getViewMatrix() const;
 
-    glm::vec3 getInitialFoward();
+    glm::vec3 getInitialFoward() const;
 
-    glm::vec3 getForward();
-    glm::vec3 getUp();
-    glm::vec3 getRight();
+    glm::vec3 getForward() const;
+    glm::vec3 getUp() const;
+    glm::vec3 getRight() const;
 
-    glm::vec4 frustumToWorld(glm::vec4 ndc);
+    glm::vec4 frustumToWorld(glm::vec4 ndc) const;
     glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) const;
 
     void updateNearFar(float nearPlane, float farPlane);
@@ -482,7 +482,7 @@ struct RenderState {
 
     std::vector<DrawCall> drawCalls;
     glm::vec4 tint = {1, 1, 1, 1};
-    FrameBuffer* renderToFrameBuffer = nullptr;
+    const FrameBuffer* renderToFrameBuffer = nullptr;
 };
 
 /**
@@ -722,7 +722,7 @@ struct MeshDrawData {
     // This is the camera through which a mesh is rendered.
     // Can also be used during shadow map (depth) rendering to allow for the shadow map
     // frustum to be fit inside the view frustum tightly.
-    Camera* camera = nullptr;
+    const Camera* camera = nullptr;
 
     // This is the "camera" which renders the mesh into the shadow depth buffer.
     // We want to have both here as for the shadow map rendering we may try to fit the shadow map frustum
@@ -758,7 +758,7 @@ GLuint createGridVAO(int lines = 100);
 void drawText(const char* text, int x, int y, Bitmap* font);
 void drawBitmap(int x, int y, Bitmap* bm);
 void drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, Bitmap* bitmap, int offsetX  = 0, int offsetY = 0);
-void loadBitmap(const char* fileName, Bitmap** bm);
+std::unique_ptr<Bitmap> loadBitmap(const char* fileName);
 void setPixel(int x, int y, int r, int g, int b, int a);
 void drawPlane();
 void drawPlane(Light* directionalLight, const std::vector<Light*>& pointLights);
@@ -772,10 +772,10 @@ void drawParticleEffect(bool instancedRender = false);
 void drawGrid(GridData* gridData = {}, glm::ivec2 viewPortDimensions = glm::ivec2{scaled_width, scaled_height}, bool blurred = false);
 void drawBitmap(int x, int y, uint8_t* bitmapPixels);
 glm::mat4 getWorldMatrixFromGlobalState();
-Texture* createTextureFromFile(const std::string& fileName, GLenum colorFormat = GL_RGBA, GLint internalColorFormat = GL_SRGB8_ALPHA8);
-Texture* createTextureFromBitmap(Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
-Texture* createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType = "png");
-FrameBuffer* createShadowMapFramebufferObject(glm::vec2 size);
+std::unique_ptr<Texture> createTextureFromFile(const std::string& fileName, GLenum colorFormat = GL_RGBA, GLint internalColorFormat = GL_SRGB8_ALPHA8);
+std::unique_ptr<Texture> createTextureFromBitmap(Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
+std::unique_ptr<Texture> createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType = "png");
+std::unique_ptr<FrameBuffer> createShadowMapFramebufferObject(glm::vec2 size);
 void beginBatch();
 void endBatch();
 void foregroundColor(glm::vec4 col);
@@ -783,7 +783,7 @@ void foregroundColor(glm::vec4 col);
 // This can be used with textures, will multiply with the texel color
 void tint(glm::vec4 col);
 
-Texture* getDefaultNormalMap();
+std::shared_ptr<Texture> getDefaultNormalMap();
 void scale(glm::vec3 val);
 void textScale(glm::vec2 val);
 void panUVS(glm::vec2 pan);
@@ -836,27 +836,27 @@ GLuint createQuadVAO(PlanePivot pivot = PlanePivot::center);
 
 glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera);
 
-Texture* createEmptyTexture(int w, int h);
-Texture* createEmptyFloatTexture(int w, int h);
-Texture* createTextTexture(int w, int h);
+std::unique_ptr<Texture> createEmptyTexture(int w, int h);
+std::unique_ptr<Texture> createEmptyFloatTexture(int w, int h);
+std::unique_ptr<Texture> createTextTexture(int w, int h);
 void updateTexture(int w, int h, Texture* texture);
-Mesh* loadMeshFromFile(const std::string& fileName);
+std::unique_ptr<Mesh> loadMeshFromFile(const std::string& fileName);
 Result createShader(const std::string& vsrc, const std::string& fsrc, Shader* target);
 Result createComputeShader(const std::string& source, Shader* target);
-Mesh* parseGLTF(JsonElement* gltfJson);
+std::unique_ptr<Mesh> parseGLTF(JsonElement* gltfJson);
 void prepareTransformationMatrices(glm::mat4 matworld, Camera* camera, Camera* shadowMapCamera, bool shadows);
 void updateAndDrawText(const char *text, Texture *pTexture, int screenPosX, int screenPosY, int screenPosZ = -0.7);
 
 // Creates a color framebuffer incl. depthbuffer
-FrameBuffer* createFrameBuffer(int width, int height, bool hdr = false, bool additionalColorBuffer = false);
+std::unique_ptr<FrameBuffer> createFrameBuffer(int width, int height, bool hdr = false, bool additionalColorBuffer = false);
 
 // Creates a color framebuffer based on the given texture and a default depthtexture.
 // An additional color texture can be used to create a second color attachment, e.g. for bloom effects.
-FrameBuffer *createFrameBufferWithTexture(int width, int height, Texture* colorTexture, Texture* colorTexture2 = nullptr);
+std::unique_ptr<FrameBuffer> createFrameBufferWithTexture(int width, int height, std::shared_ptr<Texture> colorTexture, std::shared_ptr<Texture> colorTexture2 = nullptr);
 
 bool keyPressed(int key);
 
-void activateFrameBuffer(FrameBuffer* fb);
+void activateFrameBuffer(const FrameBuffer* fb);
 
 
 class MeshImporter {

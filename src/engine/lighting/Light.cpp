@@ -19,7 +19,7 @@ void Light::quickDebugManipulation(float &left, float &right, float &bottom, flo
 #endif
 }
 
-glm::mat4 Light::getShadowProjectionMatrix(Camera* fittingTarget) const {
+glm::mat4 Light::getShadowProjectionMatrix(const Camera* fittingTarget) const {
 
 #ifdef QUICK_DEBUG
 	return glm::ortho<float>(-10, 10, -10, 10, 0.1, 20);
@@ -114,7 +114,7 @@ glm::mat4 Light::getShadowProjectionMatrix(Camera* fittingTarget) const {
 
  }
 
-glm::mat4 Light::getShadowViewMatrix(Camera *fittingTarget) const {
+glm::mat4 Light::getShadowViewMatrix(const Camera *fittingTarget) const {
 
 	// If we have no fitting target, we will just assume a generic position
 	if (!fittingTarget) {
@@ -161,7 +161,7 @@ glm::mat4 Light::getShadowViewMatrix(Camera *fittingTarget) const {
 
 }
 
-glm::mat4 Light::getShadowViewProjectionMatrix(Camera *fittingTarget) const {
+glm::mat4 Light::getShadowViewProjectionMatrix(const Camera *fittingTarget) const {
 	return getShadowProjectionMatrix(fittingTarget) * getShadowViewMatrix(fittingTarget);
 }
 
@@ -272,7 +272,7 @@ void Light::initFrustumDebugging(Camera* fittingTarget) {
 * Returns a vector of world positions of the view frustum of this light, tightly wrapped around
 * the given fitting target camera.
 */
-std::vector<glm::vec3> Light::getLightFrustumFittedToCamera(Camera* fittingTarget) {
+std::vector<glm::vec3> Light::getLightFrustumFittedToCamera(const Camera* fittingTarget) {
 
 	auto lightViewMatrix = getShadowViewMatrix(fittingTarget);
 	std::vector<glm::vec3> lightFrustumWorldCorners;
@@ -309,7 +309,7 @@ std::vector<glm::vec3> Light::getLightFrustumFittedToCamera(Camera* fittingTarge
 * viewCameraFrustumVAO). The name is misleading, as what was the viewCameraFrustum during the calculation of the
 * view frustum, is now represented by the originalFittingTarget.
 */
-void Light::renderWorldFrustum(Camera *viewCamera, Camera* originalFittingTarget) {
+void Light::renderWorldFrustum(Camera *viewCamera, const Camera* originalFittingTarget) {
 	glBindVertexArray(viewCameraFrustumVAO);
 	glUseProgram(frustumShader->handle);
 
