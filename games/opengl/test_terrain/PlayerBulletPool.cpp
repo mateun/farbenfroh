@@ -35,3 +35,13 @@ PlayerBulletPool::PlayerBulletPool(Scene *scene, Mesh *bulletMesh, Texture *bull
 SceneNode * PlayerBulletPool::findFirstInactive() {
     return Scene::findFirstInactive(bulletNodes);
 }
+
+std::vector<SceneNode *> PlayerBulletPool::findAllActive() {
+    std::vector<SceneNode *> actives;
+    for (auto n : bulletNodes) {
+        if (n->isActive()) {
+            actives.push_back(n.get());
+        }
+    }
+    return actives;
+}

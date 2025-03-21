@@ -4,7 +4,7 @@
 
 #include "GameplayLevel.h"
 
-#include "EnemyExplosionComponent.h"
+#include "CollisionManager.h"
 #include "PlayerBulletPool.h"
 #include "PlayerShooting.h"
 #include  "../../../src/engine/game/default_game.h"
@@ -194,10 +194,7 @@ namespace ttg {
             cameraUpdate();
 
             playerShootingLogic->update();
-
-            // TODO bullet movement and collision logic
-
-
+            collisionManager->handlePlayerBulletsVsEnemies(playerBulletPool.get(), enemies);
 
         }
 
@@ -437,9 +434,9 @@ namespace ttg {
         padNode->initAsMeshNode(padMeshData);
 
         // Enemies
-        std::vector<std::unique_ptr<SceneNode>> enemyList;
+
         for (int i = 0; i < 3; i++) {
-            auto enemy = std::make_unique<SceneNode>("spiderbot1_" + std::to_string(i));
+            auto enemy = std::make_shared<SceneNode>("spiderbot1_" + std::to_string(i));
             enemy->setLocation({-5 + (i*8), 0, -6});
             MeshDrawData targetDummyMeshData;
             targetDummyMeshData.shader = basicShader.get();
@@ -448,29 +445,26 @@ namespace ttg {
             // targetDummyMeshData.normalMap = game->getTextureByName("ground_normal");
             enemy->initAsMeshNode(targetDummyMeshData);
             {
-                auto peSmoke = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, enemy->getLocation(), 200, true, false);
-                auto peExplosion = new gru::ParticleEmitter(game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), gru::EmitterType::EXPLOSION, enemy->getLocation(), 100, true, false);
+                auto explosionParticleSystem = std::make_shared<gru::ParticleSystem>();
+                auto peSmoke = new gru::ParticleEmitter(explosionParticleSystem, nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, enemy->getLocation(), 200, true, false);
+                auto peExplosion = new gru::ParticleEmitter(explosionParticleSystem, game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), gru::EmitterType::EXPLOSION, enemy->getLocation(), 100, true, false);
                 gru::EmitterExecutionRule rule;
                 rule.loop = false;
                 rule.startDelay = .1;
                 rule.maxDuration = 1.50;
                 rule.locationOffset = enemy->getLocation();   // TODO actually apply this somewhere
-                auto psystem = new gru::ParticleSystem();
-                psystem->addEmitter(peSmoke, rule);
+
+                explosionParticleSystem->addEmitter(peSmoke, rule);
                 rule.startDelay = 0.0;
                 rule.maxDuration = .50;
-                psystem->addEmitter(peExplosion, rule);
-                auto particleSystemNode = new SceneNode("particleSystem_" + std::to_string(i));
+                explosionParticleSystem->addEmitter(peExplosion, rule);
+
+                auto particleSystemNode = std::make_shared<SceneNode>("particleSystem_" + std::to_string(i));
                 particleSystemNode->disable();
-                particleSystemNode->initAsParticleSystemNode(psystem);
-                // TODO could also be a child of the enemy?!
-                enemy->setExtraData(particleSystemNode);
-
-                // Set this system as a child of the respective enemy.
-                //enemyExplosionParticles.push_back(particleSystemNode);
+                particleSystemNode->initAsParticleSystemNode(std::move(explosionParticleSystem));
+                enemy->addChild(particleSystemNode);
             }
-
-            enemyList.push_back(std::move(enemy));
+            enemies.push_back(std::move(enemy));
         }
 
         spawnDecalQuadMesh = createQuadMesh(PlanePivot::center);
@@ -502,8 +496,6 @@ namespace ttg {
         scene->setUICamera(game->getUICamera());
         scene->addNode(cameraNode);
         scene->addNode(std::move(terrainNode));
-        // scene->addNode(std::move(plNode1));
-        // scene->addNode(std::move(plNode2));
         scene->addNode(std::move(subTerrain));
         scene->addNode(std::move(grassNode1));
         scene->addNode(std::move(grassNode2));
@@ -511,22 +503,12 @@ namespace ttg {
         scene->addNode(std::move(stoneFieldNode2));
         scene->addNode(std::move(sunNode));
         scene->addNode(padNode);
-        for (auto& e : enemyList) {
-            scene->addNode(std::move(e));
+        for (auto& e : enemies) {
+            scene->addNode(e);
         }
         for (auto& sd : spawnDecals) {
             scene->addNode(std::move(sd));
         }
-
-        // The explosion particle systems should be part of each enemy node, which will then
-        // activate them on demand.
-        // Better than this sidetracked list here.
-        // for (auto psn : enemyExplosionParticles) {
-        //     scene->addNode(psn);
-        // }
-
-
-
 
         characterController = new CharacterController(padNode.get());
         characterController->setMovementSpeed(10);
@@ -534,10 +516,7 @@ namespace ttg {
 
         playerBulletPool = std::make_shared<PlayerBulletPool>(scene, game->getMeshByName("planar_bullet"), game->getTextureByName("planar_bullet_diffuse"), basicShader.get());
         playerShootingLogic = std::make_unique<PlayerShooting>(padNode, playerBulletPool);
-
-        //peSmoke2 = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, {-3, 0.5, 7}, 200);
-
-
+        collisionManager = std::make_unique<CollisionManager>();
 
     }
 } // ttg

@@ -5,6 +5,7 @@
 #ifndef GAMEPLAYLEVEL_H
 #define GAMEPLAYLEVEL_H
 
+class CollisionManager;
 class PlayerBulletPool;
 class EnemyExplosionComponent;
 class DefaultGame;
@@ -51,7 +52,6 @@ public:
     CharacterController * characterController = nullptr;
     MeshDrawData * playerBulletMeshData = nullptr;
 
-
     gru::ParticleEmitter * peSmoke0 = nullptr;
     gru::ParticleEmitter * peExplosion0 = nullptr;
     gru::ParticleEmitter * peSmoke2 = nullptr;
@@ -65,6 +65,8 @@ private:
 
     std::unique_ptr<PlayerShooting> playerShootingLogic;
     std::shared_ptr<PlayerBulletPool> playerBulletPool;
+    std::unique_ptr<CollisionManager> collisionManager;
+    std::vector<std::shared_ptr<SceneNode>> enemies;
 
 };
 

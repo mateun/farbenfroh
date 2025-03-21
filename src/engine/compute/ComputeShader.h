@@ -16,10 +16,9 @@ public:
 
     void initWithTexture(int width, int height);
 
-    template<class T>
-    void initWithShaderStorageBuffer(std::vector<T>& data);
+    void use();
 
-    void bindSSBO() const;
+    void bindSSBO(GLuint ssbo) const;
 
     void dispatch(DispatchOutput dispatchOutput, glm::ivec3 groupSize) const;
 

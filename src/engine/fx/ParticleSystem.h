@@ -9,6 +9,10 @@
 #include <vector>
 #include <map>
 
+namespace gru {
+  class ParticleSystem;
+}
+
 struct MeshDrawData;
 class ComputeShader;
 class Mesh;
@@ -64,12 +68,14 @@ namespace gru {
     /**
     * If mesh is a nullptr, a quad will be used.
     */
-    ParticleEmitter(Mesh* mesh, Texture* texture, EmitterType type, glm::vec3 location = {0,0, 0}, int numParticles = 5000, bool useInstancing = true, bool loop = false);
+    ParticleEmitter(const std::shared_ptr<ParticleSystem>& particleSystem, Mesh* mesh, Texture* texture, EmitterType type, glm::vec3 location = {0,0, 0}, int numParticles = 5000, bool useInstancing = true, bool loop = false);
     void reset();
     void update();
     void draw(const Camera* camera) const;
 
+
   private:
+    std::weak_ptr<ParticleSystem> particleSystem;
     bool initialized = false;
     glm::vec3 location = {0, 0, 0};
     glm::vec3 rotation = {0, 0, 0};
@@ -93,6 +99,7 @@ namespace gru {
 
     std::shared_ptr<Shader> particleShader = nullptr;
     std::shared_ptr<ComputeShader> computeShader = nullptr;
+    GLuint particleSSBO;
 
     // This holds vertices, uvs, normals, tangents for every particle.
     // UVs and normals don't change per frame, but the position does,

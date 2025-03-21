@@ -28,7 +28,7 @@ public:
     ~SceneNode();
 
     void initAsMeshNode(const MeshDrawData& meshData);
-    void initAsParticleSystemNode(gru::ParticleSystem* particleSystem);
+    void initAsParticleSystemNode(std::shared_ptr<gru::ParticleSystem> particleSystem);
     void initAsCameraNode(Camera* camera);
     void initAsLightNode(Light* light);
     void initAsTextNode();  // TODO
@@ -82,13 +82,15 @@ public:
 
     std::shared_ptr<NodeTransform> transform();
 
+    std::vector<std::shared_ptr<SceneNode>> findChildren(SceneNodeType scene_node);
+
 private:
-    std::vector<std::unique_ptr<NodeComponent>> _components;
+    std::vector<std::shared_ptr<NodeComponent>> _components;
 
     // These are type specific fields and can be null
     std::string id;
     Mesh* mesh = nullptr;
-    gru::ParticleSystem* particleSystem = nullptr;
+    std::shared_ptr<gru::ParticleSystem> particleSystem = nullptr;
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
     Shader* shader = nullptr;

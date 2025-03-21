@@ -118,20 +118,19 @@ void Scene::update() {
         flyCamMover->update();
     }
 
-    for (auto n : _allNodes) {
-        n->update();
+    std::vector<SceneNode*> flatAll;
+    flattenNodes(_allNodes, flatAll);
+    for (auto n : flatAll) {
+        if (n->isActive()) {
+            n->update();
+        }
     }
 
     for (auto ln : _pointLightNodes) {
         ln->light->location = ln->getLocation();
     }
 
-    for (auto ps: _particleSystemNodes) {
-        if (!ps->isActive()) {
-            continue;
-        }
-        ps->particleSystem->update();
-    }
+
 }
 
 void Scene::activateDebugFlyCam(bool value) {
@@ -270,7 +269,7 @@ void Scene::render() const {
             glClear(GL_DEPTH_BUFFER_BIT);
 
             for (auto m : flatMeshNodes) {
-                if (!m->isActive() || !m->getMeshData().castShadow) {
+                if (!m->isActive() || !m->getMeshData().castShadow || m->_type == SceneNodeType::ParticleSystem) {
                     continue;
                 }
                 MeshDrawData dd;
@@ -399,20 +398,21 @@ void Scene::render() const {
         }
 
         GL_ERROR_EXIT(44556611)
-        drawMesh(mdd);
 
-    }
-
-    // 3. Render particles
-    std::vector<SceneNode*> flatParticleNodes;
-    flattenNodes(_particleSystemNodes, flatParticleNodes);
-    for (auto ps : flatParticleNodes) {
-        if (!ps->isActive()) {
-            continue;
+        // TODO remove this special treatment of particle system nodes?!
+        if (m->_type == SceneNodeType::ParticleSystem) {
+            m->particleSystem->render(activeCamera);
+        } else {
+            drawMesh(mdd);
         }
-        ps->particleSystem->render(activeCamera);
+
 
     }
+
+
+
+
+
 
     // Postprocessing, if active:
     // First, apply all post effects:

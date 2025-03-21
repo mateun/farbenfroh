@@ -95,26 +95,24 @@ void ComputeShader::initWithTexture(int width, int height) {
 
 
 }
-template<typename T>
-void ComputeShader::initWithShaderStorageBuffer(std::vector<T>& data) {
-    glGenBuffers(1, &ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    size_t size = data.size() * sizeof(T);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, size, data.data(), GL_DYNAMIC_COPY);
+
+void ComputeShader::use() {
+    glUseProgram(handle);
 }
 
-void ComputeShader::bindSSBO() const {
+void ComputeShader::bindSSBO(GLuint ssbo) const {
+
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
 }
 
 void ComputeShader::dispatch(DispatchOutput dispatchOutput, glm::ivec3 groupSize) const {
 
     glUseProgram(handle);
-    if (dispatchOutput == DispatchOutput::Buffer) {
-        bindSSBO();
-    } else {
-        glBindImageTexture(0, outputTexture->handle, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-    }
+    // if (dispatchOutput == DispatchOutput::Buffer) {
+    //     bindSSBO();
+    // } else {
+    //     glBindImageTexture(0, outputTexture->handle, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    // }
 
     // glDispatchCompute uses the number of work groups. Our local group size is 1x1,
     // so we need the same dimension as our texture to cover every pixel once.

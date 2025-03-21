@@ -5,7 +5,7 @@
 #include "SceneNode.h"
 
 #include "NodeComponent.h"
-
+#include "Scene.h"
 
 
 SceneNode::SceneNode(const std::string &nodeId, std::shared_ptr<NodeTransform> transform) : id (nodeId), _transform(transform){
@@ -129,6 +129,11 @@ void SceneNode::update() {
     for (auto& nc : _components) {
         nc->invoke();
     }
+
+    if (_type == SceneNodeType::ParticleSystem) {
+        particleSystem->update();
+    }
+
 }
 
 void SceneNode::addComponent(std::unique_ptr<NodeComponent> component) {
@@ -143,6 +148,16 @@ glm::quat SceneNode::getOrientation() {
 
 std::shared_ptr<NodeTransform> SceneNode::transform() {
     return _transform;
+}
+
+std::vector<std::shared_ptr<SceneNode>> SceneNode::findChildren(SceneNodeType refType) {
+    std::vector<std::shared_ptr<SceneNode>> result;
+    for (auto& child : children) {
+        if (child->_type == refType ) {
+            result.push_back(child);
+        }
+    }
+    return result;
 }
 
 
@@ -179,9 +194,9 @@ void SceneNode::initAsMeshNode(const MeshDrawData& meshData) {
     this->meshData = meshData;
 }
 
-void SceneNode::initAsParticleSystemNode(gru::ParticleSystem *particleSystem) {
+void SceneNode::initAsParticleSystemNode(std::shared_ptr<gru::ParticleSystem> particleSystem) {
     this->_type = SceneNodeType::ParticleSystem;
-    this->particleSystem = particleSystem;
+    this->particleSystem = std::move(particleSystem);
 }
 
 

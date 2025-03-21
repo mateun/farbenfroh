@@ -181,8 +181,8 @@ std::shared_ptr<ComputeShader> gru::ShaderFactory::getComputeShaderByType(Emitte
 * - fragment shader for any color based and transparent effects like fading in and out.
 * If no specific mesh is passed in, a quad will be used as the mesh.
 */
-gru::ParticleEmitter::ParticleEmitter(Mesh *mesh, Texture *texture, EmitterType type, glm::vec3 location,
-                                      int numParticles, bool useInstancing, bool loop) : mesh(mesh), texture(texture), numParticles(numParticles), location(location), type(type) {
+gru::ParticleEmitter::ParticleEmitter(const std::shared_ptr<ParticleSystem>& particleSystem, Mesh *mesh, Texture *texture, EmitterType type, glm::vec3 location,
+                                      int numParticles, bool useInstancing, bool loop) : mesh(mesh), texture(texture), numParticles(numParticles), location(location), type(type), particleSystem(particleSystem) {
     particleShader = ShaderFactory::getShaderByType(type);
     computeShader = ShaderFactory::getComputeShaderByType(type);
 
@@ -220,7 +220,14 @@ gru::ParticleEmitter::ParticleEmitter(Mesh *mesh, Texture *texture, EmitterType 
             p.loop = loop ? 1 : 0;
             particles.push_back(p);
         }
-        computeShader->initWithShaderStorageBuffer(particles);
+
+        // Init SSBO for particles
+        {
+            glGenBuffers(1, &particleSSBO);
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleSSBO);
+            size_t size = particles.size() * sizeof(Particle);
+            glBufferData(GL_SHADER_STORAGE_BUFFER, size, particles.data(), GL_DYNAMIC_COPY);
+        }
 
     } else {
         initMegaBuffer();
@@ -241,6 +248,8 @@ void gru::ParticleEmitter::update() {
 
 
     // Use a ComputeShader to update all particles
+    computeShader->use();
+    computeShader->bindSSBO(particleSSBO);
     computeShader->setFloat("deltaTime", ftSeconds);
     GL_ERROR_EXIT(556688)
     GLuint numWorkGroups = (numParticles + 255) / 256;
@@ -255,13 +264,15 @@ void gru::ParticleEmitter::draw(const Camera* camera) const {
     if (!active) return;
 
     MeshDrawData mdd;
+    mdd.location = location;
+    // TODO orientation?!
     mdd.mesh = mesh.get();
     mdd.texture = texture.get();
     mdd.shader = particleShader.get();
 
     mdd.camera = camera;
     mdd.instanceCount = numParticles;
-    computeShader->bindSSBO();
+    computeShader->bindSSBO(particleSSBO);
 
     glDepthMask(GL_FALSE);
     drawMesh(mdd);

@@ -92,11 +92,12 @@
 #include "../games/opengl/test_terrain/TestTerrainGame.cpp"
 #include "../games/opengl/test_terrain/GameplayLevel.cpp"
 #include "../games/opengl/test_terrain/LevelEditor.cpp"
-#include "../games/opengl/test_terrain/EnemyExplosionComponent.cpp"
 #include "../games/opengl/test_terrain/PlayerBulletComp.cpp"
 #include "../games/opengl/test_terrain/EnemyHitManager.cpp"
 #include "../games/opengl/test_terrain/PlayerShooting.cpp"
 #include "../games/opengl/test_terrain/PlayerBulletPool.cpp"
+#include "../games/opengl/test_terrain/CollisionManager.cpp"
+#include "../games/opengl/test_terrain/EnemyBulletPool.cpp"
 
 //#include "../src/engine/editor/shadergraph/ShaderGraph.cpp"
 
