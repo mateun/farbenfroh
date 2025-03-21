@@ -113,7 +113,7 @@ void SceneNode::addChild(std::shared_ptr<SceneNode> child) {
     children.push_back(std::move(child));
 }
 
-MeshDrawData SceneNode::getMeshData() {
+MeshDrawData& SceneNode::getMeshData() {
     return meshData;
 }
 

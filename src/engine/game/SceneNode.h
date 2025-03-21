@@ -69,7 +69,7 @@ public:
     void setParent(const std::shared_ptr<SceneNode>& scene_node);
     void addChild(std::shared_ptr<SceneNode> child);
 
-    MeshDrawData getMeshData();
+    MeshDrawData& getMeshData();
 
     void setExtraData(void* data);
     void* getExtraData();

@@ -157,7 +157,9 @@ namespace ttg {
             glm::vec3 pos = cameraNode->getLocation();
             pos += glm::vec3{direction.x, 0, direction.z} *ftSeconds * 20.0f;
             cameraNode->setLocation(pos);
-            cameraNode->getCamera()->updateLookupTarget({cameraNode->getLocation().x, cameraNode->getLocation().y - 34, cameraNode->getLocation().z -8 });
+            cameraNode->getCamera()->updateLookupTarget({
+                cameraNode->getLocation().x, cameraNode->getLocation().y - 34, cameraNode->getLocation().z - 8
+            });
             // cam->updateLocation({0,34, 8});
             // cam->updateLookupTarget({0, 0, 1});
         }
@@ -196,18 +198,24 @@ namespace ttg {
             playerShootingLogic->update();
             collisionManager->handlePlayerBulletsVsEnemies(playerBulletPool.get(), enemies);
 
+            // Just for now...
+            static float timePassed = 0;
+            timePassed += ftSeconds;
+            levelBridge->getMeshData().uvPan = {0, timePassed * 0.01};
         }
 
     }
 
     void GameplayLevel::init() {
-
         basicShader = std::make_unique<Shader>();
-        basicShader->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert", "../games/opengl/test_terrain/assets/shaders/basic.frag");
+        basicShader->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert",
+                                   "../games/opengl/test_terrain/assets/shaders/basic.frag");
         basicShaderUnlit = new Shader();
-        basicShaderUnlit->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert", "../games/opengl/test_terrain/assets/shaders/basic_unlit.frag");
+        basicShaderUnlit->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert",
+                                        "../games/opengl/test_terrain/assets/shaders/basic_unlit.frag");
         emissiveShader = new Shader();
-        emissiveShader->initFromFiles("../src/engine/fx/shaders/emissive.vert", "../src/engine/fx/shaders/emissive.frag");
+        emissiveShader->initFromFiles("../src/engine/fx/shaders/emissive.vert",
+                                      "../src/engine/fx/shaders/emissive.frag");
 
         terrain = new Terrain(50, 50);
 
@@ -409,7 +417,8 @@ namespace ttg {
         heroMeshData.texture = game->getTextureByName("hero_albedo.png");
         heroMeshData.normalMap = game->getTextureByName("hero_normal");
         heroMeshData.shader = new Shader();
-        heroMeshData.shader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
+        heroMeshData.shader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert",
+                                           "../src/engine/editor/assets/shaders/colored_mesh.frag");
         heroNode->initAsMeshNode(heroMeshData);
 
         auto shotCursorNode = std::make_shared<SceneNode>("shotCursor");
@@ -446,8 +455,14 @@ namespace ttg {
             enemy->initAsMeshNode(targetDummyMeshData);
             {
                 auto explosionParticleSystem = std::make_shared<gru::ParticleSystem>();
-                auto peSmoke = new gru::ParticleEmitter(explosionParticleSystem, nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, enemy->getLocation(), 200, true, false);
-                auto peExplosion = new gru::ParticleEmitter(explosionParticleSystem, game->getMeshByName("cubby"), game->getTextureByName("smoke_diffuse"), gru::EmitterType::EXPLOSION, enemy->getLocation(), 100, true, false);
+                auto peSmoke = new gru::ParticleEmitter(explosionParticleSystem, nullptr,
+                                                        game->getTextureByName("smoke_diffuse"),
+                                                        gru::EmitterType::SMOKE, enemy->getLocation(), 200, true,
+                                                        false);
+                auto peExplosion = new gru::ParticleEmitter(explosionParticleSystem, game->getMeshByName("cubby"),
+                                                            game->getTextureByName("smoke_diffuse"),
+                                                            gru::EmitterType::EXPLOSION, enemy->getLocation(), 100,
+                                                            true, false);
                 gru::EmitterExecutionRule rule;
                 rule.loop = false;
                 rule.startDelay = .1;
@@ -480,17 +495,22 @@ namespace ttg {
             mdd.mesh = spawnDecalQuadMesh.get();
             mdd.castShadow = false;
             mdd.texture = game->getTextureByName("spawn_decal");
-            mdd.onRender = [](MeshDrawData md) {
-                // TODO Not sure about the "out of band" binding of the shader here.
-                glUseProgram(md.shader->handle);
-                // This changes the frame uniform which changes the color, making it pulse.
-                // Turn off for now:
-                //md.shader->setFloatValue(currentFrame, "frame");
-            };
+            mdd.shaderParameters.push_back({"frame", currentFrame});
             spawnDecal->initAsMeshNode(mdd);
             spawnDecals.push_back(std::move(spawnDecal));
         }
 
+        // This connects two different map areas ("levels")
+        levelBridge = std::make_shared<SceneNode>("level_bridge");
+        //levelBridge->disable();
+        levelBridge->setLocation({-3, 0.25, -16});
+        levelBridge->setScale({4, 1, 5});
+        MeshDrawData ldd;
+        ldd.shader = basicShader.get();
+        ldd.castShadow = false;
+        ldd.mesh = game->getMeshByName("level_bridge");
+        ldd.texture = game->getTextureByName("level_bridge_diffuse");
+        levelBridge->initAsMeshNode(ldd);
 
         scene = new Scene();
         scene->setUICamera(game->getUICamera());
@@ -502,6 +522,7 @@ namespace ttg {
         scene->addNode(std::move(stoneFieldNode1));
         scene->addNode(std::move(stoneFieldNode2));
         scene->addNode(std::move(sunNode));
+        scene->addNode(levelBridge);
         scene->addNode(padNode);
         for (auto& e : enemies) {
             scene->addNode(e);
@@ -514,7 +535,9 @@ namespace ttg {
         characterController->setMovementSpeed(10);
         characterController->setRotationSpeed(400);
 
-        playerBulletPool = std::make_shared<PlayerBulletPool>(scene, game->getMeshByName("planar_bullet"), game->getTextureByName("planar_bullet_diffuse"), basicShader.get());
+        playerBulletPool = std::make_shared<PlayerBulletPool>(scene, game->getMeshByName("planar_bullet"),
+                                                              game->getTextureByName("planar_bullet_diffuse"),
+                                                              emissiveShader);
         playerShootingLogic = std::make_unique<PlayerShooting>(padNode, playerBulletPool);
         collisionManager = std::make_unique<CollisionManager>();
 

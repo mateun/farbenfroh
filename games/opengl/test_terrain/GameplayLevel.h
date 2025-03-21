@@ -57,6 +57,7 @@ public:
     gru::ParticleEmitter * peSmoke2 = nullptr;
 
     gru::ParticleSystem * psystem0 = nullptr;
+    std::shared_ptr<SceneNode> levelBridge;
 
 private:
     std::shared_ptr<SceneNode> padNode;

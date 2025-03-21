@@ -378,7 +378,7 @@ void Scene::render() const {
         mdd.texture = m->texture;
         mdd.normalMap = m->normalMap;
         mdd.shader = m->shader;
-        mdd.uvPan = m->uvPan;
+        mdd.uvPan = m->meshData.uvPan;
         mdd.uvScale = m->uvScale;
         mdd.normalUVScale2 = m->meshData.normalUVScale2;
         mdd.uvScale2 = m->uvScale2;
