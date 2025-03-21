@@ -528,7 +528,7 @@ namespace ttg {
 
 
 
-        characterController = new CharacterController(scene->findNodeById("heroPad"));
+        characterController = new CharacterController(padNode.get());
         characterController->setMovementSpeed(10);
         characterController->setRotationSpeed(400);
 

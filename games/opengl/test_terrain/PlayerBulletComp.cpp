@@ -10,7 +10,7 @@ PlayerBulletComp::PlayerBulletComp() {
 
 void PlayerBulletComp::update() {
     auto pos = getNode().lock()->getLocation();
-    pos += getNode().lock()->transform()->forward() * ftSeconds * 45.0f;
+    pos += getNode().lock()->getForwardVector() * ftSeconds * 45.0f;
     getNode().lock()->setLocation(pos);
 
     lifeTime += ftSeconds;
