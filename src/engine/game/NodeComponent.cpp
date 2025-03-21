@@ -65,11 +65,11 @@ void NodeComponent::enable() {
     enabled = true;
 }
 
-SceneNode * NodeComponent::getNode() {
+std::weak_ptr<SceneNode> NodeComponent::getNode() {
     return node;
 }
 
-void NodeComponent::setNode(SceneNode *node) {
+void NodeComponent::setNode(std::weak_ptr<SceneNode> node) {
     this->node = node;
 }
 

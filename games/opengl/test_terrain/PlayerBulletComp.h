@@ -9,13 +9,13 @@
 
 class PlayerBulletComp : public ScriptComponent{
 public:
-    PlayerBulletComp(const std::vector<std::shared_ptr<SceneNode>>& enemyNodes);
+    PlayerBulletComp();
     void update() override;
 
 private:
     float lifeTime = 0.0f;
     float maxLifeInSeconds = 2;
-    const std::vector<std::shared_ptr<SceneNode>>& _enemyNodes;
+
 };
 
 

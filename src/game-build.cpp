@@ -95,6 +95,8 @@
 #include "../games/opengl/test_terrain/EnemyExplosionComponent.cpp"
 #include "../games/opengl/test_terrain/PlayerBulletComp.cpp"
 #include "../games/opengl/test_terrain/EnemyHitManager.cpp"
+#include "../games/opengl/test_terrain/PlayerShooting.cpp"
+#include "../games/opengl/test_terrain/PlayerBulletPool.cpp"
 
 //#include "../src/engine/editor/shadergraph/ShaderGraph.cpp"
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <variant>
 #include <engine/algo/Bvh.h>
 #include <engine/fx/ParticleSystem.h>
 #include <GL/glew.h>
@@ -704,7 +705,14 @@ struct GridData {
     Camera* camera = nullptr;
 };
 
-//glm::vec3 lightDirection{0.6, -2, -0.5};
+using ShaderParameterValue = std::variant<float, int, glm::vec2, glm::vec3, glm::vec4, glm::mat4>;
+
+struct ShaderParameter {
+    std::string name;
+    ShaderParameterValue value;
+
+
+};
 
 /**
 * This holds everything we need to issue a physical draw call.
@@ -738,7 +746,8 @@ struct MeshDrawData {
     std::vector<Light*> spotLights;
     glm::vec2 uvPan = {0, 0};
     glm::vec2 uvScale2 = {1, 1};
-    glm::vec2 normalUVScale2 = {1, 1};;
+    glm::vec2 normalUVScale2 = {1, 1};
+    std::vector<ShaderParameter> shaderParameters;
     float uvScale = 1;
     bool depthTest = true;
     bool skinnedDraw = false;

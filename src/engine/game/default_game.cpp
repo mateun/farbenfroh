@@ -75,29 +75,61 @@ DefaultGame::DefaultGame()  {
 }
 
 void DefaultGame::update() {
-    if (useGameLevels()) {
-        _currentLevel->update();
+    try {
+        if (useGameLevels()) {
+            _currentLevel->update();
+        }
+    } catch (const std::exception &e) {
+        // Option A: Print to console
+        std::cerr << "Unhandled update exception: " << e.what() << std::endl;
+
+        // Option B: Show a message box
+        MessageBoxA(
+            nullptr,
+            e.what(),
+            "Unhandled update Exception",
+            MB_OK | MB_ICONERROR
+        );
+
+        exit(11991122); // or some error code
     }
 }
 
 void DefaultGame::init() {
-    performanceFrequency = performance_frequency;
+    try {
+        performanceFrequency = performance_frequency;
 
-    // Doing the base class initialiations and then calling the derived class:
-    _spriteBatch = new gru::SpriteBatch(1000);
-    _uiSpriteBatch = new gru::SpriteBatch(100);
+        // Doing the base class initialiations and then calling the derived class:
+        _spriteBatch = new gru::SpriteBatch(1000);
+        _uiSpriteBatch = new gru::SpriteBatch(100);
 
-    // Auto asset import, only if allowed:
-    folderAssetLoader = new FolderAssetLoader();
-    if (shouldAutoImportAssets()) {
-        for (const auto& assetFolder : getAssetFolder()) {
-            folderAssetLoader->load(assetFolder);
+        // Auto asset import, only if allowed:
+        folderAssetLoader = new FolderAssetLoader();
+        if (shouldAutoImportAssets()) {
+            for (const auto& assetFolder : getAssetFolder()) {
+                folderAssetLoader->load(assetFolder);
+            }
         }
-    }
 
-    for (int i = 0; i < 4;i++) {
-        controllerStates.push_back(XINPUT_STATE {});
-        prevControllerStates.push_back(XINPUT_STATE {});
+        for (int i = 0; i < 4;i++) {
+            controllerStates.push_back(XINPUT_STATE {});
+            prevControllerStates.push_back(XINPUT_STATE {});
+        }
+
+    }
+    catch (const std::exception& e) {
+        // Option A: Print to console
+        std::cerr << "Unhandled init exception: " << e.what() << std::endl;
+
+        // Option B: Show a message box
+        MessageBoxA(
+            nullptr,
+            e.what(),
+            "Unhandled init Exception",
+            MB_OK | MB_ICONERROR
+        );
+
+        exit(06660);
     }
 
 }

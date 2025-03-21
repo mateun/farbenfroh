@@ -23,7 +23,7 @@ public:
 
     void setUICamera(Camera* cam);
 
-    void addNode(std::unique_ptr<SceneNode> node);
+    void addNode(std::shared_ptr<SceneNode> node);
     void update();
 
     void activateDebugFlyCam(bool value);
@@ -37,6 +37,7 @@ public:
     void render() const;
 
     SceneNode* findNodeById(const std::string& id);
+    static SceneNode* findFirstInactive(const std::vector<std::shared_ptr<SceneNode>> & nodeList);
 
 private:
     std::vector<std::shared_ptr<Light>> pointLights;

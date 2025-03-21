@@ -1868,7 +1868,7 @@ void drawMesh() {
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, glDefaultObjects->currentRenderState->texture->handle);
-        GL_ERROR_EXIT(980);
+        GL_ERROR_EXIT(9800);
     } else {
         if (glDefaultObjects->currentRenderState->skinnedDraw) {
             bindShader(glDefaultObjects->skinnedShader);
@@ -1973,7 +1973,10 @@ void drawMeshSimple2(const MeshDrawData& drawData) {
 }
 
 void drawMesh(const MeshDrawData &drawData) {
+
+    // The mesh is the problem!
     glBindVertexArray(drawData.mesh->vao);
+    auto e = glGetError();
     bindShader(drawData.shader);
 
     if (drawData.texture) {
@@ -2089,14 +2092,34 @@ void drawMesh(const MeshDrawData &drawData) {
         glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &index);
     }
 
-    //glDrawElements(GL_TRIANGLES, drawData.mesh->numberOfIndices, drawData.mesh->indexDataType, nullptr);
+
+    // Apply all further parameters, specific to this mesh:
+    for (auto shaderParam : drawData.shaderParameters) {
+        std::visit([shaderParam, drawData](auto&& value) {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, float>) {
+                drawData.shader->setFloatValue(value, shaderParam.name);
+            } else if constexpr (std::is_same_v<T, int>) {
+                drawData.shader->setIntValue(value, shaderParam.name);
+            } else if constexpr (std::is_same_v<T, glm::vec2>) {
+                drawData.shader->setVec2Value(value, shaderParam.name);
+            } else if constexpr (std::is_same_v<T, glm::vec3>) {
+                drawData.shader->setVec3Value(value, shaderParam.name);
+            } else if constexpr (std::is_same_v<T, glm::vec4>) {
+                drawData.shader->setVec4Value(value, shaderParam.name);
+            } else if constexpr (std::is_same_v<T, glm::mat4>) {
+                drawData.shader->setMat4Value(value, shaderParam.name);
+            }
+        }, shaderParam.value);
+    }
+
     if (drawData.instanceCount > 0) {
         //glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, drawData.instanceCount);
         glDrawElementsInstanced(GL_TRIANGLES, drawData.mesh->indices.size(), GL_UNSIGNED_INT, nullptr, drawData.instanceCount );
     } else {
         glDrawElements(GL_TRIANGLES, drawData.mesh->indices.size(), drawData.mesh->indexDataType, nullptr);
     }
-    GL_ERROR_EXIT(993);
+    GL_ERROR_EXIT(9931);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
@@ -4946,8 +4969,10 @@ void Shader::initFromFiles(const std::string &vertFile, const std::string &fragF
 }
 
 void Texture::bindAt(int unitIndex) {
+
     glActiveTexture(GL_TEXTURE0 + unitIndex);
     glBindTexture(GL_TEXTURE_2D, handle);
+
     GL_ERROR_EXIT(980);
 }
 

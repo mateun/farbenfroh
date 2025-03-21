@@ -5,9 +5,10 @@
 #ifndef GAMEPLAYLEVEL_H
 #define GAMEPLAYLEVEL_H
 
-
+class PlayerBulletPool;
 class EnemyExplosionComponent;
 class DefaultGame;
+class PlayerShooting;
 
 namespace ttg {
 
@@ -25,28 +26,20 @@ public:
 
     GameplayLevel(DefaultGame* game, const std::string& name = "gameplay");
 
-    void renderShadowBias();
-
-    void renderPlayerStats();
-
-    void render() override;
-
-    SceneNode* findFirstInactive(const std::vector<SceneNode *> & nodeList);
-
-    void updatePlayerBullets();
-
-    void checkPlayerCollision();
-
+    void init() override;
+    void update() override;
     void cameraUpdate();
 
-    void update() override;
-    void init() override;
-
+    void render() override;
+    void renderShadowBias();
+    void renderPlayerStats();
+    void updatePlayerBullets();
+    void checkPlayerCollision();
 
     Terrain * terrain = nullptr;
     Scene * scene = nullptr;
 
-    Shader * basicShader = nullptr;
+    std::unique_ptr<Shader> basicShader = nullptr;
     Shader * basicShaderUnlit = nullptr;
     Shader * emissiveShader = nullptr;
     CameraMover * cameraMover = nullptr;
@@ -54,18 +47,24 @@ public:
     CameraMover* flyCamMover = nullptr;
     bool inFlyCamDebugMode = false;
 
-
-
     float shadowBias =0;
     CharacterController * characterController = nullptr;
     MeshDrawData * playerBulletMeshData = nullptr;
-    std::vector<SceneNode*> playerBulletPool;
+
 
     gru::ParticleEmitter * peSmoke0 = nullptr;
     gru::ParticleEmitter * peExplosion0 = nullptr;
     gru::ParticleEmitter * peSmoke2 = nullptr;
 
     gru::ParticleSystem * psystem0 = nullptr;
+
+private:
+    std::shared_ptr<SceneNode> padNode;
+    std::shared_ptr<SceneNode> cameraNode;
+    std::unique_ptr<Mesh> spawnDecalQuadMesh;
+
+    std::unique_ptr<PlayerShooting> playerShootingLogic;
+    std::shared_ptr<PlayerBulletPool> playerBulletPool;
 
 };
 

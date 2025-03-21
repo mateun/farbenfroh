@@ -5,6 +5,8 @@
 #include "GameplayLevel.h"
 
 #include "EnemyExplosionComponent.h"
+#include "PlayerBulletPool.h"
+#include "PlayerShooting.h"
 #include  "../../../src/engine/game/default_game.h"
 class gru::ParticleSystem;
 class gru::ParticleEmitter;
@@ -38,20 +40,11 @@ namespace ttg {
 
         lightingOff();
         bindCamera(game->getUICamera());
-        int activeBullets = 0;
-        for (auto b : playerBulletPool) {
-            if (b->isActive()) {
-                activeBullets++;
-            }
-        }
         char buf[175];
-        sprintf_s(buf, 160, "# player bullets:%03d",
-                  activeBullets);
-        flipUvs(false);
-        font->renderText(buf, {2, scaled_height - 40, 0.88});
+
+
 
         auto padNode = scene->findNodeById("heroPad");
-        auto cameraNode = scene->findNodeById("camera");
 
         sprintf_s(buf, 160, "# player location:%3.2f/%3.2f/%3.2f",
                   padNode->getLocation().x, padNode->getLocation().y, padNode->getLocation().z);
@@ -92,15 +85,7 @@ namespace ttg {
         renderPlayerStats();
     }
 
-    SceneNode * GameplayLevel::findFirstInactive(const std::vector<SceneNode *> &nodeList) {
-        for (auto n : nodeList) {
-            if (!n->isActive()) {
-                return n;
-            }
-        }
 
-        return nullptr;
-    }
 
     // void GameplayLevel::updateActiveEnemyExplosions() {
     //     for (auto ee: enemyExplosionParticles) {
@@ -160,7 +145,6 @@ namespace ttg {
 
     void GameplayLevel::cameraUpdate() {
         auto padNode = scene->findNodeById("heroPad");
-        auto cameraNode = scene->findNodeById("camera");
 
         // We want the camera to follow the player, but with a smooth lag.
         // This is the ideal position we want to be in.
@@ -181,8 +165,8 @@ namespace ttg {
 
     void GameplayLevel::update() {
 
+#ifdef USE_POINT_LIGHTS
         auto plNode1 = scene->findNodeById("pointLight1");
-
         // TODO maybe move this into the actual node, so
         // each node has some logic component which takes over the actual movement etc.
         // Or we do it externally.. not sure, what is actually better. Encapsulation favors
@@ -190,6 +174,7 @@ namespace ttg {
         static float timePassed= 0;
         timePassed += ftSeconds;
         plNode1->setLocation({-5 + (10 * sinf(timePassed)), 5, 2});
+#endif
 
         scene->update();
         if (keyPressed(VK_F11)) {
@@ -208,30 +193,11 @@ namespace ttg {
             checkPlayerCollision();
             cameraUpdate();
 
-            auto padNode = scene->findNodeById("heroPad");
+            playerShootingLogic->update();
+
+            // TODO bullet movement and collision logic
 
 
-            // Player shooting
-            // TODO move into own "controller" class?
-
-            static float lastShotInterval = 0.0f;
-            lastShotInterval += ftSeconds;
-            if (getControllerAxis(ControllerAxis::R_TRIGGER, 0) > 0.1 && lastShotInterval >= 0.1f) {
-                lastShotInterval = 0.0f;
-                auto bulletNode = findFirstInactive(playerBulletPool);
-                if (!bulletNode) {
-                    throw std::runtime_error("No bullet node found!!");
-                }
-                bulletNode->enable();
-                bulletNode->setLocation(padNode->getLocation() + glm::vec3{0, 1.0f, 0} + padNode->getForwardVector() * .5f);
-                bulletNode->setOrientation(padNode->getWorldOrientation());
-                BulletData* bd = (BulletData*)bulletNode->getExtraData();
-                bd->currentLifeInSeconds = 0;
-            }
-
-
-            // TODO actually implement the movment code within the PlayerBulletComponent!
-            //updatePlayerBullets();
 
         }
 
@@ -239,7 +205,7 @@ namespace ttg {
 
     void GameplayLevel::init() {
 
-        basicShader = new Shader();
+        basicShader = std::make_unique<Shader>();
         basicShader->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert", "../games/opengl/test_terrain/assets/shaders/basic.frag");
         basicShaderUnlit = new Shader();
         basicShaderUnlit->initFromFiles("../games/opengl/test_terrain/assets/shaders/basic.vert", "../games/opengl/test_terrain/assets/shaders/basic_unlit.frag");
@@ -256,7 +222,7 @@ namespace ttg {
         smd.mesh = game->getMeshByName("cube_ground2");
         terrainNode->setScale({2, 1, 2});
         terrainNode->setLocation({0, -1, 0});
-        smd.shader = basicShader;
+        smd.shader = basicShader.get();
         smd.texture = game->getTextureByName("ground_albedo");
         smd.normalMap = game->getTextureByName("ground_normal");
         smd.uvScale2 = {60, 60};
@@ -270,7 +236,7 @@ namespace ttg {
         smd.mesh = game->getMeshByName("cube_ground");
         subTerrain->setScale({0.5, 2, 0.5});
         subTerrain->setLocation({28, -8.5, -20});
-        smd.shader = basicShader;
+        smd.shader = basicShader.get();
         smd.texture = game->getTextureByName("ground_albedo");
         smd.tint = {1.5, 0.5, 1, 1};
         smd.color = {0,0, 1, 1};
@@ -283,7 +249,7 @@ namespace ttg {
         smd.mesh = game->getMeshByName("grass_field");
         grassNode1->setScale({4, 5,4});
         grassNode1->setLocation({4, -0.15, -3});
-        smd.shader = basicShader;
+        smd.shader = basicShader.get();
         smd.texture = game->getTextureByName("grass_diffuse");
         smd.uvScale2 = {4, 4};
         smd.uvScale = 1;
@@ -304,7 +270,7 @@ namespace ttg {
         smd.tint = {1, 1, 1, 1};
         smd.texture = game->getTextureByName("asphalt_albedo");
         smd.normalMap = game->getTextureByName("asphalt_normal");
-        smd.shader = basicShader;
+        smd.shader = basicShader.get();
         smd.uvScale2 = {1, 1};
         smd.uvScale = 1;
         stoneFieldNode1->initAsMeshNode(smd);
@@ -377,7 +343,7 @@ namespace ttg {
         hydrantdNode->setLocation({0, 0.0, 0});
         hydrantdNode->initAsMeshNode(smd);
 
-        auto wall1Node = new SceneNode("wall_left");
+        auto wall1Node = std::make_unique<SceneNode>("wall_left");
         wall1Node->setOrientation(glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0)));
         smd.mesh = game->getMeshByName("round_wall");
         smd.texture = game->getTextureByName("ground_albedo");
@@ -390,7 +356,7 @@ namespace ttg {
         wall1Node->setLocation({-25, 0.0, -20});
         wall1Node->initAsMeshNode(smd);
 
-        auto wall2Node = new SceneNode("wall_right");
+        auto wall2Node = std::make_unique<SceneNode>("wall_right");
         wall2Node->setScale({2, 1, 10});
         wall2Node->setLocation({25, 0.0, 40});
         wall2Node->initAsMeshNode(smd);
@@ -417,7 +383,7 @@ namespace ttg {
         auto plNode1 = std::make_unique<SceneNode>("pointLight1");
         plNode1->initAsLightNode(pointLight1);
 
-        auto plNode2 = std::make_unique<SceneNode>();
+        auto plNode2 = std::make_unique<SceneNode>("pointLight2");
         plNode2->setLocation({-13, 2,0});
         auto pointLight2 = new Light();
         pointLight2->type = LightType::Point;
@@ -427,7 +393,7 @@ namespace ttg {
 
         plNode2->initAsLightNode(pointLight2);
 
-        auto cameraNode = std::make_unique<SceneNode>("camera");
+        cameraNode = std::make_unique<SceneNode>("camera");
         cameraNode->enable();
         cameraNode->initAsCameraNode(game->getGameplayCamera());
         auto cam = cameraNode->getCamera();
@@ -439,7 +405,7 @@ namespace ttg {
         cameraMover = new CameraMover(cameraNode->getCamera());
 
 
-        auto heroNode = std::make_unique<SceneNode>("hero");
+        auto heroNode = std::make_shared<SceneNode>("hero");
         heroNode->setLocation({0, 0.2, 0});
         MeshDrawData heroMeshData;
         heroMeshData.mesh = game->getMeshByName("hero_small");
@@ -449,7 +415,7 @@ namespace ttg {
         heroMeshData.shader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
         heroNode->initAsMeshNode(heroMeshData);
 
-        auto shotCursorNode = new SceneNode("shotCursor");
+        auto shotCursorNode = std::make_shared<SceneNode>("shotCursor");
         shotCursorNode->setLocation({0, 0.2, 0});
         shotCursorNode->setScale({0.5, 1, 0.5});
         MeshDrawData cursorMeshData;
@@ -459,9 +425,9 @@ namespace ttg {
         cursorMeshData.castShadow = false;
         shotCursorNode->initAsMeshNode(cursorMeshData);
 
-        auto padNode = std::make_unique<SceneNode>("heroPad");
+        padNode = std::make_shared<SceneNode>("heroPad");
         padNode->setLocation({0, 0.5, 5});
-        padNode->addChild(heroNode.get());
+        padNode->addChild(heroNode);
         padNode->addChild(shotCursorNode);
         padNode->setScale({0.6, 0.6, 0.6});
         MeshDrawData padMeshData;
@@ -471,12 +437,12 @@ namespace ttg {
         padNode->initAsMeshNode(padMeshData);
 
         // Enemies
-        std::vector<SceneNode*> enemyList;
+        std::vector<std::unique_ptr<SceneNode>> enemyList;
         for (int i = 0; i < 3; i++) {
-            auto enemy = new SceneNode("spiderbot1_" + std::to_string(i));
+            auto enemy = std::make_unique<SceneNode>("spiderbot1_" + std::to_string(i));
             enemy->setLocation({-5 + (i*8), 0, -6});
             MeshDrawData targetDummyMeshData;
-            targetDummyMeshData.shader = basicShader;
+            targetDummyMeshData.shader = basicShader.get();
             targetDummyMeshData.mesh = game->getMeshByName("spiderbot4");
             targetDummyMeshData.texture = game->getTextureByName("spiderbot1_diffuse");
             // targetDummyMeshData.normalMap = game->getTextureByName("ground_normal");
@@ -504,20 +470,20 @@ namespace ttg {
                 //enemyExplosionParticles.push_back(particleSystemNode);
             }
 
-            enemyList.push_back(enemy);
+            enemyList.push_back(std::move(enemy));
         }
 
-        auto quadMesh = createQuadMesh(PlanePivot::center);
-        std::vector<SceneNode*> spawnDecals;
+        spawnDecalQuadMesh = createQuadMesh(PlanePivot::center);
+        std::vector<std::shared_ptr<SceneNode>> spawnDecals;
         // Spawn decals
         for (int i = 0; i < 3; i++) {
-            auto spawnDecal = new SceneNode("spawnDecal_" + std::to_string(i));
+            auto spawnDecal = std::make_shared<SceneNode>("spawnDecal_" + std::to_string(i));
             spawnDecal->setLocation({-18 + (i*8), 0.25, 5});
             spawnDecal->setOrientation(glm::angleAxis<float>(glm::radians(-90.0f), glm::vec3{1, 0, 0}));
             spawnDecal->setScale({4, 4, 1});
             MeshDrawData mdd;
-            mdd.shader = basicShader;;
-            mdd.mesh = quadMesh.get();
+            mdd.shader = basicShader.get();
+            mdd.mesh = spawnDecalQuadMesh.get();
             mdd.castShadow = false;
             mdd.texture = game->getTextureByName("spawn_decal");
             mdd.onRender = [](MeshDrawData md) {
@@ -528,28 +494,28 @@ namespace ttg {
                 //md.shader->setFloatValue(currentFrame, "frame");
             };
             spawnDecal->initAsMeshNode(mdd);
-            spawnDecals.push_back(spawnDecal);
+            spawnDecals.push_back(std::move(spawnDecal));
         }
 
 
         scene = new Scene();
         scene->setUICamera(game->getUICamera());
-        scene->addNode(std::move(cameraNode));
+        scene->addNode(cameraNode);
         scene->addNode(std::move(terrainNode));
-        scene->addNode(std::move(plNode1));
-        scene->addNode(std::move(plNode2));
+        // scene->addNode(std::move(plNode1));
+        // scene->addNode(std::move(plNode2));
         scene->addNode(std::move(subTerrain));
         scene->addNode(std::move(grassNode1));
         scene->addNode(std::move(grassNode2));
         scene->addNode(std::move(stoneFieldNode1));
         scene->addNode(std::move(stoneFieldNode2));
         scene->addNode(std::move(sunNode));
-        scene->addNode(std::move(padNode));
-        for (auto e : enemyList) {
-            scene->addNode(std::unique_ptr<SceneNode>(e));
+        scene->addNode(padNode);
+        for (auto& e : enemyList) {
+            scene->addNode(std::move(e));
         }
-        for (auto sd : spawnDecals) {
-            scene->addNode(std::unique_ptr<SceneNode>(sd));
+        for (auto& sd : spawnDecals) {
+            scene->addNode(std::move(sd));
         }
 
         // The explosion particle systems should be part of each enemy node, which will then
@@ -566,33 +532,8 @@ namespace ttg {
         characterController->setMovementSpeed(10);
         characterController->setRotationSpeed(400);
 
-        // Player bullet pool
-        // A list of bullets which all start in active but are activated at shooting.
-        // When being too old, they get reset again, a bit like particles.
-
-        playerBulletMeshData = new MeshDrawData();
-        playerBulletMeshData->texture = game->getTextureByName("planar_bullet_diffuse");
-        playerBulletMeshData->mesh = game->getMeshByName("planar_bullet");
-        playerBulletMeshData->shader = emissiveShader;
-        playerBulletMeshData->castShadow = true;
-        playerBulletMeshData->subroutineFragBind = "calculateSingleColor";
-        playerBulletMeshData->onRender = [](MeshDrawData md) {
-            glUseProgram(md.shader->handle);
-            md.shader->setFloatValue(6.0f, "emissionFactor");
-        };
-        //playerBulletMeshData->lit = false;
-        for (int i = 0; i< 30; i++) {
-            auto bulletNode = std::make_unique<SceneNode>("playerBullet_" + std::to_string(i));
-            bulletNode->disable();
-            bulletNode->initAsMeshNode(*playerBulletMeshData);
-            bulletNode->setScale({1, 1, 1});
-            bulletNode->setExtraData(new BulletData());
-
-            // TODO find alternative for this bulletpool - very probably this should move into
-            // the PlayerBullet component.
-            //playerBulletPool.push_back(bulletNode);
-            scene->addNode(std::move(bulletNode));
-        }
+        playerBulletPool = std::make_shared<PlayerBulletPool>(scene, game->getMeshByName("planar_bullet"), game->getTextureByName("planar_bullet_diffuse"), basicShader.get());
+        playerShootingLogic = std::make_unique<PlayerShooting>(padNode, playerBulletPool);
 
         //peSmoke2 = new gru::ParticleEmitter(nullptr, game->getTextureByName("smoke_diffuse"), gru::EmitterType::SMOKE, {-3, 0.5, 7}, 200);
 

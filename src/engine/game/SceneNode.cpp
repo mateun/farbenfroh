@@ -7,10 +7,6 @@
 #include "NodeComponent.h"
 
 
-SceneNode::SceneNode() {
-    id = "anonymous";
-    _transform = DEFAULT_TRANSFORM;
-}
 
 SceneNode::SceneNode(const std::string &nodeId, std::shared_ptr<NodeTransform> transform) : id (nodeId), _transform(transform){
 }
@@ -107,13 +103,14 @@ void SceneNode::enable() {
     _active = true;
 }
 
-void SceneNode::setParent(SceneNode *parent) {
-    this->parent = parent;
-    parent->children.push_back(std::shared_ptr<SceneNode>(this));
+void SceneNode::setParent(const std::shared_ptr<SceneNode>& parentNode) {
+    this->parent = parentNode;
+
 }
 
-void SceneNode::addChild(SceneNode* child) {
-    child->setParent(this);
+void SceneNode::addChild(std::shared_ptr<SceneNode> child) {
+    child->setParent(shared_from_this());
+    children.push_back(std::move(child));
 }
 
 MeshDrawData SceneNode::getMeshData() {
@@ -129,14 +126,15 @@ void * SceneNode::getExtraData() {
 }
 
 void SceneNode::update() {
-    for (auto nc : _components) {
+    for (auto& nc : _components) {
         nc->invoke();
     }
 }
 
-void SceneNode::addComponent(std::shared_ptr<NodeComponent> component) {
-    _components.push_back(component);
-    component->setNode(this);
+void SceneNode::addComponent(std::unique_ptr<NodeComponent> component) {
+    component->setNode(shared_from_this());
+    _components.push_back(std::move(component));
+
 }
 
 glm::quat SceneNode::getOrientation() {
@@ -188,25 +186,24 @@ void SceneNode::initAsParticleSystemNode(gru::ParticleSystem *particleSystem) {
 
 
 glm::vec3 SceneNode::getHierarchicalWorldLocation(glm::vec3 localLocation) {
-    if (parent) {
-        return localLocation + parent->_location;
+    if (auto p = parent.lock()) {
+        return localLocation + p->_location;
     }
 
     return localLocation;
 
-
 }
 
-void SceneNode::collectParentNodes(std::vector<SceneNode*>& parents) {
-    if (parent) {
-        parents.push_back(parent);
-        parent->collectParentNodes(parents);
+void SceneNode::collectParentNodes(std::vector<std::shared_ptr<SceneNode>>& parents) {
+    if (auto p = parent.lock()) {
+        parents.push_back(p);
+        p->collectParentNodes(parents);
     }
 
 }
 
 glm::quat SceneNode::getWorldOrientation() {
-    std::vector<SceneNode*> flatParents;
+    std::vector<std::shared_ptr<SceneNode>> flatParents;
     collectParentNodes(flatParents);
     //std::ranges::reverse(flatParents);
 

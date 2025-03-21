@@ -20,11 +20,10 @@ class Light;
 
 
 
-class SceneNode {
+class SceneNode : public std::enable_shared_from_this<SceneNode> {
     friend class Scene;
 
 public:
-    SceneNode();
     SceneNode(const std::string& nodeId, std::shared_ptr<NodeTransform> transform = DEFAULT_TRANSFORM);
     ~SceneNode();
 
@@ -52,7 +51,7 @@ public:
     glm::vec3 getHierarchicalWorldLocation(glm::vec3 localLocation);
     glm::quat getWorldOrientation();
 
-    void collectParentNodes(std::vector<SceneNode *>& parents);
+    void collectParentNodes(std::vector<std::shared_ptr<SceneNode>>& parents);
 
     glm::vec3 getLocation();
     glm::vec3 getScale();
@@ -67,8 +66,8 @@ public:
     void disable();
     void enable();
 
-    void setParent(SceneNode * scene_node);
-    void addChild(SceneNode *child);
+    void setParent(const std::shared_ptr<SceneNode>& scene_node);
+    void addChild(std::shared_ptr<SceneNode> child);
 
     MeshDrawData getMeshData();
 
@@ -77,14 +76,14 @@ public:
 
     template <typename T>
     std::vector<std::shared_ptr<T> > getComponents() const;
-    void addComponent(std::shared_ptr<NodeComponent> component);
+    void addComponent(std::unique_ptr<NodeComponent> component);
 
     glm::quat getOrientation();
 
     std::shared_ptr<NodeTransform> transform();
 
 private:
-    std::vector<std::shared_ptr<NodeComponent>> _components;
+    std::vector<std::unique_ptr<NodeComponent>> _components;
 
     // These are type specific fields and can be null
     std::string id;
@@ -114,7 +113,7 @@ private:
     SceneNodeType _type;
     bool _active = true;
 
-    SceneNode * parent = nullptr;
+    std::weak_ptr<SceneNode> parent;
     std::vector<std::shared_ptr<SceneNode>> children;
 
     void* extraData = nullptr;

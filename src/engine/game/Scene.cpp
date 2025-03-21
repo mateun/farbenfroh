@@ -81,7 +81,7 @@ void Scene::setUICamera(Camera *cam) {
 }
 
 
-void Scene::addNode(std::unique_ptr<SceneNode> node) {
+void Scene::addNode(std::shared_ptr<SceneNode> node) {
     const std::shared_ptr sharedNode = std::move(node);
     _allNodes.push_back(sharedNode);
 
@@ -398,6 +398,7 @@ void Scene::render() const {
             m->meshData.onRender(m->meshData);
         }
 
+        GL_ERROR_EXIT(44556611)
         drawMesh(mdd);
 
     }
@@ -454,4 +455,13 @@ SceneNode * Scene::findNodeById(const std::string &id) {
         }
     }
     return nullptr;
+}
+
+SceneNode * Scene::findFirstInactive(const std::vector<std::shared_ptr<SceneNode>>& nodeList) {
+        for (auto& n : nodeList) {
+            if (!n->isActive()) {
+                return n.get();
+            }
+        }
+        return nullptr;
 }

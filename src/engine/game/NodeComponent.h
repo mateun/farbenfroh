@@ -57,15 +57,15 @@ class NodeComponent {
 public:
   virtual void invoke() = 0;
 
-  SceneNode* getNode();
+  std::weak_ptr<SceneNode> getNode();
 
   void disable();
   void enable();
 
 
 private:
-  void setNode(SceneNode* node);
-  SceneNode* node = nullptr;
+  void setNode(std::weak_ptr<SceneNode> node);
+  std::weak_ptr<SceneNode> node;
   bool enabled = true;
 };
 
