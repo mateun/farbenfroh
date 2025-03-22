@@ -6,6 +6,7 @@
 #include <filesystem>
 
 #include <iostream>
+#include <engine/io/MeshImporter.h>
 
 extern HWND getWindow();
 
@@ -37,8 +38,10 @@ void FolderAssetLoader::load(const std::string &assetFolder) {
                          extension == ".obj" ||
                          extension == ".glb" ||
                          extension == ".gltf") {
-                    auto mesh = MeshImporter().importMesh(entry.path().string());
-                    _meshMap[entry.path().filename().stem().string()] = mesh;
+                    auto pureName = entry.path().filename().stem().string();
+                    auto skeletonBaseFolder = assetFolder + "/skeletal/" + pureName;
+                    auto mesh = AssimpMeshImporter().importMesh(entry.path().string(), skeletonBaseFolder);
+                    _meshMap[pureName] = mesh;
                 } else if (extension == ".wav") {auto sound = loadSoundFileExt(entry.path().string(), getWindow());
                     _soundMap[entry.path().filename().stem().string()] = sound;
 

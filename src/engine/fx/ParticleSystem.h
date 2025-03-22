@@ -9,6 +9,9 @@
 #include <vector>
 #include <map>
 
+class Camera;
+struct Shader;
+
 namespace gru {
   class ParticleSystem;
 }

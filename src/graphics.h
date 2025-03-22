@@ -6,7 +6,6 @@
 #include <vector>
 #include <optional>
 #include <variant>
-#include <engine/algo/Bvh.h>
 #include <engine/fx/ParticleSystem.h>
 #include <GL/glew.h>
 #include <engine/input/UpdateSwitcher.h>
@@ -16,6 +15,7 @@
 #include "assimp/scene.h"
 #include "../src/engine/game/game_model.h"
 #include "../src/engine/animation/Animation.h"
+#include "ozz/animation/runtime/animation.h"
 
 #define GL_ERROR_EXIT(code)   auto err_##code = glGetError(); \
                         if (err_##code != 0) { \
@@ -27,6 +27,12 @@
                                         printf("GL error %d: \ncontext info: %s\n", err_##code, info.c_str()); \
                                         exit(code); \
                                     }
+
+class Camera;
+
+namespace ozz::animation {
+    class Skeleton;
+}
 
 extern int scaled_width, scaled_height;
 class JsonElement;
@@ -163,6 +169,9 @@ struct Centroid {
 };
 
 
+
+
+
 /**
  * A 3D mesh which can be rendered anywhere
  * in the world.
@@ -178,6 +187,7 @@ struct Mesh {
     GLenum indexDataType = GL_UNSIGNED_INT;
 
     Skeleton* skeleton = nullptr;
+    std::shared_ptr<ozz::animation::Skeleton> ozzSkeleton;
 
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> positionsSortedByIndex;
@@ -868,26 +878,7 @@ bool keyPressed(int key);
 void activateFrameBuffer(const FrameBuffer* fb);
 
 
-class MeshImporter {
-public:
 
-    /**
-     * FBX notes:
-     * For .fbx files out of Blender, first rotate the object by -90 degress around the x-axis.
-     * Then apply all transforms.
-     * Then export fbx.
-     *
-     * GLTF notes:
-     * Disable "Sample optimization" and "Keep channel..." (or similar settings).
-     * This will lead to exact non optimized frame information, making it easier to debug.
-     *
-    **/
-    Mesh* importMesh(const std::string& filePath, bool debugPrintSM = false);
-    std::vector<Animation*> importAnimations(const std::string& filePath);
-
-private:
-    std::vector<Animation*> importAnimationsInternal(const aiScene* scene);
-};
 
 
 /**

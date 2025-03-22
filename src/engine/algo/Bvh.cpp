@@ -3,6 +3,9 @@
 //
 
 #include "Bvh.h"
+
+#include <engine/io/MeshImporter.h>
+
 #include "../../graphics.h"
 
 namespace gru {
@@ -219,7 +222,7 @@ namespace gru {
 
     Mesh * Bvh::getCubeMesh() {
         if (!cubeMesh) {
-            cubeMesh = MeshImporter().importMesh("../assets/unit_cube.glb");
+            cubeMesh = AssimpMeshImporter().importMesh("../assets/unit_cube.glb");
         }
         return cubeMesh;
 

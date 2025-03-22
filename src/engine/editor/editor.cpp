@@ -4,6 +4,7 @@
 
 #include "editor.h"
 
+#include <codecvt>
 #include <ranges>
 #include <engine/animation/AnimationBlender.h>
 #include <engine/animation/BoneMatrixCalculator.h>
@@ -11,10 +12,16 @@
 #include <engine/animation/PerBoneBlendData.h>
 #include <engine/animation/Pose.h>
 #include <engine/rastergraphics/rastergraphics.h>
+#include <shobjidl.h>
 
 #include "graphics.h"
 
 #include "../game/game_model.h"
+#include "ozz/include/ozz/animation/runtime/local_to_model_job.h"
+#include "ozz/include/ozz/animation/runtime/skeleton.h"
+#include "ozz/include/ozz/base/span.h"
+#include "ozz/include/ozz/base/maths/simd_math.h"
+#include "ozz/include/ozz/base/maths/soa_transform.h"
 
 namespace editor {
     void Editor::renderImGui() {
@@ -254,6 +261,53 @@ namespace editor {
 
                 }
             }
+
+            if (importedMesh->ozzSkeleton) {
+
+                const int num_soa_joints = importedMesh->ozzSkeleton->num_soa_joints();
+                locals_.resize(num_soa_joints);
+                const int num_joints = importedMesh->ozzSkeleton->num_joints();
+                models_.resize(num_joints);
+
+                ozz::animation::LocalToModelJob ltm_job;
+                ltm_job.skeleton = importedMesh->ozzSkeleton.get();
+                ltm_job.input = ozz::make_span(locals_);
+                ltm_job.output = ozz::make_span(models_);
+                if (!ltm_job.Run()) {
+                    throw new std::runtime_error("could not load ozz model");
+                }
+
+
+                for (auto jointIndex = 0; jointIndex < importedMesh->ozzSkeleton->num_joints(); jointIndex++) {
+
+                        MeshDrawData dd;
+                        dd.mesh = assetLoader->getMesh("bone_mesh");
+                        dd.color = {0.7, 0.1, .1, 1};
+                        dd.camera = getMeshViewerCamera();
+                        dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height};
+                        dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
+                        auto ozzTransform = ltm_job.output[jointIndex];
+                        glm::mat4 modelTransform = glm::mat4(1);
+                        {
+                            float temp[4];
+                            _mm_store_ps(temp, ozzTransform.cols[0]);
+                            auto col0 = glm::vec4(temp[0], temp[1], temp[2], temp[3]);
+                            _mm_store_ps(temp, ozzTransform.cols[1]);
+                            auto col1 = glm::vec4(temp[0], temp[1], temp[2], temp[3]);
+                            _mm_store_ps(temp, ozzTransform.cols[2]);
+                            auto col2 = glm::vec4(temp[0], temp[1], temp[2], temp[3]);
+                            _mm_store_ps(temp, ozzTransform.cols[3]);
+                            auto col3 = glm::vec4(temp[0], temp[1], temp[2], temp[3]);
+                            modelTransform = glm::mat4(col0, col1, col2, col3);
+
+                        }
+                        dd.worldTransform = modelTransform;
+                        dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
+                        drawMesh(dd);
+                    }
+
+                }
+
         }
 
         // Rest to normal viewport:
@@ -278,46 +332,49 @@ namespace editor {
             ImGui::TableNextColumn();
             ImGui::Text("Joint infos");
 
-            if (ImGui::BeginTable("bone_detail_table", 4)) {
-                // Set up headers for the table (optional)
-                ImGui::TableSetupColumn("Name");
-                ImGui::TableSetupColumn("localTransform", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("offsetMatrix", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("Parent");
-                ImGui::TableHeadersRow();
+            if (importedMesh->skeleton) {
+                if (ImGui::BeginTable("bone_detail_table", 4)) {
+                    // Set up headers for the table (optional)
+                    ImGui::TableSetupColumn("Name");
+                    ImGui::TableSetupColumn("localTransform", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("offsetMatrix", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("Parent");
+                    ImGui::TableHeadersRow();
 
 
-                for (auto j: importedMesh->skeleton->joints) {
+                    for (auto j: importedMesh->skeleton->joints) {
 
-                    ImGui::TableNextRow();
+                        ImGui::TableNextRow();
 
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%s", j->name.c_str());
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%s", j->name.c_str());
 
-                    ImGui::TableNextColumn();
-                    float x = j->currentPoseLocalTransform[3][0]; // Translation x
-                    float y = j->currentPoseLocalTransform[3][1]; // Translation y
-                    float z = j->currentPoseLocalTransform[3][2]; // Translation z
-                    ImGui::Text("%f/%f/%f", x, y, z);
+                        ImGui::TableNextColumn();
+                        float x = j->currentPoseLocalTransform[3][0]; // Translation x
+                        float y = j->currentPoseLocalTransform[3][1]; // Translation y
+                        float z = j->currentPoseLocalTransform[3][2]; // Translation z
+                        ImGui::Text("%f/%f/%f", x, y, z);
 
-                    ImGui::TableNextColumn();
-                    float ibx = j->inverseBindMatrix[3][0]; // Translation x
-                    float iby = j->inverseBindMatrix[3][1]; // Translation y
-                    float ibz = j->inverseBindMatrix[3][2]; // Translation z
-                    ImGui::Text("%f/%f/%f", ibx, iby, ibz);
+                        ImGui::TableNextColumn();
+                        float ibx = j->inverseBindMatrix[3][0]; // Translation x
+                        float iby = j->inverseBindMatrix[3][1]; // Translation y
+                        float ibz = j->inverseBindMatrix[3][2]; // Translation z
+                        ImGui::Text("%f/%f/%f", ibx, iby, ibz);
 
-                    ImGui::TableNextColumn();
-                    if (j->parent) {
-                        ImGui::Text(j->parent->name.c_str());
-                    } else {
-                        ImGui::Text("-");
+                        ImGui::TableNextColumn();
+                        if (j->parent) {
+                            ImGui::Text(j->parent->name.c_str());
+                        } else {
+                            ImGui::Text("-");
+                        }
+
                     }
 
+                    // End the table
+                    ImGui::EndTable();
                 }
-
-                // End the table
-                ImGui::EndTable();
             }
+
 
 
             // Render current animation details:
@@ -403,6 +460,47 @@ namespace editor {
         renderMeshMenu();
     }
 
+
+    std::string Editor::selectFolderUsingIFileDialog()
+    {
+        std::wstring folder = L"";
+        // Initialize COM.
+        HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+        if (SUCCEEDED(hr)) {
+            IFileDialog *pfd = nullptr;
+            // Create the File Open Dialog object.
+            hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
+            if (SUCCEEDED(hr)) {
+                // Set the options to pick folders.
+                DWORD dwFlags;
+                pfd->GetOptions(&dwFlags);
+                pfd->SetOptions(dwFlags | FOS_PICKFOLDERS);
+
+                // Show the dialog.
+                hr = pfd->Show(NULL);
+                if (SUCCEEDED(hr)) {
+                    IShellItem *psiResult = nullptr;
+                    hr = pfd->GetResult(&psiResult);
+                    if (SUCCEEDED(hr)) {
+                        PWSTR pszFilePath = nullptr;
+                        hr = psiResult->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+                        if (SUCCEEDED(hr)) {
+                            std::wcout << L"Selected folder: " << pszFilePath << std::endl;
+                            folder = pszFilePath;
+                            CoTaskMemFree(pszFilePath);
+                        }
+                        psiResult->Release();
+                    }
+                }
+                pfd->Release();
+            }
+            CoUninitialize();
+        }
+
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+        return converter.to_bytes(folder);
+    }
+
     std::string Editor::showFileDialog(const std::string &typeFilter) {
 
         OPENFILENAME ofn;       // Common dialog box structure
@@ -436,7 +534,15 @@ namespace editor {
 
     void Editor::renderMeshMenu() {
         if (ImGui::BeginMenu("Mesh")) {
+
+            if (ImGui::MenuItem("Select skeleton base folder")) {
+                skeletonBaseName = selectFolderUsingIFileDialog();
+            }
+
             if (ImGui::MenuItem("Import Mesh")) {
+                if (skeletonBaseName.empty()) {
+                    skeletonBaseName = selectFolderUsingIFileDialog();
+                }
                 doImportMeshAction();
             }
 
@@ -445,7 +551,7 @@ namespace editor {
                     if (importedMesh) {
                         delete (importedMesh);
                     }
-                    importedMesh = MeshImporter().importMesh(lastImportedMeshFileName);
+                    importedMesh = AssimpMeshImporter().importMesh(lastImportedMeshFileName, skeletonBaseName);
                 }
             }
 
@@ -459,7 +565,7 @@ namespace editor {
             if (ImGui::MenuItem("Import Animation")) {
                 auto fileName = showFileDialog("All\0*.*\0fbx\0*.fbx\0gltf\0*.glb");
                 if (!fileName.empty()) {
-                    auto importedAnims = MeshImporter().importAnimations(fileName);
+                    auto importedAnims = AssimpMeshImporter().importAnimations(fileName);
                     for (auto anim: importedAnims) {
                         importedAnimations[anim->name] = anim;
                     }
@@ -504,7 +610,7 @@ namespace editor {
             if (importedMesh) {
                 delete (importedMesh);
             }
-            importedMesh = MeshImporter().importMesh(lastImportedMeshFileName);
+            importedMesh = AssimpMeshImporter().importMesh(lastImportedMeshFileName, skeletonBaseName);
             animationPlayer->setMesh(importedMesh);
         }
     }

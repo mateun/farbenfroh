@@ -1,6 +1,13 @@
 #pragma once
 #include <engine/animation/AnimationPlayer.h>
 
+#include "ozz/base/containers/vector.h"
+
+namespace ozz::math {
+    struct Float4x4;
+    struct SoaTransform;
+}
+
 class Level;
 class GameObject;
 
@@ -57,6 +64,9 @@ namespace editor {
         void ShowGameEditor();
         void recurseRenderGameObjects(GameObject *parent);
         void renderMainMenu();
+
+        std::string selectFolderUsingIFileDialog();
+
         void renderGameObjectsMenu();
 
         void doImportMeshAction();
@@ -69,6 +79,14 @@ namespace editor {
         Camera *getMeshViewerCamera();
 
         void renderMeshViewerExt();
+
+        std::string skeletonBaseName = "";
+
+        // Buffer of local transforms as sampled from animation_.
+        ozz::vector<ozz::math::SoaTransform> locals_;
+
+        // Buffer of model space matrices.
+        ozz::vector<ozz::math::Float4x4> models_;
 
 
     };

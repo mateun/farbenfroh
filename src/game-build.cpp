@@ -38,6 +38,8 @@
 #include <engine/game/SceneNode.cpp>
 #include <engine/game/Scene.cpp>
 #include <engine/game/NodeComponent.cpp>
+#include <engine/io/AssimpMeshImporter.cpp>
+#include <engine/io/OzzSkeletonImporter.cpp>
 
 //#include "../games/simple_king/king_main.cpp"
 

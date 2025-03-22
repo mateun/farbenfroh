@@ -4,6 +4,8 @@ project(game_engine)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
 
+add_subdirectory(extlibs/ozz extlibs/ozz/out/)
+
 include_directories(src extlibs/glm-0.9.9.8/glm extlibs/ $ENV{VULKAN_SDK}/Include
                     extlibs/Recast/Include extlibs/Detour/Include extlibs/assimp/Include extlibs/lua547/src
         extlibs/glew-2.2.0/include extlibs)
@@ -49,5 +51,5 @@ add_executable(collisiongrid_test
         src/engine/tests/CollisionGridTests.cpp
 )
 
-target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
+target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation)
 target_link_libraries(animtest dsound dxgi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
