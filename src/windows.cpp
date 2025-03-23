@@ -82,6 +82,8 @@ static HWND window;
 int64_t performance_frequency = 0;
 static LARGE_INTEGER freq = {};
 
+static DefaultGame* game = nullptr;
+
 ImFont* boldFont = nullptr;
 
 // Controller (GamePad) states.
@@ -135,19 +137,18 @@ float getControllerAxis(ControllerAxis axis, int index) {
 
     if (axis == ControllerAxis::LSTICK_X) {
         return controllerStates[index].Gamepad.sThumbLX / 32767.0f;
-    } else if ( axis == ControllerAxis::LSTICK_Y) {
+    } if ( axis == ControllerAxis::LSTICK_Y) {
         return controllerStates[index].Gamepad.sThumbLY / 32767.0f;
-    } else if ( axis == ControllerAxis::RSTICK_X) {
+    } if ( axis == ControllerAxis::RSTICK_X) {
         return controllerStates[index].Gamepad.sThumbRX / 32767.0f;
-    } else if ( axis == ControllerAxis::RSTICK_Y) {
+    } if ( axis == ControllerAxis::RSTICK_Y) {
         return controllerStates[index].Gamepad.sThumbRY / 32767.0f;
-    } else if ( axis == ControllerAxis::L_TRIGGER) {
+    } if ( axis == ControllerAxis::L_TRIGGER) {
         return controllerStates[index].Gamepad.bLeftTrigger / 255.0f;
-    } else if ( axis == ControllerAxis::R_TRIGGER) {
+    } if ( axis == ControllerAxis::R_TRIGGER) {
         return controllerStates[index].Gamepad.bRightTrigger / 255.0f;
-    } else {
-        return 0;
     }
+    return 0;
 
 }
 
@@ -542,6 +543,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
     switch (message) {
 
         case WM_CLOSE:
+        if (game) delete game;
+        game = nullptr;
         DestroyWindow(hwnd);
         windowClosed = true;
         break;
@@ -696,7 +699,7 @@ bool processOSMessages() {
 }
 
 
-void mainLoop(HWND hwnd, DefaultGame* game, VulkanRenderer* vulkanRenderer) {
+void mainLoop(HWND hwnd, VulkanRenderer* vulkanRenderer) {
 	LARGE_INTEGER startticks;
 	LARGE_INTEGER endticks;
 
@@ -739,11 +742,15 @@ void mainLoop(HWND hwnd, DefaultGame* game, VulkanRenderer* vulkanRenderer) {
         }
 
 
-        running = game->shouldStillRun();
-        pollController(0);
-        game->update();
-        postPollController(0);
-        game->render();
+	    // We might have been deleted async
+	    // by the user closing the main window.
+	    if (game) {
+            running = game->shouldStillRun();
+            pollController(0);
+            game->update();
+            postPollController(0);
+            game->render();
+	    }
 
         lastKeyPress = 0;
         lbuttonUp = false;
@@ -1146,7 +1153,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     VulkanRenderer* vulkanRenderer = nullptr;
 
     // Allocate our game
-    auto game = getGame();
+    game = getGame();
     auto editorFlag = GetArgumentValue("editor", __argc, __argv);
     if ( editorFlag == "true" ) {
         game = new editor::EditorGame();
@@ -1254,7 +1261,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
         }
 
         game->init();
-        mainLoop(hwnd, game, vulkanRenderer);
+        mainLoop(hwnd, vulkanRenderer);
     }
 
 

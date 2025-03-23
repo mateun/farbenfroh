@@ -2,6 +2,8 @@
 #include <engine/animation/AnimationPlayer.h>
 
 #include "ozz/base/containers/vector.h"
+#include "ozz/include/ozz/base/containers/vector.h"
+#include "ozz/include/ozz/base/maths/transform.h"
 
 namespace ozz::math {
     struct Float4x4;
@@ -21,6 +23,8 @@ namespace editor {
 
     public:
         Editor();
+        ~Editor();
+
 
     public:
         void renderImGui();
@@ -78,6 +82,8 @@ namespace editor {
         void saveLevel();
         Camera *getMeshViewerCamera();
 
+        ozz::math::Transform convertSoaToAos(const ozz::math::SoaTransform &soa_transform, int element);
+
         void renderMeshViewerExt();
 
         std::string skeletonBaseName = "";
@@ -99,6 +105,7 @@ namespace editor {
  */
     class EditorGame : public DefaultGame {
     public:
+        ~EditorGame();
         void update() override;
         void init() override;
         void render() override;

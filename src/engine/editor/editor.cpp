@@ -21,7 +21,10 @@
 #include "ozz/include/ozz/animation/runtime/skeleton.h"
 #include "ozz/include/ozz/base/span.h"
 #include "ozz/include/ozz/base/maths/simd_math.h"
+#include "ozz/include/ozz/base/maths/soa_float.h"
 #include "ozz/include/ozz/base/maths/soa_transform.h"
+#include "ozz/include/ozz/base/maths/transform.h"
+#include "ozz/include/ozz/base/maths/internal/simd_math_config.h"
 
 namespace editor {
     void Editor::renderImGui() {
@@ -114,6 +117,93 @@ namespace editor {
         }
 
         return _meshViewerCamera;
+    }
+
+    /**
+    * This method takes a SoA transform as input and unpacks it into an AoS transform.
+    * As each SoA struct holds 4 AoS structs, we also need to give the index (0 - 3) which we actually want to extract here.
+    */
+    ozz::math::Transform Editor::convertSoaToAos(const ozz::math::SoaTransform &soa_transform, int element) {
+        ozz::math::Transform joint_transform;
+
+        
+        ozz::math::SimdFloat4 translations_x = soa_transform.translation.x;
+        ozz::math::SimdFloat4 translations_y = soa_transform.translation.y;
+        ozz::math::SimdFloat4 translations_z = soa_transform.translation.z;
+
+        // Similarly for rotation
+        ozz::math::SimdFloat4 rotations_x = soa_transform.rotation.x;
+        ozz::math::SimdFloat4 rotations_y = soa_transform.rotation.y;
+        ozz::math::SimdFloat4 rotations_z = soa_transform.rotation.z;
+        ozz::math::SimdFloat4 rotations_w = soa_transform.rotation.w;
+
+        // Similarly for scale
+        ozz::math::SimdFloat4 scales_x = soa_transform.scale.x;
+        ozz::math::SimdFloat4 scales_y = soa_transform.scale.y;
+        ozz::math::SimdFloat4 scales_z = soa_transform.scale.z;
+
+        // Extract single float from SimdFloat4.
+        // To actually get to a usable float value
+        if (element == 0) {
+            joint_transform.translation.x = ozz::math::GetX(ozz::math::SplatX(translations_x));
+            joint_transform.translation.y = ozz::math::GetX(ozz::math::SplatX(translations_y));
+            joint_transform.translation.z = ozz::math::GetX(ozz::math::SplatX(translations_z));
+
+            joint_transform.rotation.x = ozz::math::GetX(ozz::math::SplatX(rotations_x));
+            joint_transform.rotation.y = ozz::math::GetX(ozz::math::SplatX(rotations_y));
+            joint_transform.rotation.z = ozz::math::GetX(ozz::math::SplatX(rotations_z));
+            joint_transform.rotation.w = ozz::math::GetX(ozz::math::SplatX(rotations_w));
+
+            joint_transform.scale.x = ozz::math::GetX(ozz::math::SplatX(scales_x));
+            joint_transform.scale.y = ozz::math::GetX(ozz::math::SplatX(scales_y));
+            joint_transform.scale.z = ozz::math::GetX(ozz::math::SplatX(scales_z));
+        }
+        else if (element == 1) {
+            joint_transform.translation.x = ozz::math::GetX(ozz::math::SplatY(translations_x));
+            joint_transform.translation.y = ozz::math::GetX(ozz::math::SplatY(translations_y));
+            joint_transform.translation.z = ozz::math::GetX(ozz::math::SplatY(translations_z));
+
+            joint_transform.rotation.x = ozz::math::GetX(ozz::math::SplatY(rotations_x));
+            joint_transform.rotation.y = ozz::math::GetX(ozz::math::SplatY(rotations_y));
+            joint_transform.rotation.z = ozz::math::GetX(ozz::math::SplatY(rotations_z));
+            joint_transform.rotation.w = ozz::math::GetX(ozz::math::SplatY(rotations_w));
+
+            joint_transform.scale.x = ozz::math::GetX(ozz::math::SplatY(scales_x));
+            joint_transform.scale.y = ozz::math::GetX(ozz::math::SplatY(scales_y));
+            joint_transform.scale.z = ozz::math::GetX(ozz::math::SplatY(scales_z));
+        }
+        else if (element == 2) {
+            joint_transform.translation.x = ozz::math::GetX(ozz::math::SplatZ(translations_x));
+            joint_transform.translation.y = ozz::math::GetX(ozz::math::SplatZ(translations_y));
+            joint_transform.translation.z = ozz::math::GetX(ozz::math::SplatZ(translations_z));
+
+            joint_transform.rotation.x = ozz::math::GetX(ozz::math::SplatZ(rotations_x));
+            joint_transform.rotation.y = ozz::math::GetX(ozz::math::SplatZ(rotations_y));
+            joint_transform.rotation.z = ozz::math::GetX(ozz::math::SplatZ(rotations_z));
+            joint_transform.rotation.w = ozz::math::GetX(ozz::math::SplatZ(rotations_w));
+
+            joint_transform.scale.x = ozz::math::GetX(ozz::math::SplatZ(scales_x));
+            joint_transform.scale.y = ozz::math::GetX(ozz::math::SplatZ(scales_y));
+            joint_transform.scale.z = ozz::math::GetX(ozz::math::SplatZ(scales_z));
+        }
+        else if (element == 3) {
+            joint_transform.translation.x = ozz::math::GetX(ozz::math::SplatW(translations_x));
+            joint_transform.translation.y = ozz::math::GetX(ozz::math::SplatW(translations_y));
+            joint_transform.translation.z = ozz::math::GetX(ozz::math::SplatW(translations_z));
+
+            joint_transform.rotation.x = ozz::math::GetX(ozz::math::SplatW(rotations_x));
+            joint_transform.rotation.y = ozz::math::GetX(ozz::math::SplatW(rotations_y));
+            joint_transform.rotation.z = ozz::math::GetX(ozz::math::SplatW(rotations_z));
+            joint_transform.rotation.w = ozz::math::GetX(ozz::math::SplatW(rotations_w));
+
+            joint_transform.scale.x = ozz::math::GetX(ozz::math::SplatW(scales_x));
+            joint_transform.scale.y = ozz::math::GetX(ozz::math::SplatW(scales_y));
+            joint_transform.scale.z = ozz::math::GetX(ozz::math::SplatW(scales_z));
+        }
+
+
+        return joint_transform;
+
     }
 
     void Editor::renderMeshViewerExt() {
@@ -264,8 +354,27 @@ namespace editor {
 
             if (importedMesh->ozzSkeleton) {
 
-                const int num_soa_joints = importedMesh->ozzSkeleton->num_soa_joints();
-                locals_.resize(num_soa_joints);
+
+                {
+
+                    locals_.resize(importedMesh->ozzSkeleton->num_soa_joints());   // We want AoS format (not SoA)
+
+                    // Convert from skeleton.joint_rest_poses() (SoA format)
+                    //std::vector<ozz::math::Transform> aos_transforms(num_joints);
+
+                    for (int soa_index = 0, joint_index = 0; soa_index < importedMesh->ozzSkeleton->num_soa_joints(); ++soa_index) {
+
+                        const auto& soa_transform = importedMesh->ozzSkeleton->joint_rest_poses()[soa_index];
+                        locals_[soa_index] = soa_transform;
+
+                        // Maybe we don't need this ... as we can (and must already put SoA transforms into our locals
+                        // for (int element_index = 0; element_index < 4 && joint_index < num_joints; ++element_index, ++joint_index) {
+                        //     auto aosTransform = convertSoaToAos(soa_transform, element_index);
+                        //     locals_[joint_index] = aosTransform;
+                        // }
+                    }
+                }
+
                 const int num_joints = importedMesh->ozzSkeleton->num_joints();
                 models_.resize(num_joints);
 
@@ -286,21 +395,8 @@ namespace editor {
                         dd.camera = getMeshViewerCamera();
                         dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height};
                         dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
-                        auto ozzTransform = ltm_job.output[jointIndex];
-                        glm::mat4 modelTransform = glm::mat4(1);
-                        {
-                            float temp[4];
-                            _mm_store_ps(temp, ozzTransform.cols[0]);
-                            auto col0 = glm::vec4(temp[0], temp[1], temp[2], temp[3]);
-                            _mm_store_ps(temp, ozzTransform.cols[1]);
-                            auto col1 = glm::vec4(temp[0], temp[1], temp[2], temp[3]);
-                            _mm_store_ps(temp, ozzTransform.cols[2]);
-                            auto col2 = glm::vec4(temp[0], temp[1], temp[2], temp[3]);
-                            _mm_store_ps(temp, ozzTransform.cols[3]);
-                            auto col3 = glm::vec4(temp[0], temp[1], temp[2], temp[3]);
-                            modelTransform = glm::mat4(col0, col1, col2, col3);
-
-                        }
+                        glm::mat4 modelTransform;
+                        std::memcpy(&modelTransform, &ltm_job.output[jointIndex], sizeof(glm::mat4));
                         dd.worldTransform = modelTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
                         drawMesh(dd);
@@ -958,10 +1054,24 @@ namespace editor {
         gradientShader->initFromFiles("../src/engine/editor/assets/shaders/colored_mesh.vert", "../src/engine/editor/assets/shaders/colored_mesh.frag");
     }
 
+    Editor::~Editor() {
+        locals_.clear();
+        models_.clear();
+        if (importedMesh && importedMesh->ozzSkeleton) {
+            importedMesh->ozzSkeleton.reset();
+        }
+
+
+    }
+
     void EditorGame::init() {
         DefaultGame::init();
 
         editor = new Editor();
+    }
+
+    EditorGame::~EditorGame() {
+        if (editor) delete editor;
     }
 
     void EditorGame::update() {
