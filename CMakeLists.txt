@@ -36,12 +36,21 @@ add_executable(game WIN32
         src/game-build.cpp
 
 )
+target_compile_definitions(game PRIVATE USE_RAW_WIN32=1)
+
+add_executable(game_with_app_framework WIN32
+        games/opengl/test_terrain/AnimationEditor.cpp
+        src/engine/ui/Application.cpp
+)
+target_compile_definitions(game_with_app_framework PRIVATE USE_WIN32_APP_FRAMEWORK=1)
 
 add_executable(animtest WIN32
         src/imgui-build.cpp
         src/engine/tests/test_units.cpp
         src/engine/tests/AnimationTests.cpp
 )
+target_compile_definitions(animtest PRIVATE USE_RAW_WIN32=1)
+
 add_executable(quadtree_test
         src/engine/algo/QuadTree.cpp
         src/engine/tests/QuadTreeTests.cpp
@@ -52,4 +61,4 @@ add_executable(collisiongrid_test
 )
 
 target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation)
-target_link_libraries(animtest dsound dxgi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32)
+target_link_libraries(animtest dsound dxgi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation)

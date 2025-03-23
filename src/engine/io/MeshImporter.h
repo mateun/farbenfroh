@@ -17,6 +17,7 @@ public:
 
     virtual std::vector<Animation*> importAnimations(const std::string& filePath) = 0;
 
+
 };
 
 class AssimpMeshImporter : public MeshImporter {
@@ -43,6 +44,7 @@ private:
     std::vector<Animation*> importAnimationsInternal(const aiScene* scene);
     glm::quat assimpQuatToGLM(const aiQuaternion& aiQuat);
     Animation* aiAnimToAnimation(aiAnimation* aiAnim);
+    std::vector<std::shared_ptr<ozz::animation::Animation>> importOzzAnimations(const std::string& skeletonBaseFolder = "");
 
 };
 

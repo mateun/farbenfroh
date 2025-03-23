@@ -24,6 +24,10 @@
 #include <engine/animation/AnimationBlender.cpp>
 #include <engine/animation/AnimationState.cpp>
 #include <engine/animation/Animation.cpp>
+#include <engine/fx/ParticleSystem.cpp>
+#include <engine/io/AssimpMeshImporter.cpp>
+#include <engine/compute/ComputeShader.cpp>
+#include <engine/profiling/PerformanceTimer.cpp>
 
 #include <engine/animation/JointMask.cpp>
 #include <engine/animation/AnimationController.cpp>

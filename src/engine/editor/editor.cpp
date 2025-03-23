@@ -17,6 +17,7 @@
 #include "graphics.h"
 
 #include "../game/game_model.h"
+#include "ozz/animation/runtime/sampling_job.h"
 #include "ozz/include/ozz/animation/runtime/local_to_model_job.h"
 #include "ozz/include/ozz/animation/runtime/skeleton.h"
 #include "ozz/include/ozz/base/span.h"
@@ -258,36 +259,48 @@ namespace editor {
             dd.directionalLights.push_back(sun);
 
             if (blendedAnimations.size() > 1 && !animationPlaying) {
-                // Find the pose for each blended animation
-                // And then - blend it!!!
-                Pose* finalPose = new Pose();
+
+                if (importedMesh->skeleton) {
+                    // Find the pose for each blended animation
+                    // And then - blend it!!!
+                    Pose* finalPose = new Pose();
 
 
-                // Create an effective override of the upper body for our aim/walk blend.
-                // Only the aim should contribute to the upper body bones.
-                PerBoneBlendData perBoneBlendData;
-                perBoneBlendData.addNamedBoneWeight("upperarm.r", 1);
-                perBoneBlendData.addNamedBoneWeight("lowerarm.r", 1);
-                perBoneBlendData.addNamedBoneWeight("hand.r", 1);
-                perBoneBlendData.addNamedBoneWeight("upperarm.l", 1);
-                perBoneBlendData.addNamedBoneWeight("lowerarm.l", 1);
-                perBoneBlendData.addNamedBoneWeight("hand.l", 1);
+                    // Create an effective override of the upper body for our aim/walk blend.
+                    // Only the aim should contribute to the upper body bones.
+                    PerBoneBlendData perBoneBlendData;
+                    perBoneBlendData.addNamedBoneWeight("upperarm.r", 1);
+                    perBoneBlendData.addNamedBoneWeight("lowerarm.r", 1);
+                    perBoneBlendData.addNamedBoneWeight("hand.r", 1);
+                    perBoneBlendData.addNamedBoneWeight("upperarm.l", 1);
+                    perBoneBlendData.addNamedBoneWeight("lowerarm.l", 1);
+                    perBoneBlendData.addNamedBoneWeight("hand.l", 1);
 
-                // Always blend the first 2 animations for now:
-                auto blendedAnimsList = std::vector(blendedAnimations.begin(), blendedAnimations.end());
-                finalPose = BoneMatrixCalculator().calculateBlendedPose(blendedAnimsList[0], blendedAnimsList[1], importedMesh->skeleton, blendTimestamp, blendWeight, &perBoneBlendData);
+                    // Always blend the first 2 animations for now:
+                    auto blendedAnimsList = std::vector(blendedAnimations.begin(), blendedAnimations.end());
+                    finalPose = BoneMatrixCalculator().calculateBlendedPose(blendedAnimsList[0], blendedAnimsList[1], importedMesh->skeleton, blendTimestamp, blendWeight, &perBoneBlendData);
 
-                if (finalPose) {
-                    dd.skinnedDraw = true;
-                    dd.shader = skinnedMeshShader;
-                    dd.boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(finalPose);
                     if (finalPose) {
-                        delete finalPose;
+                        dd.skinnedDraw = true;
+                        dd.shader = skinnedMeshShader;
+                        dd.boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(finalPose);
+                        if (finalPose) {
+                            delete finalPose;
+                        }
+                    } else {
+                        throw std::runtime_error("no pose could be calculated!");
                     }
-                } else {
-                    throw std::runtime_error("no pose could be calculated!");
                 }
+                else if (importedMesh->ozzSkeleton) {
 
+                    context_.Resize(importedMesh->ozzSkeleton->num_joints());
+                    // Samples optimized animation at t = animation_time_.
+                    ozz::animation::SamplingJob sampling_job;
+                    sampling_job.animation = currentOzzAnimation.get();
+                    sampling_job.context = &context_;
+                    sampling_job.ratio =currentAnimation->currentDebugTimestamp;
+                    sampling_job.output = make_span(locals_);
+                }
             }
 
             else if (currentAnimation && !animationPlaying) {

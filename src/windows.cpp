@@ -1141,6 +1141,7 @@ void _initDX11(HWND hwin, HINSTANCE hInst) {
 }
 
 
+#ifdef USE_RAW_WIN32
 int APIENTRY WinMain(HINSTANCE hInstance,
 			HINSTANCE hPrevInstance,
 			LPSTR lpCmdLine,
@@ -1268,4 +1269,5 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     return 0;
 
 }
+#endif
 

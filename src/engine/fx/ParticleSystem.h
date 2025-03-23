@@ -6,8 +6,10 @@
 #define PARTICLESYSTEM_H
 
 #include <glm/glm.hpp>
+#include <GL/glew.h>
 #include <vector>
 #include <map>
+#include <memory>
 
 class Camera;
 struct Shader;

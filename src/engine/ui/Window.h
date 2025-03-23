@@ -9,14 +9,16 @@
 
 class Window {
 public:
-    Window();
+    Window(int w, int h, bool fullscreen);
     ~Window();
     void render();
 
 
 private:
     glm::vec3 location;
-
+    int height = 0;
+    int width = 0;
+    bool fullscreen = false;
 };
 
 

@@ -10,6 +10,8 @@
 #include <engine/io/skeleton_import.h>
 
 #include "ozz/animation/runtime/skeleton.h"
+#include "ozz/base/io/archive.h"
+#include "ozz/base/io/stream.h"
 
 
 Animation* AssimpMeshImporter::aiAnimToAnimation(aiAnimation* aiAnim) {
@@ -65,7 +67,8 @@ Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::st
         throw new std::runtime_error("error during assimp scene load. ");
     }
 
-    auto animations = importAnimationsInternal(scene);
+    auto assimpAnimations = importAnimationsInternal(scene);
+    auto ozzAnimations = importOzzAnimations();
 
     if (scene->mNumMeshes == 0) {
         return nullptr;
@@ -119,7 +122,7 @@ Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::st
     Skeleton* skeleton = nullptr;
     if (mesh->HasBones()) {
 
-#define IMPORT_SKELETON_OZZ
+#define IMPORT_SKELETON_OZZ_
 #ifdef IMPORT_SKELETON_OZZ
         if (skeletonBaseFolder.empty()) {
             throw new std::runtime_error("error during assimp skeleton load, no base folder specified.");
@@ -129,11 +132,15 @@ Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::st
             for (auto bn : ozzSkeleton->joint_names()) {
                 printf("joint name: %s\n", bn);
             }
+
+
         }
 
 #endif
+
+#define IMPORT_SKELETON_ASSIMP
 #ifdef IMPORT_SKELETON_ASSIMP
-        {
+
 
 
             std::map<int, std::vector<BoneWeight*>*> weightMap;
@@ -383,7 +390,7 @@ Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::st
     mymesh->fileName = std::filesystem::path(filePath).filename().string();
     //mymesh->skeleton = skeleton.get();
     mymesh->ozzSkeleton = ozzSkeleton;
-    mymesh->animations = animations;
+    mymesh->animations = assimpAnimations;
     mymesh->centroids = mymesh->calculateCentroids();
 
     return mymesh;
@@ -402,6 +409,48 @@ std::vector<Animation*> AssimpMeshImporter::importAnimations(const std::string &
     }
 
     return importAnimationsInternal(scene);
+}
+
+std::vector<std::shared_ptr<ozz::animation::Animation>> AssimpMeshImporter::importOzzAnimations(const std::string& skeletonBaseFolder) {
+
+        if (skeletonBaseFolder.empty()) {
+            return {};
+        }
+
+        std::vector<std::shared_ptr<ozz::animation::Animation>> animations;
+        namespace fs = std::filesystem;
+        auto directoryIterator = fs::directory_iterator(skeletonBaseFolder);
+        for (const auto & entry : directoryIterator) {
+            auto extension = entry.path().extension().string();
+            auto entryName = entry.path().filename().stem().string();
+            if (extension == ".ozz" && entryName != "skeleton.ozz" ) {
+                std::string animationFileName = skeletonBaseFolder + "/" + animationFileName;
+                std::cerr << "Loading animation archive: " << animationFileName << "."
+                                << std::endl;
+                ozz::io::File file(animationFileName.c_str(), "rb");
+                if (!file.opened()) {
+                    std::cerr << "Failed to open animation file " << animationFileName << "."
+                                    << std::endl;
+                    return {};
+                }
+                ozz::io::IArchive archive(&file);
+                if (!archive.TestTag<ozz::animation::Animation>()) {
+                    std::cerr << "Failed to load animation instance from file "
+                                    << animationFileName << "." << std::endl;
+                    return {};
+                }
+
+                auto animation = std::make_shared<ozz::animation::Animation>();
+                auto animationRaw = new ozz::animation::Animation();
+                archive >> *animationRaw;
+                animation.reset(animationRaw);
+                animations.push_back(animation);
+
+            }
+        }
+
+
+        return animations;
 }
 
 std::vector<Animation*> AssimpMeshImporter::importAnimationsInternal(const aiScene *scene) {

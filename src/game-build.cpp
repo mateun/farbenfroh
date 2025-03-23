@@ -40,6 +40,7 @@
 #include <engine/game/NodeComponent.cpp>
 #include <engine/io/AssimpMeshImporter.cpp>
 #include <engine/io/OzzSkeletonImporter.cpp>
+#include <engine/ui/Application.cpp>
 
 //#include "../games/simple_king/king_main.cpp"
 
@@ -100,6 +101,7 @@
 #include "../games/opengl/test_terrain/PlayerBulletPool.cpp"
 #include "../games/opengl/test_terrain/CollisionManager.cpp"
 #include "../games/opengl/test_terrain/EnemyBulletPool.cpp"
+#include "../games/opengl/test_terrain/AnimationEditor.cpp"
 
 //#include "../src/engine/editor/shadergraph/ShaderGraph.cpp"
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <engine/animation/AnimationPlayer.h>
 
+#include "ozz/animation/runtime/sampling_job.h"
 #include "ozz/base/containers/vector.h"
 #include "ozz/include/ozz/base/containers/vector.h"
 #include "ozz/include/ozz/base/maths/transform.h"
@@ -39,6 +40,7 @@ namespace editor {
         FolderAssetLoader *assetLoader = nullptr;
         std::unique_ptr<FrameBuffer> skeletalMeshWindowFrameBuffer = nullptr;
         Animation* currentAnimation = nullptr;
+        std::shared_ptr<ozz::animation::Animation> currentOzzAnimation;
         float blendTimestamp = 0;
         float blendWeight = 0.5;
         int currentAnimationFrame = 0;
@@ -87,6 +89,9 @@ namespace editor {
         void renderMeshViewerExt();
 
         std::string skeletonBaseName = "";
+
+        // Sampling context.
+        ozz::animation::SamplingJob::Context context_;
 
         // Buffer of local transforms as sampled from animation_.
         ozz::vector<ozz::math::SoaTransform> locals_;

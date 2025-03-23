@@ -4,7 +4,8 @@
 
 #include "Window.h"
 
-Window::Window() {
+
+Window::Window(int w, int h, bool fullscreen) : width(w), height(h), fullscreen(fullscreen) {
 
 }
 
@@ -15,3 +16,5 @@ void Window::render() {
     MeshDrawData dd;
     //dd.mesh = getPlaneMesh();
 }
+
+// The winmain function
