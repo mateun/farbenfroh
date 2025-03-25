@@ -3,7 +3,11 @@
 //
 
 #include "CharacterController.h"
+#include <engine/game/SceneNode.h>
+#include <engine/input/Input.h>
+#include <glm/gtc/quaternion.hpp>
 
+extern float ftSeconds;
 
 CharacterController::CharacterController(SceneNode *characterNode) : _characterNode(characterNode){
 
@@ -34,37 +38,37 @@ void CharacterController::update() {
     // TODO: instead of directly using specific bindings, we could let us inject the actual
     // values for yaw, pitch etc. from the consumer.
     // Alternative: use a keybinding map injected from outside.
-    if (isKeyDown('E') || isKeyDown(VK_RIGHT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.25) {
+    if (Input::getInstance()->isKeyDown('E') || Input::getInstance()->isKeyDown(VK_RIGHT) || Input::getInstance()->getControllerAxis(ControllerAxis::RSTICK_X, 0) > 0.25) {
         yaw = -1;
         lookHor = -1;
     }
 
-    if (isKeyDown('Q') || isKeyDown(VK_LEFT) || getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.25) {
+    if (Input::getInstance()->isKeyDown('Q') || Input::getInstance()->isKeyDown(VK_LEFT) || Input::getInstance()->getControllerAxis(ControllerAxis::RSTICK_X, 0) < -0.25) {
         yaw = 1;
         lookHor = 1;
     }
 
-    if (getControllerAxis(ControllerAxis::RSTICK_Y, 0) > 0.25) {
+    if (Input::getInstance()->getControllerAxis(ControllerAxis::RSTICK_Y, 0) > 0.25) {
         lookVer = -1;
     }
 
-    if (getControllerAxis(ControllerAxis::RSTICK_Y, 0) < -0.25) {
+    if (Input::getInstance()->getControllerAxis(ControllerAxis::RSTICK_Y, 0) < -0.25) {
         lookVer = 1;
     }
 
 
-    if (isKeyDown('W') || getControllerAxis(ControllerAxis::LSTICK_Y, 0) > 0.25 ) {
+    if (Input::getInstance()->isKeyDown('W') || Input::getInstance()->getControllerAxis(ControllerAxis::LSTICK_Y, 0) > 0.25 ) {
         dir = 1;
     }
-    if (isKeyDown('S') || getControllerAxis(ControllerAxis::LSTICK_Y, 0) < -0.25) {
+    if (Input::getInstance()->isKeyDown('S') || Input::getInstance()->getControllerAxis(ControllerAxis::LSTICK_Y, 0) < -0.25) {
         dir = -1;
     }
 
 
-    if (isKeyDown('A') || getControllerAxis(ControllerAxis::LSTICK_X, 0) < -0.25) {
+    if (Input::getInstance()->isKeyDown('A') || Input::getInstance()->getControllerAxis(ControllerAxis::LSTICK_X, 0) < -0.25) {
         hdir = -1;
     }
-    if (isKeyDown('D') || getControllerAxis(ControllerAxis::LSTICK_X, 0) > 0.25) {
+    if (Input::getInstance()->isKeyDown('D') || Input::getInstance()->getControllerAxis(ControllerAxis::LSTICK_X, 0) > 0.25) {
         hdir = 1;
     }
 

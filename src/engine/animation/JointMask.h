@@ -5,6 +5,10 @@
 #ifndef JOINTMASK_H
 #define JOINTMASK_H
 
+#include <string>
+#include <vector>
+#include <engine/animation/skeleton.h>
+
 
 enum class MaskType {
   Hierarchy,
@@ -14,6 +18,9 @@ enum class MaskType {
 enum class HierarchyDirection {
     up, down,
 };
+
+class Skeleton;
+class Joint;
 
 /**
 * Defines a set of joints which will exclusively participate in an animation.
@@ -25,7 +32,7 @@ enum class HierarchyDirection {
 class JointMask {
 
   public:
-    JointMask(Skeleton* skeleton, MaskType maskType, HierarchyDirection direction = HierarchyDirection::up, const std::string& startJointName= "");
+    JointMask(gru::Skeleton* skeleton, MaskType maskType, HierarchyDirection direction = HierarchyDirection::up, const std::string& startJointName= "");
 
 
 
@@ -38,7 +45,7 @@ class JointMask {
 
 private:
     MaskType maskType;
-    Skeleton * skeleton = nullptr;
+    gru::Skeleton * skeleton = nullptr;
 
     // only used if the type is hierarchical
     HierarchyDirection hierarchyDirection;

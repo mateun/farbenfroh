@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <engine/graphics/Texture.h>
 
 class Camera;
 struct Shader;
@@ -21,7 +22,7 @@ namespace gru {
 struct MeshDrawData;
 class ComputeShader;
 class Mesh;
-class Texture;
+
 class Particle;
 
 namespace gru {

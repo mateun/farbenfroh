@@ -5,7 +5,12 @@
 #ifndef LIGHT_H
 #define LIGHT_H
 #include <glm\glm.hpp>
+#include <engine/graphics/FrameBuffer.h>
+#include <vector>
 
+
+class Shader;
+class Camera;
 
 enum class LightType {
   Directional,
@@ -13,7 +18,7 @@ enum class LightType {
   Spot,
   };
 
-struct FrameBuffer;
+
 
 struct PointLightData {
   float constant = 0.05;

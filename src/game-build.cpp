@@ -41,6 +41,9 @@
 #include <engine/io/AssimpMeshImporter.cpp>
 #include <engine/io/OzzSkeletonImporter.cpp>
 #include <engine/ui/Application.cpp>
+#include <engine/ui/Widget.cpp>
+#include <engine/ui/Camera.cpp>
+
 
 //#include "../games/simple_king/king_main.cpp"
 

@@ -5,10 +5,18 @@
 #ifndef COMPUTESHADER_H
 #define COMPUTESHADER_H
 
+#include <string>
+#include <vector>
+#include <GL/glew.h>
+#include <stdexcept>
+#include <glm\glm.hpp>
+
 enum class DispatchOutput {
     Texture,
     Buffer
 };
+
+class Texture;
 
 class ComputeShader {
 public:

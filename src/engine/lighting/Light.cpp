@@ -3,9 +3,13 @@
 //
 
 #include "Light.h"
-#include "graphics.h"
-#include "../../engine/algo/VectorUtils.h"
-
+#include <glm/gtc/matrix_transform.hpp>
+#include <engine/algo/VectorUtils.h>
+#include <stdexcept>
+#include <engine/graphics/Application.h>
+#include <engine/graphics/ErrorHandling.h>
+#include <engine/graphics/Camera.h>
+#include <engine/graphics/Font.h>
 
 void Light::quickDebugManipulation(float &left, float &right, float &bottom, float &top, float &n, float &f) const {
 //#define QUICK_DEBUG
@@ -175,7 +179,7 @@ void Light::initFrustumDebugging(Camera* fittingTarget) {
         // Initialize the frustum VAO of our view camera:
         glGenVertexArrays(1, &viewCameraFrustumVAO);
         glBindVertexArray(viewCameraFrustumVAO);
-    	GL_ERROR_EXIT(21111)
+    	GL_ERROR_EXIT(21111);
 
     	auto worldCorners = fittingTarget->getFrustumWorldCorners();
 
@@ -206,20 +210,20 @@ void Light::initFrustumDebugging(Camera* fittingTarget) {
         glBufferData(GL_ARRAY_BUFFER, posFlat.size() * 4, posFlat.data(), GL_DYNAMIC_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(0);
-    	GL_ERROR_EXIT(21112)
+    	GL_ERROR_EXIT(21112);
 
         GLuint vboIndices;
         glGenBuffers(1, &vboIndices);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndices);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesFlat.size() * 2, indicesFlat.data(), GL_DYNAMIC_DRAW);
-    	GL_ERROR_EXIT(21113)
+    	GL_ERROR_EXIT(21113);
 
         glBindVertexArray(0);
 
         // Next we prepare the VAO for our shadow camera frustum:
         glGenVertexArrays(1, &lightFrustumVAO);
         glBindVertexArray(lightFrustumVAO);
-    	GL_ERROR_EXIT(21114)
+    	GL_ERROR_EXIT(21114);
 
     	auto lightFrustumCornersFitted = getLightFrustumFittedToCamera(fittingTarget);
     	std::vector<float> shadowMapPosFlat;
@@ -250,13 +254,13 @@ void Light::initFrustumDebugging(Camera* fittingTarget) {
         glBufferData(GL_ARRAY_BUFFER, shadowMapPosFlat.size() * 4, shadowMapPosFlat.data(), GL_DYNAMIC_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(0);
-        GL_ERROR_EXIT(877654)
+        GL_ERROR_EXIT(877654);
 
         GLuint shadowVboIndices;
         glGenBuffers(1, &shadowVboIndices);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shadowVboIndices);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, shadowIndicesFlat.size() * 2, shadowIndicesFlat.data(), GL_DYNAMIC_DRAW);
-    	GL_ERROR_EXIT(21115)
+    	GL_ERROR_EXIT(21115);
 
         glBindVertexArray(0);
 
@@ -318,13 +322,13 @@ void Light::renderWorldFrustum(Camera *viewCamera, const Camera* originalFitting
 	frustumShader->setMat4Value(viewCamera->getViewMatrix(), "mat_view");
 	frustumShader->setMat4Value(viewCamera->getProjectionMatrix(), "mat_projection");
 	glDrawElements(GL_LINES, 24, GL_UNSIGNED_SHORT, 0);
-	GL_ERROR_EXIT(12300)
+	GL_ERROR_EXIT(12300);
 
 	glBindVertexArray(lightFrustumVAO);
 	// Red for the shadow map frustum
 	frustumShader->setVec4Value({1, 0, 0, 1}, "singleColor");
 	glDrawElements(GL_LINES, 24, GL_UNSIGNED_SHORT, 0);
-	GL_ERROR_EXIT(12301)
+	GL_ERROR_EXIT(12301);
 
 	glBindVertexArray(0);
 
@@ -342,17 +346,17 @@ void Light::renderWorldFrustum(Camera *viewCamera, const Camera* originalFitting
 		uiCamera->type = CameraType::Ortho;
 	}
 
-	lightingOff();
-	bindCamera(uiCamera);
+//	lightingOff();
+//	bindCamera(uiCamera);
 
-	flipUvs(false);
+//	flipUvs(false);
 	{
 
 		auto frustomWorldPositions = getLightFrustumFittedToCamera(originalFittingTarget);
 		for (auto frustumPos : frustomWorldPositions) {
 			glm::vec4 clipSpace = viewCamera->getProjectionMatrix() * viewCamera->getViewMatrix() * glm::vec4(frustumPos, 1);
 			glm::vec4 ndc = clipSpace / clipSpace.w;
-			glm::vec2 ss = {((ndc.x+1)/2) * scaled_width, ((ndc.y+1)/2)*scaled_height};
+			glm::vec2 ss = {((ndc.x+1)/2) * getApplication()->scaled_width(), ((ndc.y+1)/2)* getApplication()->scaled_height()};
 			char buf[175];
 			sprintf_s(buf, 160, "%4.1f/%4.1f/%4.1f",
 					  frustumPos.x, frustumPos.y, frustumPos.z);
@@ -377,7 +381,7 @@ void Light::updateFrustumDebugging(Camera* fittingTarget) {
 
 	glBindBuffer(GL_ARRAY_BUFFER, targetPositionBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, posFlat.size() * sizeof(float), posFlat.data());
-	GL_ERROR_EXIT(1111)
+	GL_ERROR_EXIT(1111);
 
 	auto lightFrustumCornersFitted = getLightFrustumFittedToCamera(fittingTarget);
 	std::vector<float> shadowMapPosFlat;
@@ -389,7 +393,7 @@ void Light::updateFrustumDebugging(Camera* fittingTarget) {
 
 	glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, shadowMapPosFlat.size() * 4, shadowMapPosFlat.data());
-	GL_ERROR_EXIT(1112)
+	GL_ERROR_EXIT(1112);
 
 }
 
@@ -398,9 +402,9 @@ void Light::updateFrustumDebugging(Camera* fittingTarget) {
 
 
 void Light::bindShadowMap(int unitIndex) {
-	if (shadowMapFBO && shadowMapFBO->handle) {
+	if (shadowMapFBO && shadowMapFBO->handle()) {
 		glActiveTexture(GL_TEXTURE0 + unitIndex);
-		glBindTexture(GL_TEXTURE_2D, shadowMapFBO->texture->handle);
+		glBindTexture(GL_TEXTURE_2D, shadowMapFBO->texture()->handle());
 	}
 }
 

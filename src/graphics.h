@@ -14,20 +14,11 @@
 #include "glm/detail/type_quat.hpp"
 #include "assimp/scene.h"
 #include "../src/engine/game/game_model.h"
-#include "../src/engine/animation/Animation.h"
-#include "ozz/animation/runtime/animation.h"
+#include <engine/graphics/PlanePivot.h>
+#include <engine/animation/skeleton.h>
+#include <engine/graphics/Bitmap.h>
 
-#define GL_ERROR_EXIT(code)   auto err_##code = glGetError(); \
-                        if (err_##code != 0) { \
-                            exit(code); \
-                        }
-
-#define GL_ERROR_EXIT_INFO(code, info)   auto err_##code = glGetError(); \
-                                    if (err_##code != 0) { \
-                                        printf("GL error %d: \ncontext info: %s\n", err_##code, info.c_str()); \
-                                        exit(code); \
-                                    }
-
+class FBFont;
 class Camera;
 
 namespace ozz::animation {
@@ -43,181 +34,21 @@ struct BITMAP_FILE {
 
 };
 
-struct Bitmap {
-	int width=-1;
-	int height=-1;
-	uint8_t* pixels=nullptr;
-};
-
-enum class PlanePivot {
-    topleft,
-    bottomleft,
-    topright,
-    bottomright,
-    center,
-};
-
-
-struct Shader {
-    GLuint handle;
-
-    void setIntValue(int val, const std::string &name);
-    void setFloatValue(float value, const std::string& name);
-    void setVec2Value(glm::vec<2, float> vec, const std::string &name);
-    void setVec3Value(glm::vec<3, float> vec, const std::string& name);
-    void setVec4Value(glm::vec4 vec, const std::string& name);
-    void setMat4Value(glm::mat4 mat, const std::string& str);
-    void setMat4Array(std::vector<glm::mat4> mats, const std::string& name);
-
-    void initFromFiles(const std::string& vertexShader, const std::string& fragmentShader);
-
-
-};
-
-struct Ray {
-    glm::vec3 origin;
-    glm::vec3 direction;
-    float maxLength = 100;
-};
 
 struct Result {
     bool ok;
     std::vector<std::string> errors;
 };
 
-struct Texture {
-    GLuint handle;
-    Bitmap* bitmap;
-
-    void bindAt(int unitIndex);
-};
-
-class FBFont {
-public:
-    FBFont(const std::string& fileName);
-    void renderText(const std::string& text, glm::vec3 position);
-
-private:
-    std::unique_ptr<Texture> texture = nullptr;
-    std::unique_ptr<Bitmap> bitmap = nullptr;
-};
-
-
-struct Joint {
-
-    void setParent(Joint* parent) {
-        this->parent = parent;
-        parent->children.push_back(this);
-    }
-
-    std::string name;
-    glm::mat4 inverseBindMatrix;
-
-    // These are the transformations in parent space
-    glm::vec3 translation;
-    glm::quat rotation;
-    glm::vec3 scale;
-
-    std::map<std::string, glm::vec3> currentPoseLocation;
-    std::map<std::string, glm::quat> currentPoseOrientation;
-    glm::vec3 currentPoseScale;
-
-    glm::mat4 bindPoseLocalTransform = glm::mat4(1.0f);
-    glm::mat4 bindPoseGlobalTransform = glm::mat4(1.0f);
-    glm::mat4 bindPoseFinalTransform = glm::mat4(1.0f);
-
-    glm::mat4 currentPoseLocalTransform= glm::mat4(1);
-    glm::mat4 currentPoseGlobalTransform = glm::mat4(1);
-    // This is the product of the global and inverseBind matrix.
-    // Can be used for skinned meshes to move the skeletal mesh vertex
-    // according to this transform.
-    glm::mat4 currentPoseFinalTransform = glm::mat4(1);
-
-    // These are the transformations as matrices in model space
-    glm::mat4 modelTranslation = glm::mat4(1);
-    glm::mat4 modelRotation = glm::mat4(1);
-    glm::mat4 modelScale = glm::mat4(1);
-    std::vector<Joint*> children;
-    Joint* parent = nullptr;
-
-
-};
-
-struct Skeleton {
-    std::vector<Joint*> joints;
-    void resetToBindPose();
-};
-
-/**
- * A wrapper around an OpenGL Framebuffer
- */
-struct FrameBuffer {
-    GLuint handle;
-    std::shared_ptr<Texture> texture;
-    std::shared_ptr<Texture> texture2;
-};
-
-/**
-* A centroid represents the original 3 points,
-* and the average value.
-*/
-struct Centroid {
-    glm::vec3 a;
-    glm::vec3 b;
-    glm::vec3 c;
-    glm::vec3 value;
-};
 
 
 
 
 
-/**
- * A 3D mesh which can be rendered anywhere
- * in the world.
- * Bind it and then it can be rendered.
- */
-struct Mesh {
-    GLuint vao = 0;
-    GLuint instanceOffsetVBO = 0;
-    GLuint instanceMatrixVBO = 0;
-    GLuint instanceColorVBO = 0;
-    GLuint instanceTintVBO = 0;
-    int numberOfIndices = -1;
-    GLenum indexDataType = GL_UNSIGNED_INT;
 
-    Skeleton* skeleton = nullptr;
-    std::shared_ptr<ozz::animation::Skeleton> ozzSkeleton;
 
-    std::vector<glm::vec3> positions;
-    std::vector<glm::vec3> positionsSortedByIndex;
-    std::vector<uint32_t> indices;
-    std::vector<glm::vec3> tangents;
-    std::vector<glm::vec3> normals;
-    std::vector<glm::vec2> uvs;
-    std::vector<glm::ivec4> boneIndices;
-    std::vector<glm::vec4> boneWeights;
-    std::string fileName;
 
-    std::vector<Animation*> animations;
-    GLuint positionVBO;
-    GLuint indicesVBO;
-    GLuint uvsVBO;
-    GLuint normalsVBO;
 
-    bool rayCollides(Ray ray, glm::vec4& color);
-    Animation* findAnimation(const std::string& name);
-
-    std::vector<Centroid*> calculateCentroids();
-
-    std::vector<Centroid*> centroids;
-};
-
-enum class CameraType {
-    Ortho,
-    Perspective,
-    OrthoGameplay,
-};
 
 class PostProcessEffect {
 public:
@@ -252,71 +83,6 @@ private:
     std::vector<std::unique_ptr<FrameBuffer>> blurFBOs;
 };
 
-
-
-class Camera {
-
-public:
-
-    Camera();
-
-    std::vector<glm::vec3> getFrustumWorldCorners() const;
-
-    float getMaxFrustumDiagonal();
-    void addPostProcessEffect(PostProcessEffect* effect);
-    std::vector<PostProcessEffect*> getPostProcessEffects() const;
-
-    CameraType type;
-    glm::vec3 location;
-    glm::vec3 lookAtTarget;
-    glm::vec3 _initialForward;
-    GameObject* followedObject = nullptr;
-    glm::vec3 followOffset;
-    glm::vec3 followDirection;
-    float nearPlane = 0.1f;
-    float farPlane = 500.0f;
-    GLuint positionBuffer = 0;
-    GLuint shadowPositionBuffer = 0;
-    Shader* frustumShader = nullptr;
-
-
-    void setInitialForward(glm::vec3 fwd);
-
-
-    void follow(GameObject* gameObject, glm::vec3 offset);
-
-    void updateFollow();
-
-    void updateLocation(glm::vec3 loc);
-
-    void updateLookupTarget(glm::vec3 t);
-
-    glm::mat4 getViewMatrix() const;
-
-    glm::vec3 getInitialFoward() const;
-
-    glm::vec3 getForward() const;
-    glm::vec3 getUp() const;
-    glm::vec3 getRight() const;
-
-    glm::vec4 frustumToWorld(glm::vec4 ndc) const;
-    glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) const;
-
-    void updateNearFar(float nearPlane, float farPlane);
-
-
-private:
-    // Can be used to debug draw the cameras frustum in world space,
-    // e.g. for shadow mapping debugging.
-    GLuint worldFrustumVAO = 0;
-
-    // Holds the positions of the shadow camera frustum, mainly for debug
-    // drawing.
-    GLuint shadowCamFrustumVAO = 0;
-
-    std::vector<PostProcessEffect*> postProcessEffects;
-};
-
 /**
  * This class gets a list of objects which it may not collide with.
  * E.g. a planet, wals, etc.
@@ -341,31 +107,7 @@ private:
 
 };
 
-/**
- * CameraMove can process inputs to move a camera around.
- * Mainly useable for debug cameras with classical WASD movement scheme.
- */
-class CameraMover : public Updatable {
 
-public:
-    CameraMover(Camera* cam, CameraCollider* cameraCollider = nullptr);
-    void update() override;
-    void setMovementSpeed(float val);
-    void setFixedPlaneForwardMovement(bool b);
-
-    // E.g. to avoid pitch clipping and being lost
-    void reset();
-
-private:
-    Camera* _cam;
-    CameraCollider* cameraCollider;
-
-    float movementSpeed = 5;
-    bool fixedPlaneFwdMovement = false;
-    bool clampPitch = false;
-    glm::vec3 originalLocation;
-    glm::vec3 originalTarget;
-};
 
 struct TileData {
     int tileX;
@@ -715,62 +457,7 @@ struct GridData {
     Camera* camera = nullptr;
 };
 
-using ShaderParameterValue = std::variant<float, int, glm::vec2, glm::vec3, glm::vec4, glm::mat4>;
 
-struct ShaderParameter {
-    std::string name;
-    ShaderParameterValue value;
-
-
-};
-
-/**
-* This holds everything we need to issue a physical draw call.
-* A lot ... but what can you do.
-*/
-struct MeshDrawData {
-    glm::vec3 location = {0, 0, 0};
-    glm::vec3 scale = {1, 1, 1};
-    glm::vec3 rotationEulers = {0, 0, 0};
-    std::vector<glm::mat4> boneMatrices;
-    std::optional<glm::mat4> worldTransform;
-    Mesh* mesh = nullptr;
-    Shader* shader = nullptr;
-
-    // This is the camera through which a mesh is rendered.
-    // Can also be used during shadow map (depth) rendering to allow for the shadow map
-    // frustum to be fit inside the view frustum tightly.
-    const Camera* camera = nullptr;
-
-    // This is the "camera" which renders the mesh into the shadow depth buffer.
-    // We want to have both here as for the shadow map rendering we may try to fit the shadow map frustum
-    // into the view frustum (provided by the actual viewing camera).
-    Camera* shadowMapCamera = nullptr;
-
-    Texture* texture = nullptr;
-    Texture* normalMap = nullptr;
-    glm::vec4 color = {1, 0, 1, 1}; // Nice magenta if we have no texture set.
-    glm::vec4 tint = {1, 1,1,1};
-    std::vector<Light*> directionalLights;
-    std::vector<Light*> pointLights;
-    std::vector<Light*> spotLights;
-    glm::vec2 uvPan = {0, 0};
-    glm::vec2 uvScale2 = {1, 1};
-    glm::vec2 normalUVScale2 = {1, 1};
-    std::vector<ShaderParameter> shaderParameters;
-    float uvScale = 1;
-    bool depthTest = true;
-    bool skinnedDraw = false;
-    std::optional<glm::ivec2> viewPortDimensions;
-    std::string subroutineFragBind = "";
-    bool castShadow = true;
-    uint32_t instanceCount = 0;
-
-    // This is a customizable callback which will be called when the scene is rendered.
-    // E.g. for setting specific shader variables.
-    std::function<void(MeshDrawData mdd)> onRender;
-
-};
 
 GridData* createGrid(int lines = 100);
 GLuint createGridVAO(int lines = 100);
@@ -783,7 +470,7 @@ void drawPlane();
 void drawPlane(Light* directionalLight, const std::vector<Light*>& pointLights);
 void drawMesh();
 void drawMesh(const MeshDrawData& drawData);
-void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO);
+void drawMeshIntoShadowMap(MeshDrawData dd, Light* l);
 void drawSkybox();
 void drawMeshSimple();
 void drawMeshInstanced(int num);
@@ -905,10 +592,6 @@ private:
 
 };
 
-enum class AngleUnit {
-    RAD,
-    DEGREES,
-};
 
 enum class SceneNodeType {
     Light,

@@ -18,15 +18,11 @@
 #include "../extlibs/imgui/imgui_impl_win32.h"
 #include "../extlibs/imgui/imgui_impl_opengl3.h"
 #include "engine/game/default_game.h"
-#include "engine/editor/editor.h"
-#include "engine/game/input.h"
-
-
 
 #pragma comment(lib, "XInput.lib")
 
 
-
+#ifdef USE_LEGACY_WIN
 // This is called by the framework to receive the actual game from the user.
 // All API methods will then be called on this game instance.
 extern DefaultGame* getGame();
@@ -86,10 +82,6 @@ static DefaultGame* game = nullptr;
 
 ImFont* boldFont = nullptr;
 
-// Controller (GamePad) states.
-// We need the previous state to enable single button press detection.
-std::vector<XINPUT_STATE> controllerStates;
-std::vector<XINPUT_STATE> prevControllerStates;
 
 HWND getWindow() {
     return window;
@@ -112,95 +104,9 @@ UINT GetDpi(HWND hWnd) {
     return dpi;
 }
 
-void initXInput() {
-    controllerStates.clear();
-    controllerStates.resize(XUSER_MAX_COUNT);
-    prevControllerStates.clear();
-    prevControllerStates.resize(XUSER_MAX_COUNT);
-}
 
 
-static bool pollController(int index) {
-    XINPUT_STATE state;
-    auto result = XInputGetState(index, &state);
-    if (result == ERROR_SUCCESS) {
-        controllerStates[index] = state;
-    }
-    return result == ERROR_SUCCESS;
-}
 
-static void postPollController(int index) {
-    prevControllerStates[index] = controllerStates[index];
-}
-
-float getControllerAxis(ControllerAxis axis, int index) {
-
-    if (axis == ControllerAxis::LSTICK_X) {
-        return controllerStates[index].Gamepad.sThumbLX / 32767.0f;
-    } if ( axis == ControllerAxis::LSTICK_Y) {
-        return controllerStates[index].Gamepad.sThumbLY / 32767.0f;
-    } if ( axis == ControllerAxis::RSTICK_X) {
-        return controllerStates[index].Gamepad.sThumbRX / 32767.0f;
-    } if ( axis == ControllerAxis::RSTICK_Y) {
-        return controllerStates[index].Gamepad.sThumbRY / 32767.0f;
-    } if ( axis == ControllerAxis::L_TRIGGER) {
-        return controllerStates[index].Gamepad.bLeftTrigger / 255.0f;
-    } if ( axis == ControllerAxis::R_TRIGGER) {
-        return controllerStates[index].Gamepad.bRightTrigger / 255.0f;
-    }
-    return 0;
-
-}
-
-bool controllerButtonPressed(ControllerButtons button, int controllerIndex) {
-
-    auto xiButton = XINPUT_GAMEPAD_A;
-
-    if (button == ControllerButtons::B_BUTTON) {
-        xiButton = XINPUT_GAMEPAD_B;
-    }
-    else if (button == ControllerButtons::X_BUTTON) {
-        xiButton = XINPUT_GAMEPAD_X;
-    }
-    else if (button == ControllerButtons::Y_BUTTON) {
-        xiButton = XINPUT_GAMEPAD_Y;
-    }
-    else if (button == ControllerButtons::DPAD_DOWN) {
-        xiButton = XINPUT_GAMEPAD_DPAD_DOWN;
-    }
-    else if (button == ControllerButtons::DPAD_UP) {
-        xiButton = XINPUT_GAMEPAD_DPAD_UP;
-    }
-    else if (button == ControllerButtons::DPAD_RIGHT) {
-        xiButton = XINPUT_GAMEPAD_DPAD_RIGHT;
-    }
-    else if (button == ControllerButtons::DPAD_LEFT) {
-        xiButton = XINPUT_GAMEPAD_DPAD_LEFT;
-    }
-    else if (button == ControllerButtons::MENU) {
-        xiButton = XINPUT_GAMEPAD_START;
-    }
-    else if (button == ControllerButtons::VIEW) {
-        xiButton = XINPUT_GAMEPAD_BACK;
-    }
-    else if (button == ControllerButtons::LB) {
-        xiButton = XINPUT_GAMEPAD_LEFT_SHOULDER;
-    }
-    else if (button == ControllerButtons::RB) {
-        xiButton = XINPUT_GAMEPAD_RIGHT_SHOULDER;
-    }
-
-    bool wasPressed = (prevControllerStates[controllerIndex].Gamepad.wButtons & xiButton) != 0;
-    bool isPressed = (controllerStates[controllerIndex].Gamepad.wButtons & xiButton) != 0;
-
-    if (!wasPressed && isPressed) {
-        return true;
-    }
-
-    return false;
-
-
-}
 
 /**
  * Retrieves a list of all active monitors in the system.
@@ -666,11 +572,7 @@ void present(HDC hdc) {
 
     SwapBuffers(hdc);
 }
-// We support Windows VK_ macros here.
-bool keyPressed(int key) {
-//    return GetAsyncKeyState(key) & 0x01;
-    return key == lastKeyPress;
-}
+
 
 bool isKeyDown(int key) {
     return GetKeyState(key) & 0x8000;
@@ -703,7 +605,7 @@ void mainLoop(HWND hwnd, VulkanRenderer* vulkanRenderer) {
 	LARGE_INTEGER startticks;
 	LARGE_INTEGER endticks;
 
-    initXInput();
+
 
 	auto hdc = GetDC(hwnd);
 	bool running = true;
@@ -1139,7 +1041,7 @@ void registerRawInput(HWND hwnd)
 void _initDX11(HWND hwin, HINSTANCE hInst) {
 
 }
-
+#endif
 
 #ifdef USE_RAW_WIN32
 int APIENTRY WinMain(HINSTANCE hInstance,

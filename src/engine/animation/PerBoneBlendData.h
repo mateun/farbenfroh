@@ -6,6 +6,7 @@
 #define PERBONEBLENDDATA_H
 #include <map>
 #include <string>
+#include <optional>
 
 
 /**

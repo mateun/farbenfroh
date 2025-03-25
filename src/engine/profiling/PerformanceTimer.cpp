@@ -4,9 +4,12 @@
 
 #include "PerformanceTimer.h"
 
-extern int64_t perframance_frequency;
 
 PerformanceTimer::PerformanceTimer(bool startImmediately) {
+    if (!frequencyInitialized) {
+        frequencyInitialized = true;
+        QueryPerformanceFrequency(&frequency);
+    }
     if (startImmediately) start();
 }
 
@@ -16,7 +19,9 @@ void PerformanceTimer::start() {
 
 void PerformanceTimer::stop() {
     QueryPerformanceCounter(&endTime);
-    diffInSeconds = (float)(endTime.QuadPart - startTime.QuadPart) / (float) performance_frequency;
+    diffInSeconds = (float)(endTime.QuadPart - startTime.QuadPart) / (float) frequency.QuadPart;
+
+
 }
 
 float PerformanceTimer::durationInSeconds() const {

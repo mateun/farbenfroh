@@ -3,6 +3,8 @@
 //
 
 #include "UpdateSwitcher.h"
+#include <stdexcept>
+#include <engine/input/Input.h>
 
 UpdateSwitcher::UpdateSwitcher(const std::vector<Updatable *> &sceneNodes, int triggerKey) : _nodes(sceneNodes), _triggerKey(triggerKey) {
     if (!sceneNodes.empty()) {
@@ -15,7 +17,7 @@ UpdateSwitcher::UpdateSwitcher(const std::vector<Updatable *> &sceneNodes, int t
 
 void UpdateSwitcher::poll() {
     static int index = 0;
-    if (keyPressed(_triggerKey)) {
+    if (Input::getInstance()->wasKeyPressed(_triggerKey)) {
         index++;
         if (index >= _nodes.size()) {
             index = 0;

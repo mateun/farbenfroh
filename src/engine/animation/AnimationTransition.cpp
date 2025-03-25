@@ -4,6 +4,13 @@
 
 #include "AnimationTransition.h"
 #include "AnimationProperty.h"
+#include "AnimationState.h"
+#include "AnimationController.h"
+
+extern float ftSeconds;
+
+
+
 
 AnimationTransition::AnimationTransition(AnimationController *animationController, AnimationState *startState,
     AnimationState *endState) : _animationController(animationController), _startState(startState), _endState(endState) {
@@ -28,7 +35,7 @@ bool AnimationTransition::evaluate() {
         auto property = propertyOptional.value();
 
         if (constraint->constraintOperator == ConstraintOperator::EQUAL) {
-            if (!(property == constraint->property)) {
+            if (property != constraint->property) {
                 return false;
             }
         }
@@ -78,54 +85,6 @@ AnimationState * AnimationTransition::getEndState() {
 
 AnimationState * AnimationTransition::getStartState() {
     return _startState;
-}
-
-bool AnimationProperty::operator==(const AnimationProperty &other) const {
-    if (other.propertyType == PropertyType::BOOL) {
-        return other.boolValue == boolValue;
-    }
-    if (other.propertyType == PropertyType::INT) {
-        return other.intValue == intValue;
-    }
-    if (other.propertyType == PropertyType::FLOAT) {
-        return other.floatValue == floatValue;
-    }
-    if (other.propertyType == PropertyType::STRING) {
-        return other.stringValue == stringValue;
-    }
-    return false;
-}
-
-bool AnimationProperty::operator>=(const AnimationProperty &other) const {
-    if (other.propertyType == PropertyType::BOOL) {
-        return other.boolValue >= boolValue;
-    }
-    if (other.propertyType == PropertyType::INT) {
-        return intValue >= other.intValue;
-    }
-    if (other.propertyType == PropertyType::FLOAT) {
-        return floatValue >= other.floatValue;
-    }
-    if (other.propertyType == PropertyType::STRING) {
-        return stringValue >= other.stringValue;
-    }
-    return false;
-}
-
-bool AnimationProperty::operator<=(const AnimationProperty &other) const {
-    if (other.propertyType == PropertyType::BOOL) {
-        return boolValue <= other.boolValue;
-    }
-    if (other.propertyType == PropertyType::INT) {
-        return intValue <= other.intValue;
-    }
-    if (other.propertyType == PropertyType::FLOAT) {
-        return floatValue <= other.floatValue;
-    }
-    if (other.propertyType == PropertyType::STRING) {
-        return stringValue <= other.stringValue;
-    }
-    return false;
 }
 
 

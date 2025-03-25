@@ -6,7 +6,8 @@
 #define SKELETON_IMPORT_H
 
 #include <string>
-
+#include <memory>
+#include <ozz/animation/runtime/skeleton.h>
 
 
 class OzzSkeletonImporter {

@@ -4,10 +4,16 @@
 
 #include "AnimationPlayer.h"
 #include "Animation.h"
+#include <engine/animation/Joint.h>
 #include <engine/animation/BoneMatrixCalculator.h>
-
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include "AnimationBlender.h"
+#include <engine/graphics/Mesh.h>
 #include "../../graphics.h"
+
+extern float ftSeconds;
 
 AnimationPlayer::AnimationPlayer() {
 }
@@ -93,7 +99,7 @@ glm::mat4 AnimationPlayer::calculateInterpolatedGlobalMatrixForJoint(Joint* j) {
         auto fromRotationSample = rotationSamples[fromRotationSampleIndex];
         auto toRotationSample = rotationSamples[toSampleIndex];
         float rotationBlendFactor = ((float) animTime - fromRotationSample->time ) / (float) (toRotationSample->time - fromRotationSample->time);
-        interpolatedRotation = glm::slerp(fromRotationSample->rotation, toRotationSample->rotation, rotationBlendFactor);
+        interpolatedRotation = slerp(fromRotationSample->rotation, toRotationSample->rotation, rotationBlendFactor);
     }
 
     if (!translationSamples.empty()) {

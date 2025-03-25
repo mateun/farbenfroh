@@ -1,9 +1,9 @@
 #pragma once
+#include <engine/game/default_game.h>
 #include <engine/animation/AnimationPlayer.h>
 
 #include "ozz/animation/runtime/sampling_job.h"
 #include "ozz/base/containers/vector.h"
-#include "ozz/include/ozz/base/containers/vector.h"
 #include "ozz/include/ozz/base/maths/transform.h"
 
 namespace ozz::math {
@@ -13,6 +13,9 @@ namespace ozz::math {
 
 class Level;
 class GameObject;
+class FolderAssetLoader;
+class CameraMover;
+
 
 namespace editor {
 
@@ -26,10 +29,7 @@ namespace editor {
         Editor();
         ~Editor();
 
-
-    public:
         void renderImGui();
-
         void update();
 
     private:
@@ -98,6 +98,9 @@ namespace editor {
 
         // Buffer of model space matrices.
         ozz::vector<ozz::math::Float4x4> models_;
+
+        int window_height = 720;
+        int window_width = 1280;
 
 
     };

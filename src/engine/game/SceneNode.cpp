@@ -2,8 +2,9 @@
 // Created by mgrus on 19.03.2025.
 //
 
+#define NOMINMAX
 #include "SceneNode.h"
-
+#include <glm/gtx/quaternion.hpp>
 #include "NodeComponent.h"
 #include "Scene.h"
 

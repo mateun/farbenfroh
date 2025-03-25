@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <stdexcept>
 #include <engine/animation/BoneMatrixCalculator.h>
+#include <engine/animation/Joint.h>
 #include <engine/animation/Pose.h>
 #include <engine/game/default_game.h>
 
@@ -123,7 +124,7 @@ void AnimationTest::init() {
     pose2.joints.push_back((&joint2));
 
 
-    Skeleton skeleton;
+    gru::Skeleton skeleton;
     skeleton.joints.push_back(&joint1);
 
 

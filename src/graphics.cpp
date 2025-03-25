@@ -21,7 +21,9 @@
 #include "stb_image.h"
 #include <engine/io/base64.h>
 #include <engine/game/SceneNode.h>
+#include <engine/graphics/ErrorHandling.h>
 
+#ifdef USE_LEGACY_WIN32_RAW
 GLuint createShadowMapFramebuffer();
 
 
@@ -180,9 +182,10 @@ void initDefaultGLObjects() {
 
 std::unique_ptr<Texture> createShadowMapTexture(int width, int height) {
     auto err = glGetError();
-    auto target = std::make_unique<Texture>();
-    glGenTextures(1, &target->handle);
-    glBindTexture(GL_TEXTURE_2D, target->handle);
+
+    GLuint textureHandle;
+    glGenTextures(1, &textureHandle);
+    glBindTexture(GL_TEXTURE_2D, target->handle());
      glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32, width, height);
     //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -205,10 +208,12 @@ std::unique_ptr<Texture> createShadowMapTexture(int width, int height) {
         exit(1);
     }
 
-    target->bitmap = new Bitmap();
-    target->bitmap->pixels = nullptr;
-    target->bitmap->width = width;
-    target->bitmap->height = height;
+
+    auto bitmap = new Bitmap();
+    bitmap->pixels = nullptr;
+    bitmap->width = width;
+    bitmap->height = height;
+    auto target = std::make_unique<Texture>(textureHandle, bitmap);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return target;
@@ -637,131 +642,6 @@ Result createShader(const std::string &vsrc, const std::string &fsrc, Shader* ta
     return {true ,{}};
 }
 
-GLuint genVec3Buffer(int index,  std::vector<float> data) {
-    GLuint buf;
-    glGenBuffers(1, &buf);
-    glBindBuffer(GL_ARRAY_BUFFER, buf);
-    glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(float), data.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(index);
-    return buf;
-
-}
-
-GLuint genVec3Buffer(int index,  std::vector<glm::vec3> data) {
-    GLuint buf;
-    glGenBuffers(1, &buf);
-    glBindBuffer(GL_ARRAY_BUFFER, buf);
-    glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(glm::vec3), data.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(index, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(index);
-    return buf;
-
-}
-
-GLuint genVec2Buffer(int index,  std::vector<glm::vec2> data) {
-    GLuint buf;
-    glGenBuffers(1, &buf);
-    glBindBuffer(GL_ARRAY_BUFFER, buf);
-    auto raw = data.data();
-    glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(glm::vec2), raw, GL_STATIC_DRAW);
-    glVertexAttribPointer(index, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(index);
-    return buf;
-}
-
-GLuint genIndexBuffer(std::vector<GLuint> indices) {
-    GLuint buf;
-    glGenBuffers(1, &buf);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * indices.size(), indices.data(), GL_STATIC_DRAW);
-    return buf;
-
-}
-
-GLuint createAndBindVAO() {
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    return vao;
-}
-
-void unbindVAO() {
-    glBindVertexArray(0);
-}
-
-
-std::unique_ptr<Mesh> createQuadMesh(PlanePivot pivot) {
-    auto mesh = std::make_unique<Mesh>();
-    std::vector<glm::vec3> basePositions = {
-        {-0.5, 0.5, 0},      // tl
-    {-0.5, -0.5, 0},        // bl
-    {0.5, -0.5, 0},         // br
-        {0.5, 0.5, 0}};     // tr
-
-    glm::vec3 pivotOffset = {0, 0, 0};
-    if (pivot == PlanePivot::bottomleft) {
-        pivotOffset = {0.5, 0.5, 0};
-    }
-    else if (pivot == PlanePivot::topleft) {
-        pivotOffset = {0.5, -0.5, 0};
-    }
-    else if (pivot == PlanePivot::bottomright) {
-        pivotOffset = {-0.5, 0.5, 0};
-    }
-    else if (pivot == PlanePivot::topright) {
-        pivotOffset = {-0.5, -0.5, 0};
-    }
-
-    // Apply pivot offset
-    {
-        int i= 0;
-        std::vector<glm::vec3> manipulated;
-        for (auto bp: basePositions) {
-            bp += pivotOffset;
-            manipulated.push_back(bp);
-            i++;
-
-        }
-        basePositions.clear();
-        for (auto mp : manipulated) {
-            basePositions.push_back(mp);
-        }
-    }
-
-    std::vector<uint32_t> indices = {
-        0, 1, 2,
-        0, 2, 3
-    };
-
-    std::vector<glm::vec2> uvs = {
-        {0, 1},
-        {0, 0},
-        {1, 0},
-        {1, 1},
-
-    };
-
-    std::vector<float> posFlat;
-    for (auto bp : basePositions) {
-        posFlat.push_back(bp.x);
-        posFlat.push_back(bp.y);
-        posFlat.push_back(bp.z);
-    }
-
-    auto vao = createAndBindVAO();
-    genVec3Buffer(0, basePositions);
-    genVec2Buffer(1, uvs);
-    genIndexBuffer(indices);
-    GL_ERROR_EXIT(8123)
-    unbindVAO();
-
-    mesh->vao = vao;
-    mesh->positions = basePositions;
-    mesh->indices = indices;
-    return mesh;
-
-}
 
 
 
@@ -1970,164 +1850,6 @@ void drawMeshSimple2(const MeshDrawData& drawData) {
 
 }
 
-void drawMesh(const MeshDrawData &drawData) {
-
-    // The mesh is the problem!
-    glBindVertexArray(drawData.mesh->vao);
-    auto e = glGetError();
-    bindShader(drawData.shader);
-
-    if (drawData.texture) {
-        drawData.texture->bindAt(0);
-    } else {
-        drawData.shader->setVec4Value(drawData.color, "singleColor");
-    }
-
-    if (drawData.normalMap) {
-        // Normal map starts at 13...
-        drawData.normalMap->bindAt(13);
-        GL_ERROR_EXIT(981);
-    } else {
-        getDefaultNormalMap()->bindAt(13);
-    }
-
-    // Lighting related:
-    {
-        // Directional
-        int lightIndex = 0;
-        for (auto directionalLight : drawData.directionalLights) {
-
-            drawData.shader->setVec3Value(directionalLight->lookAtTarget - directionalLight->location, "directionalLightData[" + std::to_string(lightIndex) + "].direction");
-            drawData.shader->setVec3Value(directionalLight->color, "directionalLightData[" + std::to_string(lightIndex) + "].diffuseColor");
-            drawData.shader->setMat4Value(directionalLight->getShadowViewProjectionMatrix(drawData.camera), "directionalLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
-            directionalLight->bindShadowMap(lightIndex+1);
-            drawData.shader->setFloatValue(directionalLight->shadowBias, "shadowBias");
-            lightIndex++;
-            GL_ERROR_EXIT(982)
-        }
-        drawData.shader->setIntValue(drawData.directionalLights.size(), "numDirectionalLights");
-
-        // Point
-        lightIndex = 0;
-        for (auto l : drawData.pointLights) {
-            drawData.shader->setVec3Value(l->location, "pointLightData[" + std::to_string(lightIndex) + "].position");
-            drawData.shader->setFloatValue(l->pointLightData.constant, "pointLightData[" + std::to_string(lightIndex) + "].constant");
-            drawData.shader->setFloatValue(l->pointLightData.linear, "pointLightData[" + std::to_string(lightIndex) + "].linear");
-            drawData.shader->setFloatValue(l->pointLightData.quadratic, "pointLightData[" + std::to_string(lightIndex) + "].quadratic");
-            drawData.shader->setVec3Value(l->color, "pointLightData[" + std::to_string(lightIndex) + "].diffuseColor");
-//            drawData.shader->setMat4Value(l->getShadowViewProjectionMatrix(), "pointLightData[" + std::to_string(lightIndex) + "].mat_view_proj");
-            l->bindShadowMap(lightIndex+3);
-            lightIndex++;
-            GL_ERROR_EXIT(982)
-        }
-        drawData.shader->setIntValue(drawData.pointLights.size(), "numPointLights");
-
-        // TODO Spot
-
-
-    }
-
-
-    drawData.shader->setVec4Value(drawData.tint, "tint");
-    drawData.shader->setVec2Value(drawData.uvPan, "uvPan");
-    drawData.shader->setVec2Value(drawData.uvScale2, "uvScale2");
-    drawData.shader->setVec2Value(drawData.normalUVScale2, "normalUVScale2");
-    drawData.shader->setFloatValue(drawData.uvScale, "uvScale");
-
-    GL_ERROR_EXIT(983);
-
-
-    // Setting transformation matrices
-    {
-        using namespace glm;
-
-        // Do we have a complete world transform matrix already set?
-        // Then we just use it!
-        // Otherwise we build it ourselves
-        if (drawData.worldTransform.has_value()) {
-            drawData.shader->setMat4Value(drawData.worldTransform.value(), "mat_world");
-        } else {
-            // Object to world transformation
-            mat4 mattrans = translate(mat4(1), drawData.location);
-            mat4 matscale = glm::scale(mat4(1),drawData.scale);
-            mat4 matworld = glm::mat4(1);
-
-            // For rotation we check if we have a rotation matrix set.
-            if (glDefaultObjects->currentRenderState->rotMatrix) {
-                matworld = mattrans * (*glDefaultObjects->currentRenderState->rotMatrix) * matscale;
-
-            } else {
-                mat4 matrotX = rotate(mat4(1), radians(drawData.rotationEulers.x), {1, 0, 0} );
-                mat4 matrotY = rotate(mat4(1), radians(drawData.rotationEulers.y), {0, 1, 0} );
-                mat4 matrotZ = rotate(mat4(1), radians(drawData.rotationEulers.z), {0, 0, 1} );
-                matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
-
-            }
-            drawData.shader->setMat4Value(matworld, "mat_world");
-
-        }
-        drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
-        drawData.shader->setMat4Value(drawData.camera->getProjectionMatrix(drawData.viewPortDimensions), "mat_projection");
-
-        drawData.shader->setVec3Value(drawData.camera->getUp(), "cameraUp");
-        drawData.shader->setVec3Value(drawData.camera->getRight(), "cameraRight");
-
-    }
-    GL_ERROR_EXIT(9930);
-
-    if (drawData.skinnedDraw) {
-        if (!drawData.boneMatrices.empty()) {
-            drawData.shader->setMat4Array(drawData.boneMatrices, "u_BoneMatrices");
-        }
-    }
-
-    if (!drawData.depthTest) {
-        glDisable(GL_DEPTH_TEST);
-    }
-
-    if (!drawData.subroutineFragBind.empty()) {
-        auto index= glGetSubroutineIndex(drawData.shader->handle, GL_FRAGMENT_SHADER, drawData.subroutineFragBind.c_str());
-        glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &index);
-    }
-
-
-    // Apply all further parameters, specific to this mesh:
-    for (auto shaderParam : drawData.shaderParameters) {
-        std::visit([shaderParam, drawData](auto&& value) {
-            using T = std::decay_t<decltype(value)>;
-            if constexpr (std::is_same_v<T, float>) {
-                drawData.shader->setFloatValue(value, shaderParam.name);
-            } else if constexpr (std::is_same_v<T, int>) {
-                drawData.shader->setIntValue(value, shaderParam.name);
-            } else if constexpr (std::is_same_v<T, glm::vec2>) {
-                drawData.shader->setVec2Value(value, shaderParam.name);
-            } else if constexpr (std::is_same_v<T, glm::vec3>) {
-                drawData.shader->setVec3Value(value, shaderParam.name);
-            } else if constexpr (std::is_same_v<T, glm::vec4>) {
-                drawData.shader->setVec4Value(value, shaderParam.name);
-            } else if constexpr (std::is_same_v<T, glm::mat4>) {
-                drawData.shader->setMat4Value(value, shaderParam.name);
-            }
-        }, shaderParam.value);
-    }
-
-    if (drawData.instanceCount > 0) {
-        //glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, drawData.instanceCount);
-        glDrawElementsInstanced(GL_TRIANGLES, drawData.mesh->indices.size(), GL_UNSIGNED_INT, nullptr, drawData.instanceCount );
-    } else {
-        glDrawElements(GL_TRIANGLES, drawData.mesh->indices.size(), drawData.mesh->indexDataType, nullptr);
-    }
-    GL_ERROR_EXIT(9931);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    if (!drawData.depthTest) {
-        glEnable(GL_DEPTH_TEST);
-    }
-    glBindVertexArray(0);
-
-
-}
 
 void drawMeshIntoShadowMap(const MeshDrawData& drawData, Light* directionalLight) {
     glBindVertexArray(drawData.mesh->vao);
@@ -2159,6 +1881,7 @@ void drawMeshIntoShadowMap(const MeshDrawData& drawData, Light* directionalLight
 }
 
 [[Deprecated("use the method with the MeshDrawData instead")]]
+/*
 void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO) {
     glBindVertexArray(glDefaultObjects->currentRenderState->mesh->vao);
 
@@ -2177,7 +1900,7 @@ void drawMeshIntoShadowMap(FrameBuffer* shadowMapFBO) {
     glViewport(0, 0, scaled_width, scaled_height);
     glBindVertexArray(0);
 }
-
+*/
 void debugDummyDrawSkeletalMesh(Mesh *pMesh) {
     glDefaultObjects->currentRenderState->mesh->indices;
     printf("debug rendering: indices: \n");
@@ -2508,61 +2231,6 @@ std::vector<glm::vec2> correctV2Data(std::vector<glm::vec2> dataIn, std::vector<
         index++;
     }
     return correctedList;
-}
-
-std::vector<uint32_t> flattenV3Indices(std::vector<glm::vec3> input) {
-    std::vector<uint32_t> result;
-    for (auto v : input) {
-        result.push_back(v.x-1);
-        result.push_back(v.y-1);
-        result.push_back(v.z-1);
-
-    }
-    return result;
-}
-
-static std::vector<int32_t> flattenIV4(std::vector<glm::ivec4> input) {
-    std::vector<int32_t> result;
-    for (auto v : input) {
-        result.push_back(v.x);
-        result.push_back(v.y);
-        result.push_back(v.z);
-        result.push_back(v.w);
-
-    }
-    return result;
-}
-
-static std::vector<float> flattenV4(std::vector<glm::vec4> input) {
-    std::vector<float> result;
-    for (auto v : input) {
-        result.push_back(v.x);
-        result.push_back(v.y);
-        result.push_back(v.z);
-        result.push_back(v.w);
-
-    }
-    return result;
-}
-
-static std::vector<float> flattenV3(std::vector<glm::vec3> input) {
-    std::vector<float> result;
-    for (auto v : input) {
-        result.push_back(v.x);
-        result.push_back(v.y);
-        result.push_back(v.z);
-
-    }
-    return result;
-}
-
-static std::vector<float> flattenV2(std::vector<glm::vec2> input) {
-    std::vector<float> result;
-    for (auto v : input) {
-        result.push_back(v.x);
-        result.push_back(v.y);
-    }
-    return result;
 }
 
 std::string getFileEnding(const std::string& fileName) {
@@ -3216,44 +2884,6 @@ void deferredEnd() {
 }
 
 std::unique_ptr<Texture> createEmptyTexture(int w, int h) {
-    return createTextTexture(w, h);
-}
-
-std::unique_ptr<Texture> createEmptyFloatTexture(int w, int h) {
-    auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 32);
-    auto bm = new Bitmap();
-    bm->width = w;
-    bm->height = h;
-    bm->pixels = pixels;
-    GLuint handle;
-
-    glGenTextures(1, &handle);
-    glBindTexture(GL_TEXTURE_2D, handle);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    // glTexImage2D(GL_TEXTURE_2D,
-    //              0,
-    //              GL_RGB32F,
-    //              bm->width, bm->height,
-    //              0,
-    //              GL_RGBA,
-    //              GL_UNSIGNED_BYTE, bm->pixels);
-
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, w, h);
-
-    auto target = std::make_unique<Texture>();
-    target->handle = handle;
-    target->bitmap = bm;
-    return target;
-
-}
-
-std::unique_ptr<Texture> createTextTexture(int w, int h) {
-
     auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 32);
     auto bm = new Bitmap();
     bm->width = w;
@@ -3417,40 +3047,6 @@ void tint(glm::vec4 col) {
     glDefaultObjects->currentRenderState->tint = col;
 }
 
-/**
-* Generates a normal map just pointing outwards.
-* Can be used if no real normal map is available and we
-* avoid shader branching.
-*/
-std::shared_ptr<Texture> getDefaultNormalMap() {
-    static std::shared_ptr<Texture> normalMap = nullptr;
-    if (!normalMap) {
-        // 1-pixel default normal map (0,0,1)
-        GLubyte defaultNormalPixel[] = {128, 128, 255}; // RGB = (0.5, 0.5, 1.0)
-
-        GLuint defaultNormalMapTex;
-        glGenTextures(1, &defaultNormalMapTex);
-        glBindTexture(GL_TEXTURE_2D, defaultNormalMapTex);
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, defaultNormalPixel);
-
-        // Set parameters
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-        normalMap = std::make_shared<Texture>();
-        normalMap->bitmap = new Bitmap();
-        normalMap->bitmap->height = 1;
-        normalMap->bitmap->width = 1;
-        normalMap->bitmap->pixels = defaultNormalPixel;
-        normalMap->handle = defaultNormalMapTex;
-    }
-
-    return normalMap;
-
-}
 
 void panUVS(glm::vec2 pan) {
     glDefaultObjects->currentRenderState->panUVS = pan;
@@ -3729,77 +3325,10 @@ void gru::SpriteBatch::updateSprite(int index, glm::vec2 posInScreenSpace, glm::
     _clipSpacePositions[startIndex+11] = -0.5;
 }
 
-glm::mat4 convertAiMatrixToGlm(const aiMatrix4x4& from) {
-
-    // Create a glm::mat4 from aiMatrix4x4 data
-    glm::mat4 result = glm::make_mat4(&from.a1);
-
-    // Since Assimp's aiMatrix4x4 is row-major and GLM's glm::mat4 is column-major,
-    // we need to transpose the matrix to correctly convert it.
-    result = glm::transpose(result);
-    return result;
 
 
 
-}
 
-const aiNode* FindNodeByName(const aiNode* node, const std::string& name) {
-    if (node->mName.C_Str() == name) {
-        return node;
-    }
-
-    for (unsigned int i = 0; i < node->mNumChildren; i++) {
-        const aiNode* foundNode = FindNodeByName(node->mChildren[i], name);
-        if (foundNode) {
-            return foundNode;
-        }
-    }
-
-    return nullptr; // Node not found
-}
-
-glm::mat4 calculateBindPoseWorldTransform(Joint* j, glm::mat4 currentTransform) {
-    if (j->parent) {
-        currentTransform = j->parent->bindPoseLocalTransform * currentTransform;
-        return calculateBindPoseWorldTransform(j->parent, currentTransform);
-    }
-
-    return currentTransform;
-}
-
-// Recursively multiplies the current transform with the parents transform:
-glm::mat4 calculateWorldTransform(Joint* j, glm::mat4 currentTransform) {
-    if (j->parent) {
-        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
-        return calculateWorldTransform(j->parent, currentTransform);
-    }
-
-    return currentTransform;
-
-}
-
-// Recursively multiplies the current transform with the parents transform:
-glm::mat4 calculateWorldTransformForFrame(Joint* j, glm::mat4 currentTransform, int frame) {
-    if (j->parent) {
-        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
-        return calculateWorldTransform(j->parent, currentTransform);
-    }
-
-    return currentTransform;
-
-}
-
-
-
-Joint* findJointByName(const std::string& name, std::vector<Joint*> joints)  {
-    for (auto j : joints) {
-        if (j->name == name) {
-            return j;
-        }
-    }
-
-    return nullptr;
-}
 
 
 
@@ -3984,47 +3513,6 @@ const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, con
 
 }
 
-Camera::Camera() {
-}
-
-/**
-* Returns the 8 corners of this cameras view frustum in world coordinates.
-*/
-std::vector<glm::vec3> Camera::getFrustumWorldCorners() const {
-    auto ltnw = frustumToWorld(     glm::vec4{-1,1,-1, 1});
-    auto rtnw = frustumToWorld(    glm::vec4{1,1,-1, 1});
-    auto lbnw = frustumToWorld(  glm::vec4{-1,-1,-1, 1});
-    auto rbnw = frustumToWorld( glm::vec4{1,-1,-1, 1});
-    auto ltfw = frustumToWorld(      glm::vec4{-1,1,1, 1});
-    auto rtfw = frustumToWorld(     glm::vec4{1,1,1, 1});
-    auto lbfw = frustumToWorld(       glm::vec4{-1,-1,1, 1});
-    auto rbfw = frustumToWorld(  glm::vec4{1,-1,1, 1});
-
-    return {ltnw, rtnw, lbnw, rbnw, ltfw, rtfw, lbfw, rbfw};
-}
-
-float Camera::getMaxFrustumDiagonal() {
-    auto ltnw = frustumToWorld(     glm::vec4{-1,1,-1, 1});
-    auto rtnw = frustumToWorld(    glm::vec4{1,1,-1, 1});
-    auto lbnw = frustumToWorld(  glm::vec4{-1,-1,-1, 1});
-    auto rbnw = frustumToWorld( glm::vec4{1,-1,-1, 1});
-    auto ltfw = frustumToWorld(      glm::vec4{-1,1,1, 1});
-    auto rtfw = frustumToWorld(     glm::vec4{1,1,1, 1});
-    auto lbfw = frustumToWorld(       glm::vec4{-1,-1,1, 1});
-    auto rbfw = frustumToWorld(  glm::vec4{1,-1,1, 1});
-
-    return distance(ltnw, rbfw);
-
-}
-
-void Camera::addPostProcessEffect(PostProcessEffect *effect) {
-    postProcessEffects.push_back(effect);
-}
-
-std::vector<PostProcessEffect *> Camera::getPostProcessEffects() const {
-    return postProcessEffects;
-}
-
 // Sets up the internal frustum based VAO
 // and also the shader for debug rendering.
 
@@ -4036,63 +3524,6 @@ glm::vec2 modelToScreenSpace(glm::vec3 model, glm::mat4 matWorld, Camera* camera
     return ss;
 }
 
-std::unique_ptr<FrameBuffer> createFrameBufferWithTexture(int width, int height, std::shared_ptr<Texture> colorTexture, std::shared_ptr<Texture> colorTexture2) {
-    GLuint fbo;
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    // Attach the texture to the framebuffer's color attachment point
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture->handle, 0);
-
-    if (colorTexture2) {
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colorTexture2->handle, 0);
-    }
-
-    GLuint depthRenderbuffer;
-    // Step 3: Create a renderbuffer for depth attachment
-    glGenRenderbuffers(1, &depthRenderbuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, depthRenderbuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-
-    // Attach the renderbuffer to the framebuffer's depth attachment point
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderbuffer);
-
-    // Step 4: Set the list of draw buffers.
-    std::vector<GLenum> drawBuffers;
-    drawBuffers.push_back(GL_COLOR_ATTACHMENT0);
-    if (colorTexture2) {
-        drawBuffers.push_back(GL_COLOR_ATTACHMENT1);
-    }
-    glDrawBuffers(drawBuffers.size(), drawBuffers.data());
-
-    // Step 5: Check if framebuffer is complete
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        printf("Error: Framebuffer is not complete!\n");
-    } else {
-        printf("Framebuffer created successfully!\n");
-    }
-
-    // Unbind the framebuffer to avoid rendering to it accidentally
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    auto frameBuffer =  std::make_unique<FrameBuffer>(fbo, colorTexture, colorTexture2);
-    return frameBuffer;
-}
-
-std::unique_ptr<FrameBuffer> createFrameBuffer(int width, int height, bool hdr, bool additionalColorBuffer) {
-    std::unique_ptr<Texture> texture = nullptr;
-    std::unique_ptr<Texture> texture2 = nullptr;
-    if (hdr) {
-        texture =  createEmptyFloatTexture(width, height);
-    } else {
-        texture =  createEmptyTexture(width, height);
-    }
-    if (additionalColorBuffer) {
-        texture2 = createEmptyFloatTexture(width, height);
-    }
-    return createFrameBufferWithTexture(width, height, std::move(texture), std::move(texture2));
-
-}
 
 void activateFrameBuffer(const FrameBuffer* fb) {
     if (fb) {
@@ -4319,96 +3750,6 @@ void bindShader(Shader* shader) {
 }
 
 
-void Camera::setInitialForward(glm::vec3 fwd) {
-    _initialForward = fwd;
-}
-
-void Camera::follow(GameObject *gameObject, glm::vec3 offset) {
-    this->followedObject = gameObject;
-    this->followOffset = offset;
-    this->followDirection = glm::normalize(gameObject->location - location);
-}
-
-void Camera::updateFollow() {
-    if (followedObject) {
-        updateLocation(followedObject->location + followOffset);
-        this->followDirection = glm::normalize(followedObject->location - location);
-        updateLookupTarget(followedObject->location);
-    }
-}
-
-void Camera::updateLocation(glm::vec3 loc) {
-    location = loc;
-}
-
-void Camera::updateLookupTarget(glm::vec3 t) {
-    lookAtTarget = t;
-}
-
-glm::mat4 Camera::getViewMatrix() const {
-    return lookAt((location), (lookAtTarget), glm::vec3(0, 1,0));
-}
-
-glm::vec3 Camera::getInitialFoward() const {
-    return _initialForward;
-}
-
-glm::vec3 Camera::getForward() const {
-    return normalize(lookAtTarget - location);
-}
-
-glm::vec3 Camera::getRight() const {
-    return normalize(cross( getForward(), {0, 1, 0}));
-}
-
-glm::vec3 Camera::getUp() const {
-    return normalize(cross(getRight(), getForward() ));
-}
-
-/**
-* viewCamera    Is the camera of which
-*/
-glm::vec4 Camera::frustumToWorld(glm::vec4 ndc) const {
-    // TODO prepare for cascading shadow maps, we need to be flexible with the near far plane of our camera.
-    // We construct our own perspective matrix here for a range of test near/far plane combinations
-    auto flexiProj = glm::perspectiveFov<float>(glm::radians(50.0f), scaled_width, scaled_height,nearPlane,farPlane);
-    auto temp = inverse( flexiProj* this->getViewMatrix()) * ndc;
-    temp /= temp.w;
-    return temp;
-}
-
-glm::mat4 Camera::getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride,
-    std::optional<float> fovOverride) const {
-    auto w = scaled_width;
-    auto h = scaled_height;
-    if (widthHeightOverride.has_value()) {
-        w = widthHeightOverride.value().x;
-        h = widthHeightOverride.value().y;
-    }
-
-    float fov = 30;
-    if (fovOverride.has_value()) {
-        fov = fovOverride.value();
-    }
-
-    if (type == CameraType::Ortho) {
-        return glm::ortho<float>(0, w, 0, h, nearPlane, farPlane);
-    }
-
-    if (type == CameraType::OrthoGameplay) {
-        return glm::ortho<float>(-10, 10, -8, 8, nearPlane, farPlane);
-    }
-
-    if (type == CameraType::Perspective) {
-        return glm::perspectiveFov<float>(glm::radians(fov), w, h, nearPlane, farPlane);
-    }
-    return glm::mat4(1.0f);
-}
-
-void Camera::updateNearFar(float nearPlane, float farPlane) {
-    this->nearPlane = nearPlane;
-    this->farPlane = farPlane;
-}
 
 
 
@@ -4442,148 +3783,6 @@ void Skeleton::resetToBindPose() {
         j->currentPoseOrientation.clear();
     }
 }
-
-void Shader::setVec4Value(const glm::vec4 vec, const std::string& name) {
-    auto loc = glGetUniformLocation(this->handle, name.c_str());
-    glUniform4f(loc, vec.x, vec.y, vec.z, vec.w);
-    GL_ERROR_EXIT(442);
-}
-
-void Shader::setFloatValue(float val, const std::string &name) {
-    auto loc = glGetUniformLocation(this->handle, name.c_str());
-    glUniform1f(loc, val);
-    GL_ERROR_EXIT(4430);
-}
-
-void Shader::setVec2Value(glm::vec<2, float> vec, const std::string &name) {
-    auto loc = glGetUniformLocation(this->handle, name.c_str());
-#ifdef _STRICT_SHADER_LOCATION_
-    if (loc == -1) throw std::runtime_error("Could not get uniform location");
-#endif
-    glUniform2f(loc, vec.x, vec.y);
-    GL_ERROR_EXIT(443);
-}
-
-
-
-void Shader::setVec3Value(glm::vec<3, float> vec, const std::string &name) {
-    auto loc = glGetUniformLocation(this->handle, name.c_str());
-#ifdef _STRICT_SHADER_LOCATION_
-    if (loc == -1) throw std::runtime_error("Could not get uniform location");
-#endif
-    glUniform3f(loc, vec.x, vec.y, vec.z);
-    GL_ERROR_EXIT(443);
-}
-
-void Shader::setMat4Value(glm::mat4 mat, const std::string &name) {
-    auto e = glGetError();
-    auto loc = glGetUniformLocation(this->handle, name.c_str());
-#ifdef _STRICT_SHADER_LOCATION_
-    if (loc == -1) throw std::runtime_error("Could not get uniform location");
-#endif
-    glUniformMatrix4fv(loc,1,  GL_FALSE, glm::value_ptr(mat));
-    std::string errorInfo = name + " loc: " + std::to_string(loc);
-
-    GL_ERROR_EXIT_INFO(444, errorInfo);
-}
-
-void Shader::setMat4Array(const std::vector<glm::mat4> mats, const std::string &name) {
-    auto loc = glGetUniformLocation(this->handle, name.c_str());
-#ifdef _STRICT_SHADER_LOCATION_
-    if (loc == -1) throw std::runtime_error("Could not get uniform location");
-#endif
-    glUniformMatrix4fv(loc,mats.size(),  GL_FALSE, value_ptr(mats[0]));
-    GL_ERROR_EXIT(445);
-}
-
-void Shader::setIntValue(int val, const std::string &name) {
-    GL_ERROR_EXIT(4450);
-    auto loc = glGetUniformLocation(this->handle, name.c_str());
-    GL_ERROR_EXIT(4451);
-#ifdef _STRICT_SHADER_LOCATION_
-    if (loc == -1) throw std::runtime_error("Could not get uniform for int value: " + name);
-#endif
-    glUniform1i(loc, val);
-    GL_ERROR_EXIT(445);
-
-}
-
-
-void Shader::initFromFiles(const std::string &vertFile, const std::string &fragFile) {
-    auto vertSource = readFile(vertFile);
-    auto fragSource = readFile(fragFile);
-
-    GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
-    const GLchar* vssource_char = vertSource.c_str();
-    glShaderSource(vshader, 1, &vssource_char, NULL);
-    glCompileShader(vshader);
-    GLint compileStatus;
-    glGetShaderiv(vshader, GL_COMPILE_STATUS, &compileStatus);
-    if (GL_FALSE == compileStatus) {
-        OutputDebugString("Error while compiling the vertex shader\n");
-
-        GLint logSize = 0;
-        glGetShaderiv(vshader, GL_INFO_LOG_LENGTH, &logSize);
-        std::vector<GLchar> errorLog(logSize);
-        glGetShaderInfoLog(vshader, logSize, &logSize, &errorLog[0]);
-        //    result.errorMessage = errorLog.data();
-        char buf[512];
-        sprintf(buf, "vshader error: %s", errorLog.data());
-        printf(buf);
-        OutputDebugStringA(buf);
-        glDeleteShader(vshader);
-        //  return result;
-
-
-    }
-
-
-    GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
-    const GLchar* fssource_char = fragSource.c_str();
-    glShaderSource(fshader, 1, &fssource_char, NULL);
-    glCompileShader(fshader);
-
-    glGetShaderiv(fshader, GL_COMPILE_STATUS, &compileStatus);
-    if (GL_FALSE == compileStatus) {
-        GLint logSize = 0;
-        glGetShaderiv(fshader, GL_INFO_LOG_LENGTH, &logSize);
-        std::vector<GLchar> errorLog(logSize);
-        glGetShaderInfoLog(fshader, logSize, &logSize, &errorLog[0]);
-        //   result.errorMessage = errorLog.data();
-        printf("fragment shader error: %s", errorLog.data());
-        glDeleteShader(fshader);
-
-    }
-
-    GLuint p = glCreateProgram();
-    glAttachShader(p, vshader);
-    glAttachShader(p, fshader);
-    glLinkProgram(p);
-
-    glGetProgramiv(p, GL_LINK_STATUS, &compileStatus);
-
-    if (GL_FALSE == compileStatus) {
-        OutputDebugStringA("Error during shader linking\n");
-        GLint maxLength = 0;
-        glGetProgramiv(p, GL_INFO_LOG_LENGTH, &maxLength);
-        std::vector<GLchar> infoLog(maxLength);
-        glGetProgramInfoLog(p, maxLength, &maxLength, &infoLog[0]);
-        OutputDebugStringA(infoLog.data());
-        printf("shader linking error: %s", infoLog.data());
-        glDeleteProgram(p);
-        glDeleteShader(vshader);
-        glDeleteShader(fshader);
-    }
-
-    GL_ERROR_EXIT(9876)
-
-    glDeleteShader(vshader);
-    glDeleteShader(fshader);
-
-    handle = p;
-
-}
-
 void Texture::bindAt(int unitIndex) {
 
     glActiveTexture(GL_TEXTURE0 + unitIndex);
@@ -4639,3 +3838,4 @@ bool FBButton::mouseOver() {
     state = EButtonState::NONE;
     return false;
 }
+#endif

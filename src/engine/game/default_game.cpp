@@ -6,6 +6,12 @@
 #include <filesystem>
 #include <string>
 #include <iostream>
+#include <engine/graphics/Camera.h>
+#include <engine/input/Input.h>
+#include <Xinput.h>
+
+#include "Timing.h"
+#include <engine/graphics/Font.h>
 
 Camera* DefaultGame::getGameplayCamera() {
     if (!_gameplayCamera) {
@@ -25,12 +31,13 @@ void DefaultGame::renderFPS() {
     }
 
 
+    fpsCounter->update();
 
     lightingOff();
     bindCamera(getUICamera());
     char buf[175];
-    sprintf_s(buf, 160, "FT:%6.1fmcs (%d) %4d/%4d",
-              ftMicrosAvg, lastAvgFPS, mouse_x, mouse_y);
+    sprintf_s(buf, 160, "FT:%6.1fmcs (%f) %4d/%4d",
+              fpsCounter->frameTimeInMicroSecondsAvg(), fpsCounter->lastFPSAverage(), Input::getInstance()->mouse_x(), Input::getInstance()->mouse_y());
     flipUvs(false);
     fpsFont->renderText(buf, {2, -16, 0.1});
 
@@ -97,7 +104,7 @@ void DefaultGame::update() {
 
 void DefaultGame::init() {
     try {
-        performanceFrequency = performance_frequency;
+
 
         // Doing the base class initialiations and then calling the derived class:
         _spriteBatch = new gru::SpriteBatch(1000);
@@ -111,10 +118,7 @@ void DefaultGame::init() {
             }
         }
 
-        for (int i = 0; i < 4;i++) {
-            controllerStates.push_back(XINPUT_STATE {});
-            prevControllerStates.push_back(XINPUT_STATE {});
-        }
+
 
     }
     catch (const std::exception& e) {
@@ -194,7 +198,7 @@ void DefaultGame::render() {
 }
 
 float DefaultGame::getFrametimeInSeconds() {
-    return ftSeconds;
+    return Timing::lastFrameTimeInSeconds();
 }
 
 Camera *DefaultGame::getShadowMapCamera() {

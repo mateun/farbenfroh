@@ -1,6 +1,7 @@
 #pragma once
 #include <dsound.h>
-
+#include <cinttypes>
+#include <string>
 
 /**
  * This is a simplified header type I took from a book from Andre LaMothe, I believe.

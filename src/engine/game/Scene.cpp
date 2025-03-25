@@ -4,17 +4,26 @@
 
 #include "Scene.h"
 
+#include <engine/graphics/Application.h>
+#include <engine/graphics/Camera.h>
+#include <engine/graphics/Texture.h>
+#include <engine/graphics/FrameBuffer.h>
+#include <engine/graphics/Geometry.h>
+#include <engine/graphics/PlanePivot.h>
+#include <engine/lighting/Light.h>
+#include <engine/game/SceneNode.h>
+#include <engine/graphics/ErrorHandling.h>
 
 Scene::Scene() {
-    rayTraceWorldPosTexture = createEmptyFloatTexture(scaled_width, scaled_height);
-    raytracedShadowPositionFBO =  createFrameBufferWithTexture(scaled_width, scaled_height, rayTraceWorldPosTexture);
+    rayTraceWorldPosTexture = Texture::createEmptyFloatTexture(getApplication()->scaled_width(), getApplication()->scaled_height());
+    raytracedShadowPositionFBO =  std::make_unique<FrameBuffer>(rayTraceWorldPosTexture);
     worldPosShader = std::make_unique<Shader>();
     worldPosShader->initFromFiles("../assets/shaders/world_pos.vert", "../assets/shaders/world_pos.frag");
     shadowMapShader = std::make_unique<Shader>();
     shadowMapShader->initFromFiles("../assets/shaders/shadow_map.vert", "../assets/shaders/shadow_map.frag");
     quadShader = std::make_unique<Shader>();
     quadShader->initFromFiles("../src/engine/fx/shaders/quad.vert", "../src/engine/fx/shaders/quad.frag");
-    quadMesh = createQuadMesh(PlanePivot::center);
+    quadMesh = Geometry::createQuadMesh(PlanePivot::center);
 
     debugFlyCam = std::make_unique<Camera>();
     debugFlyCam->type = CameraType::Perspective;
@@ -22,7 +31,7 @@ Scene::Scene() {
     debugFlyCam->lookAtTarget = glm::vec3(0, 0, 0);
     debugFlyCam->updateNearFar(0.1, 400);
     flyCamMover = std::make_unique<CameraMover>(debugFlyCam.get());
-    fullScreenFBO = createFrameBuffer(scaled_width, scaled_height, true, false);
+    fullScreenFBO = std::make_shared<FrameBuffer>(getApplication()->scaled_width(), getApplication()->scaled_height(), true, false);
 
 
 
@@ -265,8 +274,9 @@ void Scene::render() const {
     {
 
         for (auto l: _directionalLightNodes) {
-            glBindFramebuffer(GL_FRAMEBUFFER, l->light->shadowMapFBO->handle);
-            glClear(GL_DEPTH_BUFFER_BIT);
+            l->light->shadowMapFBO->bind();
+            l->light->shadowMapFBO->clearDepth();
+
 
             for (auto m : flatMeshNodes) {
                 if (!m->isActive() || !m->getMeshData().castShadow || m->_type == SceneNodeType::ParticleSystem) {
@@ -281,7 +291,7 @@ void Scene::render() const {
                 auto worldOrientation = m->getWorldOrientation();
                 dd.rotationEulers = degrees(eulerAngles(worldOrientation));
                 dd.mesh = m->mesh;
-                dd.viewPortDimensions = {l->light->shadowMapFBO->texture->bitmap->width, l->light->shadowMapFBO->texture->bitmap->height};
+                dd.viewPortDimensions = {l->light->shadowMapFBO->width(), l->light->shadowMapFBO->height()};
                 dd.directionalLights.push_back(l->light);
                 if (m->skinnedMesh) {
                      dd.skinnedDraw = m->skinnedMesh;
@@ -349,7 +359,7 @@ void Scene::render() const {
     if (!activeCamera->getPostProcessEffects().empty()) {
         activateFrameBuffer(fullScreenFBO.get());
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glViewport(0, 0, fullScreenFBO->texture->bitmap->width, fullScreenFBO->texture->bitmap->height);
+        glViewport(0, 0, fullScreenFBO->width(), fullScreenFBO->height());
     } else {
         // Render directly to standard framebuffer.
         activateFrameBuffer(nullptr);
@@ -397,7 +407,7 @@ void Scene::render() const {
             m->meshData.onRender(m->meshData);
         }
 
-        GL_ERROR_EXIT(44556611)
+        GL_ERROR_EXIT(44556611);
 
         // TODO remove this special treatment of particle system nodes?!
         if (m->_type == SceneNodeType::ParticleSystem) {
@@ -432,7 +442,7 @@ void Scene::render() const {
         mdd.shader = quadShader.get();
         mdd.location = { scaled_width/2, scaled_height/2, -5};
         mdd.scale = { scaled_width, scaled_height, 1};
-        mdd.texture = currentFB->texture.get();
+        mdd.texture = currentFB->texture().get();
         drawMesh(mdd);
 
 

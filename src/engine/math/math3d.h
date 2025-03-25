@@ -4,6 +4,7 @@
 
 #ifndef SIMPLE_KING_MATH3D_H
 #define SIMPLE_KING_MATH3D_H
+#include <glm/glm.hpp>
 
 struct Vec2 {
     float x;

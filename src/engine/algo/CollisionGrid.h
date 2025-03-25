@@ -8,11 +8,8 @@
 #include <vector>
 
 enum class GridOrigin { Center, BottomLeft };
+class PositionProvider;
 
-class PositionProvider {
-public:
-    virtual glm::vec2 getPosition() = 0;
-};
 
 class GridCell {
 public:

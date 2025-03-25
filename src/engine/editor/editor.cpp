@@ -11,12 +11,20 @@
 #include <engine/animation/JointMask.h>
 #include <engine/animation/PerBoneBlendData.h>
 #include <engine/animation/Pose.h>
-#include <engine/rastergraphics/rastergraphics.h>
 #include <shobjidl.h>
+#include <engine/input/Input.h>
+#include <imgui/imgui.h>
+#include <iostream>
+#include <engine/io/MeshImporter.h>
 
 #include "graphics.h"
 
-#include "../game/game_model.h"
+#include <engine/animation/Joint.h>
+#include <engine/game/game_model.h>
+#include <engine/graphics/Camera.h>
+#include <engine/graphics/MeshDrawData.h>
+#include <engine/graphics/CameraMover.h>
+
 #include "ozz/animation/runtime/sampling_job.h"
 #include "ozz/include/ozz/animation/runtime/local_to_model_job.h"
 #include "ozz/include/ozz/animation/runtime/skeleton.h"
@@ -104,7 +112,7 @@ namespace editor {
         ImGui::Begin("Invisible Window", nullptr,
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoDecoration);
-        ImGui::Text("mouse: %d/%d", mouse_x, mouse_y);
+        ImGui::Text("mouse: %d/%d", Input::getInstance()->mouse_x(), Input::getInstance()->mouse_y());
         ImGui::End();
         ImGui::PopStyleVar();
     }
@@ -217,8 +225,8 @@ namespace editor {
         //ImGui::SetWindowSize("Mesh Viewer", {1000, 600});
         activateFrameBuffer(skeletalMeshWindowFrameBuffer.get());
         bindCamera(getMeshViewerCamera());
-        glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width,
-                 skeletalMeshWindowFrameBuffer->texture->bitmap->height);
+        glViewport(0, 0, skeletalMeshWindowFrameBuffer->width(),
+                 skeletalMeshWindowFrameBuffer->height());
 
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -227,12 +235,12 @@ namespace editor {
         gridData->camera = getMeshViewerCamera();
         gridData->color = glm::vec4(.5, .5, 0, 1);
         gridData->scale = 0.25f;
-        drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height});
+        drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()});
 
 
         wireframeOn(3.0f);
         gridData->scale = 1.0f;
-        drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height});
+        drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()});
         wireframeOff();
 
 
@@ -252,7 +260,7 @@ namespace editor {
             // Draw the filled mesh
             MeshDrawData dd;
             dd.mesh = importedMesh;
-            dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height};
+            dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()};
             dd.location = {0, 0, 0};
             dd.camera = getMeshViewerCamera();
             dd.color = {0.9, 0.9, 0.9, 1};
@@ -355,7 +363,7 @@ namespace editor {
                         dd.mesh = assetLoader->getMesh("bone_mesh");
                         dd.color = {0.7, 0.1, .1, 1};
                         dd.camera = getMeshViewerCamera();
-                        dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height};
+                        dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()};
                         dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
                         dd.worldTransform = finalTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
@@ -406,7 +414,7 @@ namespace editor {
                         dd.mesh = assetLoader->getMesh("bone_mesh");
                         dd.color = {0.7, 0.1, .1, 1};
                         dd.camera = getMeshViewerCamera();
-                        dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height};
+                        dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()};
                         dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
                         glm::mat4 modelTransform;
                         std::memcpy(&modelTransform, &ltm_job.output[jointIndex], sizeof(glm::mat4));
@@ -420,7 +428,7 @@ namespace editor {
         }
 
         // Rest to normal viewport:
-        //glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->bitmap->width, skeletalMeshWindowFrameBuffer->texture->bitmap->height);
+        //glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->width(), skeletalMeshWindowFrameBuffer->texture->height());
         glViewport(0, 0, scaled_width, scaled_height);
 
         // Activate main framebuffer again:
@@ -433,9 +441,9 @@ namespace editor {
             ImGui::TableNextColumn();
             // Now we are finished rendering our 3D scene into our framebuffer.
             // Next we present the texture of the FBO as an image in ImGUI.
-            ImGui::Image((ImTextureID)(intptr_t)(skeletalMeshWindowFrameBuffer->texture->handle),
-                             {(float) skeletalMeshWindowFrameBuffer->texture->bitmap->width / 2,
-                              (float) skeletalMeshWindowFrameBuffer->texture->bitmap->height / 2},
+            ImGui::Image((ImTextureID)(intptr_t)(skeletalMeshWindowFrameBuffer->texture()->handle()),
+                             {(float) skeletalMeshWindowFrameBuffer->width() / 2,
+                              (float) skeletalMeshWindowFrameBuffer->height() / 2},
                              {0, 1}, {1, 0});
 
             ImGui::TableNextColumn();
@@ -781,7 +789,7 @@ namespace editor {
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
         ImGui::SetWindowPos(ImVec2(0, 30));     // Position at the top
         float toolbarHeight = 40;
-        if (ImGui::ImageButton((ImTextureID)(intptr_t) assetLoader->getTexture("button_play")->handle, {16, 16})) {
+        if (ImGui::ImageButton((ImTextureID)(intptr_t) assetLoader->getTexture("button_play")->handle(), {16, 16})) {
             printf("play button pressed\n");
         }
         ImGui::SetWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, toolbarHeight));  // Full window width, height of 50
@@ -838,8 +846,8 @@ namespace editor {
         //updateTexture(1024, 512, texture);
 
         // ImGui::Image(reinterpret_cast<ImTextureID>(texture->handle),
-        //                     {(float) texture->bitmap->width ,
-        //                      (float) texture->bitmap->height },
+        //                     {(float) texture->width() ,
+        //                      (float) texture->height() },
         //                     {0, 1}, {1, 0});
     }
 
@@ -1088,7 +1096,7 @@ namespace editor {
     }
 
     void EditorGame::update() {
-
+        Input::getInstance()->update();
         editor->update();
     }
 

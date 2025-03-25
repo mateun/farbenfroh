@@ -7,8 +7,12 @@
 
 #include <glm/glm.hpp>
 #include <string>
+#include <vector>
 #include "graphics.h"
 #include "NodeComponent.h"
+#include <engine/math/data_structures.h>
+#include <engine/graphics/Camera.h>
+#include <engine/graphics/MeshDrawData.h>
 
 class NodeComponent;
 class MeshDrawData;

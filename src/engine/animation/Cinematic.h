@@ -6,16 +6,15 @@
 #define CINEMATIC_H
 #include <string>
 #include <map>
+#include <vector>
+#include <glm/glm.hpp>
+#include <engine/math/data_structures.h>
 
+enum class ChannelType;
 class Scene;
 class SceneNode;
 class CineTrack;
 class Channel;
-enum class ChannelType {
-  Location,
-  Rotation,
-  Scale
-};
 
 
 /**
@@ -70,6 +69,10 @@ class Cinematic {
     float _duration = 0.0f;
 };
 
+class SampleValue;
+
+
+
 /**
 * A cinematic consists of tracks, which are assigned to an object (SceneNode).
 * It has up to 3 channels: location, scale, rotation.
@@ -98,26 +101,7 @@ struct SampleValue {
   glm::vec3 value;
 };
 
-class Channel {
-  friend class CineTrack;
 
-public:
-  Channel(ChannelType type, AngleUnit unit = AngleUnit::DEGREES);
-
-private:
-  ChannelType _type;
-  // This value is polymorphic in a way:
-  // depending on the type it can mean different things:
-  // location, translation, scale
-  // The map goes from a discrete time value to a specific sample
-  std::map<float, SampleValue> _samples;
-
-  glm::vec3 getInterpolatedSampleValue(float timeAbsolute, float timeNormalized);
-
-  void addKeyFrame(float time, glm::vec3 vec);
-
-  AngleUnit _angleUnit;
-};
 
 
 

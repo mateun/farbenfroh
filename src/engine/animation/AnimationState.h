@@ -5,10 +5,14 @@
 #ifndef ANIMATIONSTATE_H
 #define ANIMATIONSTATE_H
 
+#include <string>
+#include <vector>
 
 class Animation;
 class AnimationBlender;
 class AnimationTransition;
+
+
 
 /**
 * Represents the nodes in the animation state machine.

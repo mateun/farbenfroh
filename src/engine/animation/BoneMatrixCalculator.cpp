@@ -2,9 +2,16 @@
 // Created by mgrus on 18.02.2025.
 //
 
-#include "BoneMatrixCalculator.h"
-#include "PerBoneBlendData.h"
-#include "Pose.h"
+#define NOMINMAX
+#include <engine/animation/BoneMatrixCalculator.h>
+#include <engine/animation/PerBoneBlendData.h>
+#include <engine/animation/Pose.h>
+#include <engine/animation/Joint.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
+
 
 int getSampleIndex(Animation* animation, const std::string& jointName, float animationTime, SampleType sampleType) {
     auto allSamples = animation->findSamples(jointName, sampleType);
@@ -17,7 +24,7 @@ int getSampleIndex(Animation* animation, const std::string& jointName, float ani
     return -1;
 }
 
-Pose* BoneMatrixCalculator::calculateBlendedPose(Animation* first, Animation* second, Skeleton* skeleton, float animTime, float blendWeight, PerBoneBlendData* perBoneBlendData) {
+Pose* BoneMatrixCalculator::calculateBlendedPose(Animation* first, Animation* second, gru::Skeleton* skeleton, float animTime, float blendWeight, PerBoneBlendData* perBoneBlendData) {
     Pose* blendedPose = new Pose;
     auto pose1 = calculatePose(first, skeleton, animTime);
     auto pose2 = calculatePose(second, skeleton, animTime);
@@ -51,7 +58,7 @@ Pose* BoneMatrixCalculator::calculateBlendedPose(Animation* first, Animation* se
 
 
 
-Pose *BoneMatrixCalculator::calculatePose(Animation *animation, Skeleton *skeleton, float animTime) {
+Pose *BoneMatrixCalculator::calculatePose(Animation *animation, gru::Skeleton *skeleton, float animTime) {
     Pose* pose = new Pose();
 
     for (auto j: skeleton->joints) {
@@ -158,7 +165,7 @@ Pose* BoneMatrixCalculator::calculatePose_(Animation *animation, Skeleton *skele
 }
 */
 
-Pose* BoneMatrixCalculator::calculateBlendedPose(Pose *pose1, Pose *pose2, Skeleton* skeleton,
+Pose* BoneMatrixCalculator::calculateBlendedPose(Pose *pose1, Pose *pose2, gru::Skeleton* skeleton,
     float elapsedTime, float blendDuration) {
     if (elapsedTime < blendDuration) {
         float blendFactor = elapsedTime / blendDuration;

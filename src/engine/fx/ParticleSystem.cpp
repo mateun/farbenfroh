@@ -5,8 +5,14 @@
 #include "ParticleSystem.h"
 #include <GL/glew.h>
 #include <engine/compute/ComputeShader.h>
-#include "engine/math/math3d.h"
-
+#include <engine/game/Timing.h>
+#include <engine/graphics/Mesh.h>
+#include <engine/graphics/Shader.h>
+#include <engine/graphics/PlanePivot.h>
+#include <engine/graphics/Geometry.h>
+#include <engine/graphics/ErrorHandling.h>
+#include <engine/graphics/MeshDrawData.h>
+#include <engine/graphics/Renderer.h>
 
 void gru::ParticleEmitter::initMegaBuffer() {
         // Now we put all the vertices of all instances into a single VBO
@@ -192,7 +198,7 @@ gru::ParticleEmitter::ParticleEmitter(const std::shared_ptr<ParticleSystem>& par
             particleIDs[i] = i;
 
         if (!mesh) {
-            auto quadMesh = createQuadMesh(PlanePivot::center);
+            auto quadMesh = Geometry::createQuadMesh(PlanePivot::center);
             this->mesh = std::move(quadMesh);
         }
 
@@ -250,11 +256,11 @@ void gru::ParticleEmitter::update() {
     // Use a ComputeShader to update all particles
     computeShader->use();
     computeShader->bindSSBO(particleSSBO);
-    computeShader->setFloat("deltaTime", ftSeconds);
-    GL_ERROR_EXIT(556688)
+    computeShader->setFloat("deltaTime", Timing::lastFrameTimeInSeconds());
+    GL_ERROR_EXIT(556688);
     GLuint numWorkGroups = (numParticles + 255) / 256;
     computeShader->dispatch(DispatchOutput::Buffer, {numWorkGroups, 1, 1});
-    GL_ERROR_EXIT(556689)
+    GL_ERROR_EXIT(556689);
 
 
 }
@@ -275,7 +281,7 @@ void gru::ParticleEmitter::draw(const Camera* camera) const {
     computeShader->bindSSBO(particleSSBO);
 
     glDepthMask(GL_FALSE);
-    drawMesh(mdd);
+    Renderer::drawMesh(mdd);
     glDepthMask(GL_TRUE);
 
 
@@ -287,7 +293,7 @@ void gru::ParticleSystem::addEmitter(ParticleEmitter *emitter, EmitterExecutionR
 }
 
 void gru::ParticleSystem::update() {
-    timeElapsed += ftSeconds;
+    timeElapsed += Timing::lastFrameTimeInSeconds();
 
     // If this is the first time around, we need to check if any of the emitters have a startup delay defined.
     // So we only are allowed to start (update) them if the time is right.

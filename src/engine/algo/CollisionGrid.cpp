@@ -3,6 +3,7 @@
 //
 
 #include "CollisionGrid.h"
+#include "PositionProvider.h"
 
 GridCell::GridCell(glm::vec2 gridCoordinate) : gridCoordinate(gridCoordinate) {
 }

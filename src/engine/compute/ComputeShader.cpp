@@ -6,10 +6,11 @@
 #include <GL/glew.h>
 
 #include <graphics.h>
-#include <engine/animation/Animation.h>
-#include <engine/animation/Animation.h>
+#include <glm\glm.hpp>
 #include <engine/io/io.h>
 #include <engine/profiling/PerformanceTimer.h>
+#include <engine/graphics/ErrorHandling.h>
+#include <engine/graphics/Texture.h>
 
 ComputeShader::ComputeShader(const std::string &shaderPath, std::vector<std::string> includeFiles) {
     std::string source = "";
@@ -70,7 +71,7 @@ ComputeShader::ComputeShader(const std::string &shaderPath, std::vector<std::str
 
     glDeleteShader(cshader);
     handle = p;
-    GL_ERROR_EXIT(10100)
+    GL_ERROR_EXIT(10100);
 
 }
 
@@ -90,8 +91,8 @@ void ComputeShader::initWithTexture(int width, int height) {
     // We use GL_WRITE_ONLY because the compute shader is writing to the image.
     glBindImageTexture(0, outputTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-    outputTexture = new Texture();
-    outputTexture->handle = outputTex;
+    outputTexture = new Texture(outputTex);
+
 
 
 }
@@ -133,9 +134,9 @@ void ComputeShader::dispatch(DispatchOutput dispatchOutput, glm::ivec3 groupSize
 void ComputeShader::setFloat(const std::string &uniformName, float value) {
     glUseProgram(handle);
     auto loc = glGetUniformLocation(handle, uniformName.c_str());
-    GL_ERROR_EXIT(10200)
+    GL_ERROR_EXIT(10200);
     glUniform1f(loc, value);
-    GL_ERROR_EXIT(10201)
+    GL_ERROR_EXIT(10201);
 }
 
 // End compute shader testing

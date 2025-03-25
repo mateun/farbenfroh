@@ -5,14 +5,14 @@
 #ifndef ANIMATIONEDITOR_H
 #define ANIMATIONEDITOR_H
 
-#include <engine/ui/Application.h>
+#include <engine/graphics/Application.h>
 
 
 class AnimationEditor : public Application {
 public:
     AnimationEditor(int width, int height, bool fullscreen);
 
-
+    virtual void onCreated() override;
 };
 
 

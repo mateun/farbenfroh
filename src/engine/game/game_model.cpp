@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include "game_model.h"
 #include "../../graphics.h"
+#include <engine/physics/Ray.h>
 
 glm::vec3 GameObject::collideWithRay(Ray ray) {
     if (!mesh) {

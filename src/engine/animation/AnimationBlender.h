@@ -5,6 +5,7 @@
 #ifndef ANIMATIONBLENDER_H
 #define ANIMATIONBLENDER_H
 
+class Animation;
 
 class PerBoneBlendData;
 /**

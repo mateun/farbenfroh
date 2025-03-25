@@ -4,6 +4,8 @@
 
 #include "VulkanRenderer.h"
 
+#include <engine/graphics/Application.h>
+
 VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hInstance), _window(window) {
     createInstance();
     createSurface();
@@ -170,7 +172,7 @@ void VulkanRenderer::createLogicalDevice() {
 void VulkanRenderer::createSurface() {
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.hwnd = window;
+    surfaceCreateInfo.hwnd = _window;
     surfaceCreateInfo.hinstance = _hInstance;
 
 
@@ -199,8 +201,8 @@ void VulkanRenderer::createSwapChain() {
     // Calculate the surface extent:
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, &capabilities);
-    _extent.width = window_width;
-    _extent.height = window_height;
+    _extent.width = getApplication()->scaled_width();
+    _extent.height = getApplication()->scaled_height();
     _extent.width = std::clamp(_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     _extent.height = std::clamp(_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 

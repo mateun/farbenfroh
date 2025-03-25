@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <engine/algo/CollisionGrid.h>
+#include <engine/algo/PositionProvider.h>
 #include <glm/vec2.hpp>
 
 class MyPosProvider : public PositionProvider {
@@ -12,7 +13,11 @@ public:
 
     glm::vec2 getPosition() override {
         return pos;
-    };
+    }
+
+    glm::vec3 getPosition3D() override {
+        return glm::vec3(pos.x, pos.y, 0);
+    }
 private:
     glm::vec2 pos;
 };

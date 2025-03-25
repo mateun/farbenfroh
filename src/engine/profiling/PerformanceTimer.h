@@ -4,6 +4,7 @@
 
 #ifndef PERFORMANCETIMER_H
 #define PERFORMANCETIMER_H
+#include <Windows.h>
 
 class PerformanceTimer {
 
@@ -16,7 +17,9 @@ public:
 private:
     LARGE_INTEGER startTime;
     LARGE_INTEGER endTime;
+    LARGE_INTEGER frequency;
     float diffInSeconds = 0.0f;
+    inline static bool frequencyInitialized = false;
 
 };
 

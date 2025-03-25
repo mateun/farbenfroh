@@ -8,7 +8,7 @@ cyclone::Particle::Particle(glm::vec3 initialPosition, glm::vec3 initialVelocity
     this->position = initialPosition;
     this->velocity = initialVelocity;
     if (initialMass == 0) {
-        this->inverseMass = MAXINT32;
+        this->inverseMass = std::numeric_limits<int32_t>::max();
     } else {
         this->inverseMass = 1 / initialMass;
     }

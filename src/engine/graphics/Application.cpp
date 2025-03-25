@@ -4,8 +4,15 @@
 
 #include "Application.h"
 
+#include <engine/profiling/PerformanceTimer.h>
+#include <GL/glew.h>
+#include "RenderBackend.h"
+#include "Widget.h"
+#include <engine/game/Timing.h>
+#include <engine/input/Input.h>
+
 // This function must be provided by any Application implementor.
-extern std::unique_ptr<Application> getApplication();
+extern std::shared_ptr<Application> getApplication();
 
 Application::Application(int w, int h, bool fullscreen) : width(w), height(h), fullscreen(fullscreen){
 
@@ -13,6 +20,48 @@ Application::Application(int w, int h, bool fullscreen) : width(w), height(h), f
 
 Application::~Application() {
 }
+
+
+bool Application::changeResolution(int width, int height, int refreshRate, const std::string& deviceName, bool goFullscreen) {
+    DEVMODE devMode;
+    ZeroMemory(&devMode, sizeof(devMode));
+    devMode.dmSize = sizeof(devMode);
+
+    auto dpi = GetDpiForWindow(_window);
+    auto dpiScaleFactor = static_cast<float>(dpi) / 96.0f;
+    scaled_width_ = width / dpiScaleFactor;
+    scaled_height_ = height / dpiScaleFactor;
+
+    devMode.dmPelsWidth = width;
+    devMode.dmPelsHeight = height;
+    devMode.dmDisplayFrequency = refreshRate;
+    devMode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
+
+    // Apply the new display settings
+    if (goFullscreen) {
+        if (ChangeDisplaySettings(&devMode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL) {
+            MessageBox(nullptr, "Failed to change display settings", "Error", MB_OK | MB_ICONERROR);
+            return false;
+        }
+
+        // Remove window borders and make it topmost
+        SetWindowLong(_window, GWL_STYLE, WS_POPUP);
+        SetWindowPos(_window, HWND_TOP, 0, 0, width, height, SWP_FRAMECHANGED);
+        ShowWindow(_window, SW_MAXIMIZE);
+
+        // Update our internal window size variables:
+
+        fullscreen = true;
+
+        return true;
+
+    }
+    // TODO: currently nothing done if none fullscreen change. then we assume we are developing
+    //  and just stay with the bordered window.
+    return true;
+
+}
+
 
 void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpstr, int nShowCmd) {
 
@@ -75,17 +124,30 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
 
     ShowWindow(_window, SW_NORMAL);
     UpdateWindow(_window);
-    // HDC hdc = GetDC(hwnd);
+    hdc = GetDC(_window);
     // registerRawInput(hwnd);
 
+    render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, _window, width, height);
 
 }
 
 int Application::run() {
+    onCreated();
 	mainLoop();
 	return 0;
 }
 
+RenderBackend * Application::getRenderBackend() const {
+    return render_backend_.get();
+}
+
+int Application::scaled_width() {
+    return scaled_width_;
+}
+
+int Application::scaled_height() {
+    return scaled_height_;
+}
 
 #ifdef USE_WIN32_APP_FRAMEWORK
 int APIENTRY WinMain(HINSTANCE hInstance,
@@ -93,7 +155,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
                      LPSTR lpCmdLine,
                      int nShowCmd) {
 
-	std::unique_ptr<Application> app = getApplication();
+	std::shared_ptr<Application> app = getApplication();
 	app->initialize(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
 	return app->run();
 
@@ -101,14 +163,25 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 #endif
 
 
+void Application::setTopLevelWidget(const std::shared_ptr<Widget>& widget) {
+    topLevelWidget = widget;
+
+    // The top level widget is always the full application window size.
+    // Further down the hierarchy, e.g. splitted windows have smaller sizes.
+    topLevelWidget->resize(width, height);
+}
+
 void Application::mainLoop() {
 
     //initXInput();
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	bool running = true;
 
+    PerformanceTimer performance_timer;
 	MSG msg;
 	while (running) {
+	    performance_timer.start();
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) > 0) {
             if (msg.message == WM_QUIT) {
                 running = false;
@@ -117,7 +190,14 @@ void Application::mainLoop() {
             DispatchMessage(&msg);
         }
 
-	    Sleep(1);
+
+	    if (topLevelWidget) {
+	        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	        topLevelWidget->draw();
+	        SwapBuffers(hdc);
+	    }
+	    performance_timer.stop();
+	    Timing::frameTimeSecs = performance_timer.durationInSeconds();
 
 	}
 
@@ -137,57 +217,9 @@ LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
 #define ID_LEFT_CHILD  101
 #define ID_RIGHT_CHILD 102
 
-    static HWND hwndLeft = nullptr;
-    static HWND hwndRight = nullptr;
+
 
     switch (message) {
-
-        case WM_CREATE: {
-            // Create the left child window.
-            hwndLeft = CreateWindowEx(
-                0,                        // Extended style
-                "STATIC",                // Predefined class for a static control
-                "Left Pane",             // Window text (optional)
-                WS_CHILD | WS_VISIBLE,    // Child window style
-                0, 0,                     // x, y position (will adjust in WM_SIZE)
-                100, 100,                 // Width, height (temporary values)
-                hWnd,                     // Parent window handle
-                (HMENU)ID_LEFT_CHILD,     // Child window ID
-                ((LPCREATESTRUCT)lParam)->hInstance,
-                nullptr                   // Additional parameters
-            );
-
-            // Create the right child window.
-            hwndRight = CreateWindowEx(
-                0,                        // Extended style
-                "STATIC",                // Predefined class for a static control
-                "Right Pane",            // Window text (optional)
-                WS_CHILD | WS_VISIBLE,    // Child window style
-                100, 0,                   // x, y position (temporary, will update)
-                100, 100,                 // Width, height (temporary)
-                hWnd,                     // Parent window handle
-                (HMENU)ID_RIGHT_CHILD,    // Child window ID
-                ((LPCREATESTRUCT)lParam)->hInstance,
-                nullptr                   // Additional parameters
-            );
-            return 0;
-        }
-        case WM_SIZE: {
-            // Get the new dimensions of the main window's client area.
-            int clientWidth  = LOWORD(lParam);
-            int clientHeight = HIWORD(lParam);
-            // Define a fixed width for the left pane, or calculate dynamically.
-            int leftPaneWidth = clientWidth / 3;
-            // for now override left width:
-            leftPaneWidth = 400;
-
-            // Position the left child window.
-            MoveWindow(hwndLeft, 0, 0, leftPaneWidth, clientHeight, TRUE);
-
-            // Position the right child window to occupy the rest of the space.
-            MoveWindow(hwndRight, leftPaneWidth +2, 0, clientWidth - leftPaneWidth - 2, clientHeight, TRUE);
-            return 0;
-        }
 
         case WM_CLOSE:
         DestroyWindow(hWnd);
@@ -220,6 +252,11 @@ LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
             // return 0;
         }
 
+        case WM_SYSKEYDOWN:
+
+        case WM_KEYDOWN:
+            Input::getInstance()->updateLastKeyPress(wParam);
+        break;
 
         case WM_DESTROY:
             PostQuitMessage(0);

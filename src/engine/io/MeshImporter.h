@@ -7,6 +7,17 @@
 
 #include <glm/glm.hpp>
 #include <string>
+#include <vector>
+#include <memory>
+#include <ozz/animation/runtime/animation.h>
+#include <engine/animation/Animation.h>
+#include <assimp/quaternion.h>
+#include <assimp/matrix4x4.h>
+
+class Mesh;
+struct aiScene;
+struct aiNode;
+struct aiAnimation;
 
 
 class MeshImporter {
@@ -43,6 +54,13 @@ public:
 private:
     std::vector<Animation*> importAnimationsInternal(const aiScene* scene);
     glm::quat assimpQuatToGLM(const aiQuaternion& aiQuat);
+
+    const aiNode *FindNodeByName(const aiNode *node, const std::string &name);
+    glm::mat4 convertAiMatrixToGlm(const aiMatrix4x4& from);
+    glm::mat4 calculateBindPoseWorldTransform(Joint* j, glm::mat4 currentTransform);
+    glm::mat4 calculateWorldTransform(Joint* j, glm::mat4 currentTransform);
+    glm::mat4 calculateWorldTransformForFrame(Joint* j, glm::mat4 currentTransform, int frame);
+
     Animation* aiAnimToAnimation(aiAnimation* aiAnim);
     std::vector<std::shared_ptr<ozz::animation::Animation>> importOzzAnimations(const std::string& skeletonBaseFolder = "");
 

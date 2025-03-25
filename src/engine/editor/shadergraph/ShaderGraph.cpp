@@ -3,7 +3,11 @@
 //
 
 #include "ShaderGraph.h"
-
+#include <engine/io/io.h>
+#include <stdexcept>
+#include <engine/graphics/Camera.h>
+#include <glm/gtc/type_ptr.inl>
+#include <engine/graphics/ErrorHandling.h>
 
 DefaultGame* getGame() {
     return new ShaderGraph();
@@ -37,14 +41,9 @@ void ShaderGraph::setTransformMatrices(glm::vec3 location, glm::vec3 scale, glm:
     mat4 matrotZ = glm::rotate(mat4(1), glm::radians(rotation.z), {0, 0, 1} );
     matworld =  mattrans * matrotX * matrotY * matrotZ * matscale ;
 
-    auto worldLoc = glGetUniformLocation(glDefaultObjects->currentRenderState->shader->handle, "mat_model");
-    auto viewLoc = glGetUniformLocation(glDefaultObjects->currentRenderState->shader->handle, "mat_view");
-    auto projLoc = glGetUniformLocation(glDefaultObjects->currentRenderState->shader->handle, "mat_projection");
-
-    glUniformMatrix4fv(	worldLoc,1,GL_FALSE,value_ptr(matworld));
-
-    glUniformMatrix4fv( viewLoc, 1, GL_FALSE, value_ptr(viewMatrixForCamera(getUICamera())));
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, value_ptr(projectionMatrixForCamera(getUICamera())));
+    nodeShader->setMat4Value(matworld, "mat_model");
+    nodeShader->setMat4Value(getUICamera()->getViewMatrix(), "mat_view");
+    nodeShader->setMat4Value(getUICamera()->getProjectionMatrix(), "mat_projection");
 
 }
 void ShaderGraph::renderNode() {
@@ -60,12 +59,12 @@ void ShaderGraph::renderNode() {
 void ShaderGraph::renderTile(glm::vec2 tileCoord, glm::vec2 tileSize, glm::vec2 screenCoord, glm::vec2 scale) {
     glBindVertexArray(quadVAO);
 
-    bindShader(nodeShader);
-    GL_ERROR_EXIT(45)
+    nodeShader->bind();
+    GL_ERROR_EXIT(45);
     glActiveTexture(GL_TEXTURE0);
-    GL_ERROR_EXIT(46)
-    glBindTexture(GL_TEXTURE_2D, getTextureByName("node-9-slice")->handle);
-    GL_ERROR_EXIT(47)
+    GL_ERROR_EXIT(46);
+    glBindTexture(GL_TEXTURE_2D, getTextureByName("node-9-slice")->handle());
+    GL_ERROR_EXIT(47);
 
     // Manipulate the uvs for tiling.
 
@@ -85,28 +84,28 @@ void ShaderGraph::renderTile(glm::vec2 tileCoord, glm::vec2 tileSize, glm::vec2 
             tileOffsetInUVs.x + (tileCoord.x * width_uv) + width_uv,  (1- tileOffsetInUVs.y -  (tileCoord.y * height_uv)- height_uv),
             tileOffsetInUVs.x + (tileCoord.x * width_uv) + width_uv, (1 - tileOffsetInUVs.y - (tileCoord.y * height_uv)),
     };
-    glBindBuffer(GL_ARRAY_BUFFER, glDefaultObjects->quadUVBuffer);
+    //glBindBuffer(GL_ARRAY_BUFFER, glDefaultObjects->quadUVBuffer);
     glBufferData(GL_ARRAY_BUFFER, 12 * 4, uvs, GL_STATIC_DRAW);
 
     setTransformMatrices({screenCoord.x, screenCoord.y, -1}, {scale.x, scale.y, 1}, {0, 0, 0});
 
-    glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
-
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-    GL_ERROR_EXIT(344)
-
-    if (glDefaultObjects->currentRenderState->tilingOn) {
-        glUniform1i(20, 0);
-        float uvs[] = {
-                0, 1,
-                0, 0,
-                1, 0,
-                1, 1,
-
-        };
-        glBindBuffer(GL_ARRAY_BUFFER, glDefaultObjects->quadUVBuffer);
-        glBufferData(GL_ARRAY_BUFFER, 12 * 4, uvs, GL_STATIC_DRAW);
-    }
+    // glUniform1f(21, glDefaultObjects->currentRenderState->uvScale);
+    //
+    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    // GL_ERROR_EXIT(344)
+    //
+    // if (glDefaultObjects->currentRenderState->tilingOn) {
+    //     glUniform1i(20, 0);
+    //     float uvs[] = {
+    //             0, 1,
+    //             0, 0,
+    //             1, 0,
+    //             1, 1,
+    //
+    //     };
+    //     glBindBuffer(GL_ARRAY_BUFFER, glDefaultObjects->quadUVBuffer);
+    //     glBufferData(GL_ARRAY_BUFFER, 12 * 4, uvs, GL_STATIC_DRAW);
+    // }
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
 }

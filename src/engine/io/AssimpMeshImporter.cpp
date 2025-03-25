@@ -7,12 +7,17 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <engine/io/skeleton_import.h>
+#include <engine/animation/skeleton.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <engine/graphics/ErrorHandling.h>
+#include <filesystem>
 
 #include "ozz/animation/runtime/skeleton.h"
 #include "ozz/base/io/archive.h"
 #include "ozz/base/io/stream.h"
-
+#include <stdexcept>
+#include <engine/animation/Joint.h>
+#include <engine/animation/glm_helpers.h>
 
 Animation* AssimpMeshImporter::aiAnimToAnimation(aiAnimation* aiAnim) {
     //printf("Animation: %s (%f) ticksPerSecond: %f\n", aiAnim->mName.C_Str(), aiAnim->mDuration, aiAnim->mTicksPerSecond);
@@ -58,6 +63,35 @@ Animation* AssimpMeshImporter::aiAnimToAnimation(aiAnimation* aiAnim) {
 glm::quat AssimpMeshImporter::assimpQuatToGLM(const aiQuaternion& aiQuat) {
     // GLM's constructor expects (w, x, y, z)
     return glm::quat(aiQuat.w, aiQuat.x, aiQuat.y, aiQuat.z);
+}
+
+const aiNode* AssimpMeshImporter::FindNodeByName(const aiNode* node, const std::string& name) {
+    if (node->mName.C_Str() == name) {
+        return node;
+    }
+
+    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+        const aiNode* foundNode = FindNodeByName(node->mChildren[i], name);
+        if (foundNode) {
+            return foundNode;
+        }
+    }
+
+    return nullptr; // Node not found
+}
+
+glm::mat4 AssimpMeshImporter::convertAiMatrixToGlm(const aiMatrix4x4& from) {
+
+    // Create a glm::mat4 from aiMatrix4x4 data
+    glm::mat4 result = glm::make_mat4(&from.a1);
+
+    // Since Assimp's aiMatrix4x4 is row-major and GLM's glm::mat4 is column-major,
+    // we need to transpose the matrix to correctly convert it.
+    result = glm::transpose(result);
+    return result;
+
+
+
 }
 
 Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::string& skeletonBaseFolder) {
@@ -119,7 +153,7 @@ Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::st
     std::vector<glm::ivec4> boneIndexMasterList;
     std::vector<glm::vec4> boneWeightMasterList;
     std::shared_ptr<ozz::animation::Skeleton> ozzSkeleton;
-    Skeleton* skeleton = nullptr;
+    gru::Skeleton* skeleton = nullptr;
     if (mesh->HasBones()) {
 
 #define IMPORT_SKELETON_OZZ_
@@ -146,7 +180,7 @@ Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::st
             std::map<int, std::vector<BoneWeight*>*> weightMap;
             printf("bonedata: \n -------------------\n");
 
-            skeleton = new Skeleton();
+            skeleton = new gru::Skeleton();
 
             for (int i = 0; i<mesh->mNumBones; i++) {
                 auto bone = mesh->mBones[i];
@@ -164,7 +198,7 @@ Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::st
                     // If not, we create a new joint for this parent on the fly here.
                     // In fact, according to the ordering, the parent must always exist.
                     // We try to do nothing at all for now in this case.
-                    if (auto parentJoint = findJointByName(boneNode->mParent->mName.C_Str(), skeleton->joints)) {
+                    if (auto parentJoint = skeleton->findJointByName(boneNode->mParent->mName.C_Str())) {
                         joint->setParent(parentJoint);
                     }
                 }
@@ -358,7 +392,7 @@ Mesh * AssimpMeshImporter::importMesh(const std::string &filePath, const std::st
     glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 0,0);
     glEnableVertexAttribArray(5);
 
-    GL_ERROR_EXIT(800)
+    GL_ERROR_EXIT(800);
 
     GLuint vboIndices;
     glGenBuffers(1, &vboIndices);
@@ -463,3 +497,38 @@ std::vector<Animation*> AssimpMeshImporter::importAnimationsInternal(const aiSce
 
     return animations;
 }
+
+
+
+glm::mat4 AssimpMeshImporter::calculateBindPoseWorldTransform(Joint* j, glm::mat4 currentTransform) {
+    if (j->parent) {
+        currentTransform = j->parent->bindPoseLocalTransform * currentTransform;
+        return calculateBindPoseWorldTransform(j->parent, currentTransform);
+    }
+
+    return currentTransform;
+}
+
+// Recursively multiplies the current transform with the parents transform:
+glm::mat4 AssimpMeshImporter::calculateWorldTransform(Joint* j, glm::mat4 currentTransform) {
+    if (j->parent) {
+        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
+        return calculateWorldTransform(j->parent, currentTransform);
+    }
+
+    return currentTransform;
+
+}
+
+// Recursively multiplies the current transform with the parents transform:
+glm::mat4 AssimpMeshImporter::calculateWorldTransformForFrame(Joint* j, glm::mat4 currentTransform, int frame) {
+    if (j->parent) {
+        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
+        return calculateWorldTransform(j->parent, currentTransform);
+    }
+
+    return currentTransform;
+
+}
+
+

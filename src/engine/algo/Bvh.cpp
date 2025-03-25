@@ -5,8 +5,9 @@
 #include "Bvh.h"
 
 #include <engine/io/MeshImporter.h>
-
-#include "../../graphics.h"
+#include <engine/graphics/Shader.h>
+#include <engine/physics/Centroid.h>
+#include <engine/graphics/MeshDrawData.h>
 
 namespace gru {
 

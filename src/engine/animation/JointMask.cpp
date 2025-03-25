@@ -2,9 +2,13 @@
 // Created by mgrus on 07.03.2025.
 //
 
-#include "JointMask.h"
+#include <engine/animation/JointMask.h>
+#include <engine/animation/Joint.h>
+#include <engine/animation/Pose.h>
+#include <engine/animation/skeleton.h>
+#include <stdexcept>
 
-JointMask::JointMask(Skeleton* skeleton, MaskType maskType, HierarchyDirection direction, const std::string& startJointName) :
+JointMask::JointMask(gru::Skeleton* skeleton, MaskType maskType, HierarchyDirection direction, const std::string& startJointName) :
     maskType(maskType), hierarchyDirection(direction), skeleton(skeleton), hierarchyStartJointName(startJointName) {
 
     if (maskType == MaskType::Hierarchy) {
@@ -64,7 +68,7 @@ bool JointMask::isPartOfMask(Joint *candidate) {
 }
 
 void JointMask::addJointByName(const std::string& name) {
-    auto j = findJointByName(name, skeleton->joints);
+    auto j = Pose::findJointByName(name, skeleton->joints);
     if (j) {
         joints.push_back(j);
     }

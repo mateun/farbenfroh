@@ -4,13 +4,17 @@
 
 #ifndef SCENE_H
 #define SCENE_H
+#include <memory>
+#include <string>
 #include <vector>
+#include <engine/graphics/CameraMover.h>
+#include <engine/lighting/Light.h>
 
 class Camera;
 class SceneNode;
-enum class LightType;
+
 class Light;
-class CameraMover;
+
 class Texture;
 class FrameBuffer;
 class Mesh;

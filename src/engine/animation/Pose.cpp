@@ -3,6 +3,7 @@
 //
 
 #include "Pose.h"
+#include "Joint.h"
 
 Joint * Pose::findJointByName(const std::string &name) {
     // TODO make more efficient, maybe map etc.
@@ -14,3 +15,14 @@ Joint * Pose::findJointByName(const std::string &name) {
 
     return nullptr;
 }
+
+Joint * Pose::findJointByName(const std::string &name, const std::vector<Joint *> &joints) {
+    for (auto j : joints) {
+        if (j->name == name) {
+            return j;
+        }
+    }
+    return nullptr;
+}
+
+

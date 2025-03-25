@@ -5,6 +5,11 @@
 #ifndef NODECOMPONENT_H
 #define NODECOMPONENT_H
 
+#include <memory>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <vector>
+
 enum class Space {
   WORLD,
   LOCAL,

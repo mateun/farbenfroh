@@ -5,11 +5,11 @@
 #include "rastergraphics.h"
 
 #include <span>
-
+#include <engine/graphics/Texture.h>
 
 PixelBuffer::PixelBuffer(Texture *texture) {
-    dimension = { texture->bitmap->width, texture->bitmap->height };
-	auto p8 = texture->bitmap->pixels;
+    dimension = { texture->width(), texture->height() };
+	auto p8 = texture->pixels();
 	pixels = std::span(p8, p8 + (uint32_t)(dimension.x * dimension.y * 4));
 	format = PixelFormat::RGBA8;
 }

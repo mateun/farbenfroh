@@ -7,6 +7,12 @@
 
 #include <iostream>
 
+enum class AngleUnit {
+    RAD,
+    DEGREES,
+};
+
+
 
 template <typename T>
 class BinaryTree {

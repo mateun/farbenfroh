@@ -7,9 +7,11 @@
 #include <map>
 #include "../../graphics.h"
 #include "FolderAssetLoader.h"
+#include <engine/profiling/FpsCounter.h>
 
 class Mesh;
 class DefaultGame;
+
 
 /**
 * Every game is only taking place within one level at any time.
@@ -99,6 +101,7 @@ protected:
     HWND hwnd;
     int64_t performanceFrequency = 0;
     Shader* baseStaticMeshShader = nullptr;
+    std::unique_ptr<FpsCounter> fpsCounter = nullptr;
 
 private:
     Camera *_gameplayCamera = nullptr;

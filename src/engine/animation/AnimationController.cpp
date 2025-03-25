@@ -5,6 +5,7 @@
 #include "AnimationController.h"
 #include "AnimationState.h"
 #include "AnimationTransition.h"
+#include "AnimationPlayer.h"
 
 AnimationController::AnimationController(Mesh* mesh) : _mesh(mesh) {
     _player = new AnimationPlayer((Animation*)nullptr, mesh);

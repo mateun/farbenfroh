@@ -7,8 +7,9 @@
 #include <vector>
 #include <string>
 #include "../src/engine/math/math3d.h"
+#include <engine/graphics/Mesh.h>
 
-class Mesh;
+
 class GameComponent;
 
 struct GameObject {

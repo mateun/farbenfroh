@@ -14,6 +14,7 @@ class Pose {
     std::vector<Joint*> joints;
 
     Joint* findJointByName(const std::string & name);
+    static Joint* findJointByName(const std::string & name, const std::vector<Joint*>& joints);
 };
 
 

@@ -6,10 +6,13 @@
 #define ANIMATIONTRANSITION_H
 
 #include <vector>
+#include <string>
+#include "AnimationProperty.h"
 
 class AnimationController;
 class TransitionConstraint;
 class AnimationState;
+
 
 /**
 * This class represents the transition between 2 animation states.

@@ -12,6 +12,8 @@ enum class MovementMode {
     GLOBAL,
 };
 
+class SceneNode;
+
 class CharacterController : public Updatable {
 
 public:

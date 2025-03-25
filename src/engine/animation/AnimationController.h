@@ -14,6 +14,8 @@
 #include "AnimationProperty.h"
 #include "AnimationState.h"
 
+class Mesh;
+
 class AnimationPlayer;
 /**
 * This class is inspired by the way how modern game engines treat
