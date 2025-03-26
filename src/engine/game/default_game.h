@@ -5,9 +5,12 @@
 #ifndef SIMPLE_KING_DEFAULT_GAME_H
 #define SIMPLE_KING_DEFAULT_GAME_H
 #include <map>
-#include "../../graphics.h"
-#include "FolderAssetLoader.h"
+#include <engine/graphics/SpriteBatch.h>
+#include <engine/game/FolderAssetLoader.h>
+#include <engine/graphics/Font.h>
 #include <engine/profiling/FpsCounter.h>
+#include <engine/graphics/Shader.h>
+#include <engine/graphics/Camera.h>
 
 class Mesh;
 class DefaultGame;
@@ -21,6 +24,8 @@ class DefaultGame;
 class GameLevel {
 
 public:
+    virtual ~GameLevel() = default;
+
     GameLevel(DefaultGame* game, const std::string& name = "");
     virtual void update() = 0;
     virtual void render() = 0;
@@ -116,8 +121,6 @@ private:
     std::map<std::string, GameLevel*> levels;
     bool useLevels = false;
     GameLevel* _currentLevel;
-
-
 
 };
 

@@ -8,10 +8,12 @@
 #include <engine/graphics/Shader.h>
 #include <engine/physics/Centroid.h>
 #include <engine/graphics/MeshDrawData.h>
+#include <engine/graphics/Renderer.h>
+#include <engine/graphics/StatefulRenderer.h>
 
-namespace gru {
 
-    Bvh::Bvh(std::vector<Centroid*> centroids, glm::vec3 location, glm::vec3 locationOffset, glm::vec3 scale, const std::string& kind, SplitAxis splitAxis) : visualizationLocationOffset(locationOffset), location(location), scale(scale), centroids(centroids) {
+
+    gru::Bvh::Bvh(std::vector<Centroid*> centroids, glm::vec3 location, glm::vec3 locationOffset, glm::vec3 scale, const std::string& kind, SplitAxis splitAxis) : visualizationLocationOffset(locationOffset), location(location), scale(scale), centroids(centroids) {
 
 
         // No further splitting
@@ -221,7 +223,7 @@ namespace gru {
 
     }
 
-    Mesh * Bvh::getCubeMesh() {
+    Mesh * gru::Bvh::getCubeMesh() {
         if (!cubeMesh) {
             cubeMesh = AssimpMeshImporter().importMesh("../assets/unit_cube.glb");
         }
@@ -229,7 +231,7 @@ namespace gru {
 
     }
 
-    Shader* Bvh::getShader() {
+    Shader* gru::Bvh::getShader() {
         if (!unitCubeShader) {
             unitCubeShader = new Shader();
             unitCubeShader->initFromFiles("../src/engine/algo/shaders/wireframe.vert", "../src/engine/algo/shaders/wireframe.frag");
@@ -237,7 +239,8 @@ namespace gru {
         return unitCubeShader;
     }
 
-    void Bvh::render(Camera *camera, int level, const std::string& kind) {
+    void gru::Bvh::render(Camera *camera, int level, const std::string& kind) {
+
 
         if (level > 3) {
             return;
@@ -257,21 +260,22 @@ namespace gru {
         mdd.scale = (outmostMax - outmostMin) * scale * (1 - level * 0.01f);
         if (kind == "top") {
             mdd.color = glm::vec4(1, 0, 1, 1);
-            wireframeOn(1);
+            StatefulRenderer::wireframeOn(1);
         } else if (kind == "left") {
             mdd.color = glm::vec4(0.95, 0, 0, 1);
-            wireframeOn(1);
+            StatefulRenderer::wireframeOn(1);
         } else if (kind == "right") {
-            wireframeOn(1);
+            StatefulRenderer::wireframeOn(1);
             mdd.color = glm::vec4(0, 0.95, 0, 1);
         }
 
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
-        drawMesh(mdd);
+        Renderer::drawMesh(mdd);
+
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
-        wireframeOff();
+        StatefulRenderer::wireframeOff();
         if (left) {
             left->render(camera, level+1, "left");
         }
@@ -279,4 +283,3 @@ namespace gru {
             right->render(camera, level+1, "right");
         }
     }
-} // gru

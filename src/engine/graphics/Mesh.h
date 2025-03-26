@@ -23,7 +23,8 @@ class Centroid;
  * in the world.
  * Bind it and then it can be rendered.
  */
-struct Mesh {
+class Mesh {
+public:
     GLuint vao = 0;
     GLuint instanceOffsetVBO = 0;
     GLuint instanceMatrixVBO = 0;
@@ -58,6 +59,7 @@ struct Mesh {
 
     std::vector<Centroid*> centroids;
 };
+
 
 
 #endif //MESH_H

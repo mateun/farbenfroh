@@ -4,6 +4,8 @@
 
 #define NOMINMAX
 #include "SceneNode.h"
+
+#include <engine/fx/ParticleSystem.h>
 #include <glm/gtx/quaternion.hpp>
 #include "NodeComponent.h"
 #include "Scene.h"

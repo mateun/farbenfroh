@@ -13,7 +13,7 @@ class Timing {
     static float lastFrameTimeInSeconds();
 
     private:
-      static float frameTimeSecs;
+      inline static float frameTimeSecs = 0;
 
 };
 

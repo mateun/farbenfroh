@@ -3,7 +3,6 @@
 //
 
 #include "MeshImporter.h"
-#include <graphics.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -18,6 +17,7 @@
 #include <stdexcept>
 #include <engine/animation/Joint.h>
 #include <engine/animation/glm_helpers.h>
+#include <engine/animation/Pose.h>
 
 Animation* AssimpMeshImporter::aiAnimToAnimation(aiAnimation* aiAnim) {
     //printf("Animation: %s (%f) ticksPerSecond: %f\n", aiAnim->mName.C_Str(), aiAnim->mDuration, aiAnim->mTicksPerSecond);
@@ -509,22 +509,13 @@ glm::mat4 AssimpMeshImporter::calculateBindPoseWorldTransform(Joint* j, glm::mat
     return currentTransform;
 }
 
-// Recursively multiplies the current transform with the parents transform:
-glm::mat4 AssimpMeshImporter::calculateWorldTransform(Joint* j, glm::mat4 currentTransform) {
-    if (j->parent) {
-        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
-        return calculateWorldTransform(j->parent, currentTransform);
-    }
 
-    return currentTransform;
-
-}
 
 // Recursively multiplies the current transform with the parents transform:
 glm::mat4 AssimpMeshImporter::calculateWorldTransformForFrame(Joint* j, glm::mat4 currentTransform, int frame) {
     if (j->parent) {
         currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
-        return calculateWorldTransform(j->parent, currentTransform);
+        return Pose::calculateWorldTransform(j->parent, currentTransform);
     }
 
     return currentTransform;

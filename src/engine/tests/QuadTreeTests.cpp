@@ -78,14 +78,11 @@ void expectingSubidvidedQuadTreeToContainNode() {
 
 }
 
+#ifdef QUADTREE_TEST_ENABLED
 int main(int argc, char** argv) {
     // whenHavingOneNodeItIsContainedInTheTopLevelQuadtree();
     // expectingSubidvidedQuadTreeToContainNode();
     deepRecursion();
-
-
-
     return 0;
-
-
 }
+#endif

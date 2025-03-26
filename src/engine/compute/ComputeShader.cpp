@@ -5,7 +5,6 @@
 #include "ComputeShader.h"
 #include <GL/glew.h>
 
-#include <graphics.h>
 #include <glm\glm.hpp>
 #include <engine/io/io.h>
 #include <engine/profiling/PerformanceTimer.h>

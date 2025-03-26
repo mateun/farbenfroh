@@ -5,8 +5,9 @@
 #ifndef SIMPLE_KING_ANIMATIONPLAYER_H
 #define SIMPLE_KING_ANIMATIONPLAYER_H
 
-#include "../../graphics.h"
+#include <engine/animation/Animation.h>
 
+class Mesh;
 class AnimationBlender;
 
 Animation* findAnimationByName(std::string name, Mesh* mesh);
@@ -29,7 +30,7 @@ public:
     glm::mat4 calculateInterpolatedGlobalMatrixForJoint(Joint* j);
 
     // This updates the current pose for a specific explicit frame, without interpolation
-    void calculateFramePose(int frame);
+    std::vector<glm::mat4> calculateFramePose(int frame);
     void stop();
     void switchAnimation(Animation* animation);
 

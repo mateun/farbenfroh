@@ -7,11 +7,14 @@
 #include <string>
 #include <iostream>
 #include <engine/graphics/Camera.h>
+#include <engine/graphics/StatefulRenderer.h>
+#include <engine/graphics/SpriteBatch.h>
 #include <engine/input/Input.h>
 #include <Xinput.h>
 
 #include "Timing.h"
 #include <engine/graphics/Font.h>
+
 
 Camera* DefaultGame::getGameplayCamera() {
     if (!_gameplayCamera) {
@@ -33,12 +36,13 @@ void DefaultGame::renderFPS() {
 
     fpsCounter->update();
 
-    lightingOff();
-    bindCamera(getUICamera());
+    using SF = StatefulRenderer;
+    SF::lightingOff();
+    SF::bindCamera(getUICamera());
     char buf[175];
     sprintf_s(buf, 160, "FT:%6.1fmcs (%f) %4d/%4d",
               fpsCounter->frameTimeInMicroSecondsAvg(), fpsCounter->lastFPSAverage(), Input::getInstance()->mouse_x(), Input::getInstance()->mouse_y());
-    flipUvs(false);
+    SF::flipUvs(false);
     fpsFont->renderText(buf, {2, -16, 0.1});
 
 
@@ -111,7 +115,7 @@ void DefaultGame::init() {
         _uiSpriteBatch = new gru::SpriteBatch(100);
 
         // Auto asset import, only if allowed:
-        folderAssetLoader = new FolderAssetLoader();
+        folderAssetLoader = new FolderAssetLoader(hwnd);
         if (shouldAutoImportAssets()) {
             for (const auto& assetFolder : getAssetFolder()) {
                 folderAssetLoader->load(assetFolder);
@@ -190,11 +194,12 @@ void DefaultGame::render() {
     }
 
     // TODO is this default rendering even useful ?!
-    bindCamera(getGameplayCamera());
-    lightingOn();
+    using SF = StatefulRenderer;
+    SF::bindCamera(getGameplayCamera());
+    SF::lightingOn();
 
-    static auto gd = createGrid(100);
-    drawGrid(gd);
+    static auto gd = SF::createGrid(100);
+    SF::drawGrid(gd);
 }
 
 float DefaultGame::getFrametimeInSeconds() {

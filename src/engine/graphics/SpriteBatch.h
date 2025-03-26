@@ -5,8 +5,14 @@
 #ifndef SPRITEBATCH_H
 #define SPRITEBATCH_H
 
+#include <vector>
+#include <glm/glm.hpp>
+#include <GL/glew.h>
+#include <engine/graphics/TextureTile.h>
 
+class MeshDrawData;
 
+namespace gru {
     /***
      * This class allows for efficient rendering of many sprites in one go.
      * The idea is that we shall not issue a draw call per sprite.
@@ -37,7 +43,7 @@
         // Render the batch, which means:
         // - update the VBO with all clipspace coordinates.
         // - (TODO) update the respective texture buffers, for now we have only one texture.
-        void render();
+        void render(const MeshDrawData& mdd);
 
         void clear();
 
@@ -59,7 +65,6 @@
 
         uint16_t _spriteNumber = 0;
     };
-
-
+}
 
 #endif //SPRITEBATCH_H

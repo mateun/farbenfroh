@@ -155,6 +155,29 @@ void AABB::scaleBy(double scale) {
     maxZ *= scale;
 }
 
+/**
+ * Tests if the given ray intersects with a plane.
+ * The plane is only defined by its normal vector and a point on this plane.
+ *
+ * @param ray                   The ray to test.
+ * @param planeNormal           The plane normal.
+ * @param planePoint            A Point on the plane.
+ * @param intersectionPoint     If an intersection was found, this value is filled with the intersection point.
+ * @return                      true if an intersection was detected, false otherwise.
+ */
+bool rayIntersectsPlane(Ray ray, glm::vec3 planeNormal, glm::vec3 planePoint, glm::vec3* intersectionPoint)
+{
+    float rayPlaneOrientation = glm::dot(ray.direction, planeNormal);
+    if (abs(rayPlaneOrientation) <= 0.0001f) {
+        return false;
+    }
+
+    float t = (glm::dot((planePoint - ray.origin), planeNormal)) / rayPlaneOrientation;
+    *intersectionPoint = ray.origin + t * ray.direction;
+
+    return t > 0;
+}
+
 // Intersects ray r = p + td, |d| = 1, with sphere s and, if intersecting,
 // returns t value of intersection and intersection point q
 bool rayIntersectsSphere(Ray ray, float radius, glm::vec3 sphereCenter, float &t, glm::vec3 &q)

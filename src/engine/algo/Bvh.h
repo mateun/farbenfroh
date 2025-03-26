@@ -5,7 +5,10 @@
 #ifndef SIMPLE_KING_BVH_H
 #define SIMPLE_KING_BVH_H
 
-#include "graphics.h"
+#include <vector>
+#include <string>
+#include <glm/glm.hpp>
+
 class Centroid;
 class Camera;
 class Shader;
@@ -14,9 +17,6 @@ class Mesh;
 namespace gru {
 
     enum class SplitAxis { X, Y, Z, NONE };
-
-
-
 
     struct TreeNode {
         TreeNode* left = nullptr;

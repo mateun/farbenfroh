@@ -7,7 +7,7 @@
 #include "ErrorHandling.h"
 
 
-GLuint Geometry::genVec3Buffer(int index,  std::vector<float> data) {
+GLuint gru::Geometry::genVec3Buffer(int index,  std::vector<float> data) {
     GLuint buf;
     glGenBuffers(1, &buf);
     glBindBuffer(GL_ARRAY_BUFFER, buf);
@@ -18,7 +18,7 @@ GLuint Geometry::genVec3Buffer(int index,  std::vector<float> data) {
 
 }
 
-GLuint Geometry::genVec3Buffer(int index,  std::vector<glm::vec3> data) {
+GLuint gru::Geometry::genVec3Buffer(int index,  std::vector<glm::vec3> data) {
     GLuint buf;
     glGenBuffers(1, &buf);
     glBindBuffer(GL_ARRAY_BUFFER, buf);
@@ -29,7 +29,7 @@ GLuint Geometry::genVec3Buffer(int index,  std::vector<glm::vec3> data) {
 
 }
 
-GLuint Geometry::genVec2Buffer(int index,  std::vector<glm::vec2> data) {
+GLuint gru::Geometry::genVec2Buffer(int index,  std::vector<glm::vec2> data) {
     GLuint buf;
     glGenBuffers(1, &buf);
     glBindBuffer(GL_ARRAY_BUFFER, buf);
@@ -40,7 +40,7 @@ GLuint Geometry::genVec2Buffer(int index,  std::vector<glm::vec2> data) {
     return buf;
 }
 
-GLuint Geometry::genIndexBuffer(std::vector<GLuint> indices) {
+GLuint gru::Geometry::genIndexBuffer(std::vector<GLuint> indices) {
     GLuint buf;
     glGenBuffers(1, &buf);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf);
@@ -49,19 +49,19 @@ GLuint Geometry::genIndexBuffer(std::vector<GLuint> indices) {
 
 }
 
-GLuint Geometry::createAndBindVAO() {
+GLuint gru::Geometry::createAndBindVAO() {
     GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     return vao;
 }
 
-void Geometry::unbindVAO() {
+void gru::Geometry::unbindVAO() {
     glBindVertexArray(0);
 }
 
 
-std::unique_ptr<Mesh> Geometry::createQuadMesh(PlanePivot pivot) {
+std::unique_ptr<Mesh> gru::Geometry::createQuadMesh(PlanePivot pivot) {
     auto mesh = std::make_unique<Mesh>();
     std::vector<glm::vec3> basePositions = {
         {-0.5, 0.5, 0},      // tl
@@ -131,5 +131,9 @@ std::unique_ptr<Mesh> Geometry::createQuadMesh(PlanePivot pivot) {
     mesh->indices = indices;
     return mesh;
 
+}
+
+std::unique_ptr<int> gru::Geometry::createQMesh() {
+    return std::make_unique<int>(534);
 }
 

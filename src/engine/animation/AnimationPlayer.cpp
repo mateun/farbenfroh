@@ -2,18 +2,20 @@
 // Created by mgrus on 02.11.2024.
 //
 
+#define NOMINMAX
 #include "AnimationPlayer.h"
 #include "Animation.h"
 #include <engine/animation/Joint.h>
 #include <engine/animation/BoneMatrixCalculator.h>
+#include <engine/game/Timing.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include "AnimationBlender.h"
+#include <algorithm>
 #include <engine/graphics/Mesh.h>
-#include "../../graphics.h"
+#include <engine/animation/Pose.h>
 
-extern float ftSeconds;
 
 AnimationPlayer::AnimationPlayer() {
 }
@@ -117,7 +119,7 @@ glm::mat4 AnimationPlayer::calculateInterpolatedGlobalMatrixForJoint(Joint* j) {
 
     j->currentPoseLocalTransform = translate(glm::mat4(1), interpolatedTranslation) *
                             toMat4(interpolatedRotation);
-    j->currentPoseGlobalTransform = calculateWorldTransform(j, j->currentPoseLocalTransform);
+    j->currentPoseGlobalTransform = Pose::calculateWorldTransform(j, j->currentPoseLocalTransform);
 
     return j->currentPoseGlobalTransform;
 }
@@ -127,7 +129,7 @@ void AnimationPlayer::update() {
     static float frameTime = 0;
     if (animation || animationBlender && playing) {
 
-        animTime += ftSeconds;
+        animTime += Timing::lastFrameTimeInSeconds();
 
         if (looped) {
             if (animation) {
@@ -191,7 +193,7 @@ glm::mat4 AnimationPlayer::calculateFramePoseForJoint(int frame, Joint* joint) {
         auto sample = rotationJointSamples[frame];
         auto localTransform = glm::translate(glm::mat4(1), sample->translation) *
                             glm::toMat4(sample->rotation) ;
-        auto globalTransform  = calculateWorldTransform(joint, localTransform);
+        auto globalTransform  = Pose::calculateWorldTransform(joint, localTransform);
 
         // We do NOT multiply the inverse bind matrix here. This is only needed for the skinned vertices.
         auto finalTransform = globalTransform;
@@ -203,7 +205,7 @@ glm::mat4 AnimationPlayer::calculateFramePoseForJoint(int frame, Joint* joint) {
 
 }
 
-void AnimationPlayer::calculateFramePose(int frame) {
+std::vector<glm::mat4> AnimationPlayer::calculateFramePose(int frame) {
     std::vector<glm::mat4> boneMatrices;
     for (auto j: mesh->skeleton->joints) {
         if (animation) {
@@ -216,14 +218,14 @@ void AnimationPlayer::calculateFramePose(int frame) {
                 auto sample = rotationJointSamples[sampleIndex];
                 j->currentPoseLocalTransform = glm::translate(glm::mat4(1), sample->translation) *
                                     glm::toMat4(sample->rotation) ;
-                j->currentPoseGlobalTransform = calculateWorldTransform(j, j->currentPoseLocalTransform);
+                j->currentPoseGlobalTransform = Pose::calculateWorldTransform(j, j->currentPoseLocalTransform);
                 j->currentPoseFinalTransform = j->currentPoseGlobalTransform * j->inverseBindMatrix;
 
             }
         }
         boneMatrices.push_back(j->currentPoseFinalTransform);
     }
-    setBoneMatrices(boneMatrices);
+    return boneMatrices;
 
 }
 

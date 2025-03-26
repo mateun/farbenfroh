@@ -25,4 +25,15 @@ Joint * Pose::findJointByName(const std::string &name, const std::vector<Joint *
     return nullptr;
 }
 
+// Recursively multiplies the current transform with the parents transform:
+glm::mat4 Pose::calculateWorldTransform(Joint* j, glm::mat4 currentTransform) {
+    if (j->parent) {
+        currentTransform = j->parent->currentPoseLocalTransform * currentTransform;
+        return calculateWorldTransform(j->parent, currentTransform);
+    }
+
+    return currentTransform;
+
+}
+
 

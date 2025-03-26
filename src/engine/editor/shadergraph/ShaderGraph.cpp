@@ -8,18 +8,22 @@
 #include <engine/graphics/Camera.h>
 #include <glm/gtc/type_ptr.inl>
 #include <engine/graphics/ErrorHandling.h>
+#include <engine/graphics/Renderer.h>
+#include <engine/graphics/StatefulRenderer.h>
 
+#ifdef ACTIVE_SHADER_GRAPH
 DefaultGame* getGame() {
     return new ShaderGraph();
 }
+#endif
 
 void ShaderGraph::init() {
     DefaultGame::init();
-    quadVAO = createQuadVAO();
+    quadVAO = StatefulRenderer::createQuadVAO();
     nodeShader = new Shader();
     auto nodeVert = readFile("../src/engine/editor/shadergraph/shaders/node.vert");
     auto nodeFrag= readFile("../src/engine/editor/shadergraph/shaders/node.frag");
-    if (!createShader(nodeVert, nodeFrag, nodeShader).ok) {
+    if (!StatefulRenderer::createShader(nodeVert, nodeFrag, nodeShader).ok) {
         throw std::runtime_error("Error creating node shader program");
     }
 }

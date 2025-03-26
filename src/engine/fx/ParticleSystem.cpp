@@ -281,7 +281,7 @@ void gru::ParticleEmitter::draw(const Camera* camera) const {
     computeShader->bindSSBO(particleSSBO);
 
     glDepthMask(GL_FALSE);
-    Renderer::drawMesh(mdd);
+    Renderer::getInstance()->drawMesh(mdd);
     glDepthMask(GL_TRUE);
 
 

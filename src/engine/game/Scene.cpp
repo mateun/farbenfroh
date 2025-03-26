@@ -3,7 +3,8 @@
 //
 
 #include "Scene.h"
-
+#include <memory>
+#include <engine/fx/ParticleSystem.h>
 #include <engine/graphics/Application.h>
 #include <engine/graphics/Camera.h>
 #include <engine/graphics/Texture.h>
@@ -13,6 +14,9 @@
 #include <engine/lighting/Light.h>
 #include <engine/game/SceneNode.h>
 #include <engine/graphics/ErrorHandling.h>
+#include <engine/graphics/Renderer.h>
+#include <engine/fx/PostProcessEffect.h>
+#include <engine/graphics/StatefulRenderer.h>
 
 Scene::Scene() {
     rayTraceWorldPosTexture = Texture::createEmptyFloatTexture(getApplication()->scaled_width(), getApplication()->scaled_height());
@@ -23,7 +27,8 @@ Scene::Scene() {
     shadowMapShader->initFromFiles("../assets/shaders/shadow_map.vert", "../assets/shaders/shadow_map.frag");
     quadShader = std::make_unique<Shader>();
     quadShader->initFromFiles("../src/engine/fx/shaders/quad.vert", "../src/engine/fx/shaders/quad.frag");
-    quadMesh = Geometry::createQuadMesh(PlanePivot::center);
+    quadMesh = gru::Geometry::createQuadMesh(PlanePivot::center);
+
 
     debugFlyCam = std::make_unique<Camera>();
     debugFlyCam->type = CameraType::Perspective;
@@ -32,8 +37,6 @@ Scene::Scene() {
     debugFlyCam->updateNearFar(0.1, 400);
     flyCamMover = std::make_unique<CameraMover>(debugFlyCam.get());
     fullScreenFBO = std::make_shared<FrameBuffer>(getApplication()->scaled_width(), getApplication()->scaled_height(), true, false);
-
-
 
 
 }
@@ -304,7 +307,7 @@ void Scene::render() const {
 
                 glCullFace(GL_FRONT);
                 glPolygonOffset(1, 0.75);
-                drawMeshIntoShadowMap(dd, l->light);
+                StatefulRenderer::drawMeshIntoShadowMap(dd, l->light);
                 glCullFace(GL_BACK);
 
             }
@@ -357,13 +360,13 @@ void Scene::render() const {
     // Back to our "normal" framebuffer or to another offscreen buffer in case we have activated post
     // processing effects:
     if (!activeCamera->getPostProcessEffects().empty()) {
-        activateFrameBuffer(fullScreenFBO.get());
+        StatefulRenderer::activateFrameBuffer(fullScreenFBO.get());
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glViewport(0, 0, fullScreenFBO->width(), fullScreenFBO->height());
     } else {
         // Render directly to standard framebuffer.
-        activateFrameBuffer(nullptr);
-        glViewport(0, 0, scaled_width, scaled_height);
+        StatefulRenderer::activateFrameBuffer(nullptr);
+        glViewport(0, 0, getApplication()->scaled_width(), getApplication()->scaled_height());
     }
 
 
@@ -413,7 +416,7 @@ void Scene::render() const {
         if (m->_type == SceneNodeType::ParticleSystem) {
             m->particleSystem->render(activeCamera);
         } else {
-            drawMesh(mdd);
+            Renderer::getInstance()->drawMesh(mdd);
         }
 
 
@@ -435,15 +438,15 @@ void Scene::render() const {
 
 
 
-        activateFrameBuffer(nullptr);
+        StatefulRenderer::activateFrameBuffer(nullptr);
         MeshDrawData mdd;
         mdd.camera = uiCamera.get();
         mdd.mesh = quadMesh.get();
         mdd.shader = quadShader.get();
-        mdd.location = { scaled_width/2, scaled_height/2, -5};
-        mdd.scale = { scaled_width, scaled_height, 1};
+        mdd.location = { getApplication()->scaled_width()/2, getApplication()->scaled_height()/2, -5};
+        mdd.scale = { getApplication()->scaled_width(), getApplication()->scaled_height(), 1};
         mdd.texture = currentFB->texture().get();
-        drawMesh(mdd);
+        Renderer::getInstance()->drawMesh(mdd);
 
 
     }

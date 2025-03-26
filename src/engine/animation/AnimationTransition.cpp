@@ -3,14 +3,12 @@
 //
 
 #include "AnimationTransition.h"
+
+#include <engine/game/Timing.h>
+
 #include "AnimationProperty.h"
 #include "AnimationState.h"
 #include "AnimationController.h"
-
-extern float ftSeconds;
-
-
-
 
 AnimationTransition::AnimationTransition(AnimationController *animationController, AnimationState *startState,
     AnimationState *endState) : _animationController(animationController), _startState(startState), _endState(endState) {
@@ -64,7 +62,7 @@ bool AnimationTransition::evaluate() {
 
 void AnimationTransition::update() {
     if (_isActive) {
-        _elapsedTime += ftSeconds;
+        _elapsedTime += Timing::lastFrameTimeInSeconds();
         if (_elapsedTime < _durationInSeconds) {
 
         }

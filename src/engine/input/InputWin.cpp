@@ -3,9 +3,11 @@
 //
 
 #include "Input.h"
+#include "InputWin32.h"
 #include <cinttypes>
 #include <Windows.h>
-#include "Xinput.h"
+#include <Xinput.h>
+
 
 static Input* inputSingleton = nullptr;
 
@@ -17,8 +19,8 @@ Input* Input::getInstance() {
     return inputSingleton;
 }
 
-void InputWin32::updateLastKeyPress(uint64_t* uint) {
-  lastKeyPressed_ = *uint;
+void InputWin32::updateLastKeyPress(uint32_t keyCode) {
+  lastKeyPressed_ = keyCode;
 }
 
 // We support Windows VK_ macros here.
@@ -108,6 +110,9 @@ bool InputWin32::controllerButtonPressed(ControllerButtons button, int controlle
 
 }
 
+
+void InputWin32::init() {
+}
 
 void InputWin32::initXInput() {
   controllerStates.clear();

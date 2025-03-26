@@ -17,13 +17,18 @@ public:
 
     void initXInput();
     bool wasKeyPressed(int key) const override;
-    void updateLastKeyPress(uint64_t *uint) override;
+
     bool pollController(int index) override;
+
+    void postPollController(int index);
+
     float getControllerAxis(ControllerAxis axis, int index) override;
     bool controllerButtonPressed(ControllerButtons button, int controllerIndex) override;
 
 
 protected:
+    void updateLastKeyPress(uint32_t uint) override;
+
     // Controller (GamePad) states.
     // We need the previous state to enable single button press detection.
     std::vector<XINPUT_STATE> controllerStates;

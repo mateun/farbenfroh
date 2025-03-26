@@ -7,8 +7,8 @@
 #include <engine/game/Scene.h>
 #include <engine/game/SceneNode.h>
 #include <ranges>
+#include <engine/game/Timing.h>
 
-extern float ftSeconds;
 
 Cinematic::Cinematic(Scene *scene, float duration) : _scene(scene) , _duration(duration) {
 }
@@ -50,7 +50,7 @@ void Cinematic::update() {
         return;
     }
 
-    _localTime += ftSeconds;
+    _localTime += Timing::lastFrameTimeInSeconds();
 
     if (_localTime >= _duration) {
         _isPlaying = false;

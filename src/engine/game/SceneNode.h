@@ -8,7 +8,6 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
-#include "graphics.h"
 #include "NodeComponent.h"
 #include <engine/math/data_structures.h>
 #include <engine/graphics/Camera.h>
@@ -22,6 +21,15 @@ class ParticleSystem;
 class Camera;
 class Light;
 
+
+
+enum class SceneNodeType {
+    Light,
+    Camera,
+    Text,
+    Mesh,
+    ParticleSystem,
+};
 
 
 class SceneNode : public std::enable_shared_from_this<SceneNode> {

@@ -7,6 +7,8 @@
 #include <engine/graphics/Bitmap.h>
 #include <memory>
 
+#include "ErrorHandling.h"
+
 GLuint Texture::handle() const {
   return handle_;
 }
@@ -15,12 +17,54 @@ Texture::Texture() {
 
 }
 
-Texture::Texture(GLuint existingHandle) : handle_(existingHandle) {
+Texture::Texture(const std::string &fileName) {
+  bitmap_ = new Bitmap(fileName.c_str());
+  glGenTextures(1, &handle_);
+  glBindTexture(GL_TEXTURE_2D, handle_);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexImage2D(GL_TEXTURE_2D,
+               0,
+               GL_SRGB8_ALPHA8,
+               bitmap_->width,
+               bitmap_->height,
+               0,
+               GL_RGBA,
+               GL_UNSIGNED_BYTE,
+               bitmap_->pixels);
 
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  // Set aniso filtering
+  {
+    if (!glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
+      throw std::runtime_error("Anisotropic filtering not supported!");
+    }
+
+    GLfloat maxAniso = 0.0f;
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
+    printf("maxAniso: %f\n", maxAniso);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
+
+  }
+
+
+}
+
+Texture::Texture(GLuint existingHandle) : handle_(existingHandle) {
 }
 
 Texture::Texture(GLuint existingHandle, Bitmap *existingBitmap) : handle_(existingHandle) , bitmap_(existingBitmap) {
 }
+
+void Texture::bindAt(int unitIndex) const {
+  glActiveTexture(GL_TEXTURE0 + unitIndex);
+  glBindTexture(GL_TEXTURE_2D, handle_);
+  GL_ERROR_EXIT(980);
+}
+
 
 uint8_t * Texture::pixels() {
   return bitmap_->pixels;

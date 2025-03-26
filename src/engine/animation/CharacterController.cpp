@@ -4,10 +4,10 @@
 
 #include "CharacterController.h"
 #include <engine/game/SceneNode.h>
+#include <engine/game/Timing.h>
 #include <engine/input/Input.h>
 #include <glm/gtc/quaternion.hpp>
 
-extern float ftSeconds;
 
 CharacterController::CharacterController(SceneNode *characterNode) : _characterNode(characterNode){
 
@@ -26,8 +26,8 @@ void CharacterController::setMovementSpeed(float value) {
 * attached character SceneNode
 */
 void CharacterController::update() {
-    float frameMovementSpeed = movementSpeed * ftSeconds;
-    float frameRotationSpeed = rotationSpeed * ftSeconds;
+    float frameMovementSpeed = movementSpeed * Timing::lastFrameTimeInSeconds();
+    float frameRotationSpeed = rotationSpeed * Timing::lastFrameTimeInSeconds();
     float dir = 0;
     float hdir = 0;
     float yaw = 0;
@@ -105,7 +105,7 @@ void CharacterController::update() {
             // Calculate an interpolation factor (t).
             // This should be between 0 and 1 and can be based on your frame's delta time and a smoothing speed.
             float smoothingSpeed = 20; // adjust as needed
-            float deltaTime = ftSeconds;
+            float deltaTime = Timing::lastFrameTimeInSeconds();
             float t = glm::clamp(smoothingSpeed * deltaTime, 0.0f, 1.0f);
 
             // Interpolate using slerp.

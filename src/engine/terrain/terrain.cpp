@@ -4,6 +4,9 @@
 // Created by mgrus on 19.10.2024.
 //
 #include "terrain.h"
+
+#include <engine/graphics/Renderer.h>
+#include <engine/graphics/StatefulRenderer.h>
 #include <GL/glew.h>
 
 #include <glm/gtx/quaternion.hpp>
@@ -257,8 +260,8 @@ void Terrain::mapPosToSphere(glm::vec3& posVertex) {
 }
 
 void Terrain::render() {
-    bindMesh(terrainMesh);
-    drawMesh();
+    StatefulRenderer::bindMesh(terrainMesh);
+    StatefulRenderer::drawMesh();
 
 }
 

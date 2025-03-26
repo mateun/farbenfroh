@@ -15,6 +15,7 @@ class Pose {
 
     Joint* findJointByName(const std::string & name);
     static Joint* findJointByName(const std::string & name, const std::vector<Joint*>& joints);
+    static glm::mat4 calculateWorldTransform(Joint* j, glm::mat4 currentTransform);
 };
 
 

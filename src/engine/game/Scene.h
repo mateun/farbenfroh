@@ -31,10 +31,10 @@ public:
     void update();
 
     void activateDebugFlyCam(bool value);
-    Camera* getDebugFlyCam() const;
-    const SceneNode* findActiveCameraNode() const;
+    [[nodiscard]] Camera* getDebugFlyCam() const;
+    [[nodiscard]] const SceneNode* findActiveCameraNode() const;
 
-    std::vector<Light*> getLightsOfType(LightType type) const;
+    [[nodiscard]] std::vector<Light*> getLightsOfType(LightType type) const;
 
     void flattenNodes(const std::vector<std::shared_ptr<SceneNode>>& sourceNodeTree, std::vector<SceneNode*>& targetList) const;
 

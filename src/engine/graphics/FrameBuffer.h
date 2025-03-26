@@ -23,6 +23,7 @@ class FrameBuffer {
 
     GLuint handle();
     std::shared_ptr<Texture> texture() const;
+    std::shared_ptr<Texture> texture2() const;
 
 
     void bind();

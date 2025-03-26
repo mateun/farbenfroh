@@ -5,6 +5,9 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include <cinttypes>
+#include <engine/graphics/Application.h>
+
 enum class ControllerAxis {
     LSTICK_X,
     LSTICK_Y,
@@ -33,8 +36,11 @@ enum class ControllerButtons {
 
 
 class Input {
+    friend class Application;
 
   public:
+    virtual ~Input() = default;
+
     static Input* getInstance();
 
     virtual bool wasKeyPressed(int key) const = 0;
@@ -42,11 +48,12 @@ class Input {
     // This might issue some OS calls to get the latest mouse positions etc.
     // Should only be done once per frame.
     void update();
-    bool isKeyDown(char key);
+
+    static bool isKeyDown(char key);
     int mouse_x();
     int mouse_y();
 
-    virtual void updateLastKeyPress(uint32_t key_code) = 0;
+
 
     // Must be called every frame for each controller index:
     virtual bool pollController(int index) = 0;
@@ -61,13 +68,15 @@ class Input {
 
 protected:
     virtual void init() = 0;
+    virtual void updateLastKeyPress(uint32_t key_code) = 0;
 
-protected:
+
     int mouse_x_ = 0;
     int mouse_y_ = 0;
     int lastKeyPressed_ = 0;
 
-
+private:
+    Input* instance;
 
 
 };

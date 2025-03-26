@@ -18,6 +18,7 @@
 #include <engine/animation/skeleton.h>
 #include <engine/graphics/Bitmap.h>
 
+#ifdef LEGACY_GRAPHICS
 class FBFont;
 class Camera;
 
@@ -28,11 +29,7 @@ namespace ozz::animation {
 extern int scaled_width, scaled_height;
 class JsonElement;
 
-struct BITMAP_FILE {
-	BITMAPFILEHEADER bmfileHeader;
-	BITMAPINFOHEADER bminfoHeader;
 
-};
 
 
 struct Result {
@@ -83,68 +80,7 @@ private:
     std::vector<std::unique_ptr<FrameBuffer>> blurFBOs;
 };
 
-/**
- * This class gets a list of objects which it may not collide with.
- * E.g. a planet, wals, etc.
- * The component takes care if any collision took place and can be asked by the camera
- * to avoid further movement into the colliding object.
- */
-class CameraCollider {
 
-public:
-    struct CollisionCandidate {
-        glm::vec3 location;
-        float radius;
-    };
-
-    bool collides(glm::vec3 cameraPosition);
-
-    CameraCollider(std::vector<CollisionCandidate*>);
-
-private:
-    std::vector<CollisionCandidate*> collisionCandidates;
-
-
-};
-
-
-
-struct TileData {
-    int tileX;
-    int tileY;
-    int tileWidth;
-    int tileHeight;
-    int tileOffsetX;
-    int tileOffsetY;
-};
-
-struct DrawCall {
-    glm::vec3 location;
-    glm::vec3 scale;
-    glm::vec3 rotation;
-    GLfloat uvScale;
-    glm::vec4 foregroundColor;
-    float overrideAlpha = 1.0f;
-    Mesh* mesh = nullptr;
-    Texture *texture;
-
-    bool lightingOn;
-    bool flipUvs;
-    bool tilingOn;
-    glm::vec3 lightDirection{-0.6, -10, -0.5};
-
-    bool shadows;
-    Camera *camera = nullptr;
-    Camera *shadowMapCamera = nullptr;
-
-    bool shadowPass = false;
-    int instances = 1;
-    std::vector<glm::vec2> instanceOffsets;
-    std::vector<glm::mat4> instanceMatrices;
-    std::vector<glm::vec4> instanceColors;
-    std::vector<glm::vec4> instanceTints;
-
-};
 
 struct Particle {
     glm::vec3 accel;
@@ -183,60 +119,7 @@ struct ParticleEffect {
 
 };
 
-/**
- * This holds the state for render commands
- * which is valid between a beginBatch and endBatch call.
- * The user may issue several of these, each time a
- * new state is created.
- */
-struct RenderState {
-    glm::vec4 foregroundColor;
-    glm::vec3 location;
-    glm::vec3 rot;
-    glm::mat4 *rotMatrix = nullptr;
-    glm::vec3 scale;
-    glm::vec2 textScale = {1, 1};
-    glm::vec2 panUVS = {0, 0};
-    glm::vec4 clearColor= {0, 0, 0, 1};
-    float uvScale = 1;
-    float overrideAlpha = 1.0f;
-    std::vector<glm::vec2> instanceOffsets;
-    std::vector<glm::mat4> instanceMatrices;
-    std::vector<glm::vec4> instanceColors;
-    std::vector<glm::vec4> instanceTints;
-    Shader* shader = nullptr;
-    Shader* forcedShader = nullptr;
-    Texture* texture = nullptr;
-    Texture* normalMap = nullptr;
-    int normalMapTextureUnit = 2;
-    Texture* skyboxTexture = nullptr;
-    Bitmap *font = nullptr;
-    Mesh* mesh = nullptr;
-    ParticleEffect *particleEffect = nullptr;
-    Camera* camera = nullptr;
-    Camera* shadowMapCamera = nullptr;
-    Bitmap* renderTargetBitmap = nullptr;
-    bool lightingOn = true;
-    bool tilingOn;
-    bool flipUvs;
-    bool shadows = false;
-    bool deferred = false;
-    bool depthTest = true;
-    bool inBitMapBlitMode = false;
-    bool useWorldMatrix = false;
 
-    bool skinnedDraw = false;
-    bool textDraw = false;
-
-    Light* currentLight = nullptr;
-
-
-    TileData tileData;
-
-    std::vector<DrawCall> drawCalls;
-    glm::vec4 tint = {1, 1, 1, 1};
-    const FrameBuffer* renderToFrameBuffer = nullptr;
-};
 
 /**
  * An FBButton consists of a text and a size and location.
@@ -271,174 +154,6 @@ enum class ColorFormat {
     B,
     G
 };
-
-namespace gru {
-
-    struct UVs {
-        float left;
-        float top;
-        float right;
-        float bottom;
-    };
-
-    // A tile in a tileMap in pixel coordinates.
-    struct TextureTile {
-
-        TextureTile(glm::vec2 tl, glm::vec2 br, glm::vec2 atl) {
-            topLeft = tl;
-            bottomRight = br;
-            atlas = atl;
-        }
-
-        glm::vec2 topLeft;
-        glm::vec2 bottomRight;
-        glm::vec2 atlas;
-
-        UVs getTextureCoords() {
-            auto tileWidth = bottomRight.x - topLeft.x;
-            auto tileHeight = bottomRight.y - topLeft.y;
-            float uvWidth = tileWidth / atlas.x;
-            float uvHeight = tileHeight / atlas.y;
-            float uvLeft = topLeft.x / atlas.x;
-            float uvRight = uvLeft + uvWidth;
-            float uvTop = 1 -  (topLeft.y / atlas.y);
-            float uvBottom = uvTop - uvHeight;
-
-            return { uvLeft, uvTop, uvRight, uvBottom};
-        }
-    };
-
-
-
-
-    /***
-     * This class allows for efficient rendering of many sprites in one go.
-     * The idea is that we shall not issue a draw call per sprite.
-     * Instead we collect all sprites to be rendered here.
-     * Conveniently, the user can give us the sprites in pixel coordinates, which is most natural
-     * for the game developer.
-     * Internally we transform these coordinates into clipspace coordinates and store them in a list.
-     * When the user calls "render", we make one update of the VBO containing every sprite.
-     *
-     */
-    class SpriteBatch {
-
-    public:
-
-        SpriteBatch(int numberOfSpritesReservered);
-
-        // Add a "sprite" by giving its position and size in screen space, i.e.
-        // in pixels.
-        // For example, if the screen is 640 x 480 and we give a sprite at position
-        // 320/240, it will end up in clip space coordinates 0,0.
-        // ClipSpace is -1 to 1 in all dimensions.
-        // The formula is
-        // clipSpace is: 2 * (pos/screenDimension) -1.
-        // 2 * (320/640) -1 = 2 * 0.5 - 1 = 1 - 1 = 0
-        // We use as a a depth indication
-        int addSprite(glm::vec2 posInScreenSpace, glm::vec2 sizeInScreenSpace, TextureTile* textureTile, float zLayer = 0);
-
-        // Render the batch, which means:
-        // - update the VBO with all clipspace coordinates.
-        // - (TODO) update the respective texture buffers, for now we have only one texture.
-        void render();
-
-        void clear();
-
-        void updateSprite(int index, glm::vec2 screenPos, glm::vec2 sizeInScreenSpace);
-
-    private:
-        // This is used to store the clips space position data which
-        // is used for glBufferData at rendering time.
-        // During the frame, data is added via addSprite in screen space,
-        // then these coordinates are transformed to clip space, where they are stored in this list.
-        std::vector<float> _clipSpacePositions;
-        std::vector<float> _uvs;
-        std::vector<uint16_t> _indices;
-
-        GLuint _vbo;
-        GLuint _vao;
-        GLuint _ibo;
-        GLuint _uvbo;
-
-        uint16_t _spriteNumber = 0;
-    };
-
-    struct UIButton {
-        glm::vec2 pos;
-        glm::vec2 size;
-        std::string name;
-        int spriteIndex = -1;
-        SpriteBatch* spriteBatch = nullptr;
-
-        glm::vec2 savedSize;
-
-        void scaled(float val) {
-            savedSize = size;
-            spriteBatch->updateSprite(spriteIndex, pos, {size * val});
-        }
-        void unscaled() {
-            size = savedSize;
-            spriteBatch->updateSprite(spriteIndex, pos, savedSize);
-        }
-    };
-
-    /**
-     * This class provides methods to register
-     * different UI elements such as buttons, textboxes etc.
-     * Once per frame, the different query methods can be called to
-     * know if e.g. a button has been pressed or text has been entered,
-     * a combo-box item has been selected etc.
-     */
-    class UISystem  {
-
-    public:
-        void registerButton(glm::vec2 pos, glm::vec2 size, const std::string& name, gru::TextureTile* textureTile) {
-            auto button = UIButton {pos, size, name};
-            button.savedSize = size;
-            if (_spriteBatch) {
-                button.spriteIndex = (_spriteBatch->addSprite(pos, size, textureTile))-1;
-                button.spriteBatch = _spriteBatch;
-
-            }
-            _buttons.push_back(button);
-        }
-
-        // Optionally register a spritebatch.
-        // This will then automatically register the sprites for the buttons.
-        void registerSpriteBatch(gru::SpriteBatch* spriteBatch) {
-            _spriteBatch = spriteBatch;
-        }
-
-        // Returns the name of the hovered UIButton,
-        // or an emtpy string if none was hovered.
-        std::optional<UIButton> queryHovered(int mouseX, int mouseY) {
-            std::optional<UIButton> hoveredButton;
-            for (auto b : _buttons) {
-                auto buttonLeft = b.pos.x - b.size.x/2;
-                auto buttonRight = buttonLeft + b.size.x;
-                auto buttonBottom = b.pos.y - b.size.y / 2;
-                auto buttonTop = buttonBottom + b.size.y;
-                if (mouseX >= buttonLeft && mouseX <= buttonRight
-                        && mouseY >= buttonBottom && mouseY <= buttonTop) {
-                    hoveredButton = b;
-                    break;
-                }
-            }
-            return hoveredButton;
-        }
-
-        std::vector<UIButton> buttons() { return _buttons; }
-
-    private:
-
-
-
-        std::vector<UIButton> _buttons;
-        SpriteBatch* _spriteBatch = nullptr;
-
-    };
-}
 
 struct MonitorResolution {
     uint64_t width;
@@ -613,3 +328,5 @@ struct SceneMeshData {
     bool skinnedMesh = false;
     bool castShadow = true;
 };
+
+#endif

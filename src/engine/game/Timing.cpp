@@ -3,3 +3,7 @@
 //
 
 #include "Timing.h"
+
+float Timing::lastFrameTimeInSeconds() {
+    return frameTimeSecs;
+}

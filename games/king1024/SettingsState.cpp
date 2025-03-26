@@ -3,7 +3,7 @@
 //
 
 #include "SettingsState.h"
-#include "graphics.h"
+
 
 void king::SettingsState::update() {
     auto numResolutions = resolutions[activeMonitorDeviceNames[0]].size();

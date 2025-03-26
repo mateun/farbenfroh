@@ -6,9 +6,12 @@
 #include <filesystem>
 
 #include <iostream>
+#include <engine/graphics/Renderer.h>
+#include <engine/graphics/StatefulRenderer.h>
 #include <engine/io/MeshImporter.h>
 
-extern HWND getWindow();
+FolderAssetLoader::FolderAssetLoader(HWND hwnd) : native_window_(hwnd){
+}
 
 void FolderAssetLoader::load(const std::string &assetFolder) {
     namespace fs = std::filesystem;
@@ -26,9 +29,9 @@ void FolderAssetLoader::load(const std::string &assetFolder) {
                     std::shared_ptr<Texture> texture = nullptr;
                     if (pureName.contains("_n") || pureName.contains("_norm")) {
                         // We use linear color space for normal maps, instead of sRGB for albedos.
-                        texture = createTextureFromFile(entry.path().string(), GL_RGBA, GL_RGBA8);
+                        texture = std::make_shared<Texture>(entry.path().string());
                     } else {
-                        texture = createTextureFromFile(entry.path().string(), GL_RGBA, GL_SRGB8_ALPHA8);
+                        texture = std::make_shared<Texture>(entry.path().string());
                     }
 
                     _textureMap[pureName] = texture;
@@ -42,7 +45,7 @@ void FolderAssetLoader::load(const std::string &assetFolder) {
                     auto skeletonBaseFolder = assetFolder + "/skeletal/" + pureName;
                     auto mesh = AssimpMeshImporter().importMesh(entry.path().string(), skeletonBaseFolder);
                     _meshMap[pureName] = mesh;
-                } else if (extension == ".wav") {auto sound = loadSoundFileExt(entry.path().string(), getWindow());
+                } else if (extension == ".wav") {auto sound = loadSoundFileExt(entry.path().string(), native_window_);
                     _soundMap[entry.path().filename().stem().string()] = sound;
 
                 }

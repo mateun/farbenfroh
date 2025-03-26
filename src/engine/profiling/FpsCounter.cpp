@@ -5,6 +5,7 @@
 #include "FpsCounter.h"
 
 #include <vector>
+#include <engine/game/Timing.h>
 
 float FpsCounter::frameTimeInMicroSecondsAvg() {
   return ftMicrosAvg;
@@ -14,7 +15,8 @@ float FpsCounter::lastFPSAverage() {
   return lastAvgFPS;
 }
 
-void update(float ftSeconds) {
+void FpsCounter::update() {
+    float ftSeconds = Timing::lastFrameTimeInSeconds();
     static std::vector<float> ftbuffer(1000);
     static std::vector<float> ftMicrosbuffer(1000);
 

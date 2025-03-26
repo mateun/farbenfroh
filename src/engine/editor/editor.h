@@ -1,10 +1,13 @@
 #pragma once
 #include <engine/game/default_game.h>
 #include <engine/animation/AnimationPlayer.h>
+#include <engine/graphics/FrameBuffer.h>
 
 #include "ozz/animation/runtime/sampling_job.h"
 #include "ozz/base/containers/vector.h"
 #include "ozz/include/ozz/base/maths/transform.h"
+
+
 
 namespace ozz::math {
     struct Float4x4;
@@ -26,7 +29,7 @@ namespace editor {
     class Editor {
 
     public:
-        Editor();
+        Editor(HWND hwnd);
         ~Editor();
 
         void renderImGui();
@@ -59,7 +62,7 @@ namespace editor {
         Shader* skinnedMeshShader = nullptr;
         Shader* gradientShader = nullptr;
         std::unordered_set<Animation*> blendedAnimations;
-
+        HWND hwnd_;
 
     private:
         void drawAnimationTimeline();

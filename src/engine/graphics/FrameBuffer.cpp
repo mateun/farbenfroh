@@ -16,8 +16,16 @@ GLsizei FrameBuffer::height() {
   return texture_->height();
 }
 
+GLuint FrameBuffer::handle() {
+    return handle_;
+}
+
 std::shared_ptr<Texture> FrameBuffer::texture() const {
   return texture_;
+}
+
+std::shared_ptr<Texture> FrameBuffer::texture2() const {
+    return texture2_;
 }
 
 void FrameBuffer::bind() {

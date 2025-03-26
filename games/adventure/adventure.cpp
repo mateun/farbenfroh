@@ -3,7 +3,6 @@
 //
 
 #include "adventure.h"
-#include "graphics.h"
 
 namespace adv {
 

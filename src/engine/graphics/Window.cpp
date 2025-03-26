@@ -4,6 +4,8 @@
 
 #include "Window.h"
 
+#include <engine/graphics/MeshDrawData.h>
+
 
 Window::Window(int w, int h, bool fullscreen) : width(w), height(h), fullscreen(fullscreen) {
 

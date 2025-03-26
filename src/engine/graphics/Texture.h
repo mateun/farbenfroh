@@ -7,6 +7,7 @@
 
 #include <GL\glew.h>
 #include <memory>
+#include <string>
 
 class Bitmap;
 
@@ -14,9 +15,10 @@ class Texture {
 
   public:
     Texture();
+    explicit Texture(const std::string& fileName);
     explicit Texture(GLuint existingHandle);
     explicit Texture(GLuint existingHandle, Bitmap* existingBitmap);
-    void bindAt(int unitIndex);
+    void bindAt(int unitIndex) const;
     [[nodiscard]] GLuint handle() const;
 
     uint8_t* pixels();

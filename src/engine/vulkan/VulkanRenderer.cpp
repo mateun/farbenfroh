@@ -3,8 +3,12 @@
 //
 
 #include "VulkanRenderer.h"
-
+#include <iostream>
+#include <algorithm>
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_win32.h>
 #include <engine/graphics/Application.h>
+#include <engine/io/io.h>
 
 VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hInstance), _window(window) {
     createInstance();
@@ -706,7 +710,6 @@ bool VulkanRenderer::isDeviceSuitable(VkPhysicalDevice device) {
     printf("minor version: %u\n", minorVersion);
 
     vkGetPhysicalDeviceFeatures(device, &physicalDeviceFeatures);
-
 
     return (physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU || physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
         && findQueueFamilies(device).isComplete() && checkDeviceExtensionSupport(device);

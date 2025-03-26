@@ -7,6 +7,7 @@
 
 #include <array>
 #include <optional>
+#include <vector>
 #include <Windows.h>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>

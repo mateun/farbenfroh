@@ -38,13 +38,9 @@ void basicGridConstructionTest() {
 }
 
 
+#ifdef COLL_GRID_TESTS
 int main(int argc, char** argv) {
-
     basicGridConstructionTest();
-
-
-
     return 0;
-
-
 }
+#endif

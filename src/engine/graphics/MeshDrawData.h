@@ -10,8 +10,8 @@
 #include <functional>
 #include <engine/graphics/ShaderParameter.h>
 #include <engine/graphics/Texture.h>
+#include <engine/graphics/Mesh.h>
 
-class Mesh;
 class Shader;
 class Camera;
 
@@ -22,7 +22,8 @@ class Light;
 * This holds everything we need to issue a physical draw call.
 * A lot ... but what can you do.
 */
-struct MeshDrawData {
+class MeshDrawData {
+public:
     glm::vec3 location = {0, 0, 0};
     glm::vec3 scale = {1, 1, 1};
     glm::vec3 rotationEulers = {0, 0, 0};

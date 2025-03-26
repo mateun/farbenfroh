@@ -18,7 +18,7 @@ std::vector<uint32_t> flattenV3Indices(std::vector<glm::vec3> input) {
     return result;
 }
 
-static std::vector<int32_t> flattenIV4(std::vector<glm::ivec4> input) {
+std::vector<int32_t> flattenIV4(std::vector<glm::ivec4> input) {
     std::vector<int32_t> result;
     for (auto v : input) {
         result.push_back(v.x);
@@ -30,7 +30,7 @@ static std::vector<int32_t> flattenIV4(std::vector<glm::ivec4> input) {
     return result;
 }
 
-static std::vector<float> flattenV4(std::vector<glm::vec4> input) {
+std::vector<float> flattenV4(std::vector<glm::vec4> input) {
     std::vector<float> result;
     for (auto v : input) {
         result.push_back(v.x);
@@ -42,7 +42,7 @@ static std::vector<float> flattenV4(std::vector<glm::vec4> input) {
     return result;
 }
 
-static std::vector<float> flattenV3(std::vector<glm::vec3> input) {
+std::vector<float> flattenV3(std::vector<glm::vec3> input) {
     std::vector<float> result;
     for (auto v : input) {
         result.push_back(v.x);
@@ -53,7 +53,7 @@ static std::vector<float> flattenV3(std::vector<glm::vec3> input) {
     return result;
 }
 
-static std::vector<float> flattenV2(std::vector<glm::vec2> input) {
+std::vector<float> flattenV2(std::vector<glm::vec2> input) {
     std::vector<float> result;
     for (auto v : input) {
         result.push_back(v.x);

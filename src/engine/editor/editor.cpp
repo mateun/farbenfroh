@@ -16,14 +16,13 @@
 #include <imgui/imgui.h>
 #include <iostream>
 #include <engine/io/MeshImporter.h>
-
-#include "graphics.h"
-
 #include <engine/animation/Joint.h>
 #include <engine/game/game_model.h>
 #include <engine/graphics/Camera.h>
 #include <engine/graphics/MeshDrawData.h>
 #include <engine/graphics/CameraMover.h>
+#include <engine/graphics/Renderer.h>
+#include <engine/graphics/StatefulRenderer.h>
 
 #include "ozz/animation/runtime/sampling_job.h"
 #include "ozz/include/ozz/animation/runtime/local_to_model_job.h"
@@ -95,7 +94,7 @@ namespace editor {
     }
 
     void Editor::update() {
-        if (keyPressed(VK_F3)) {
+        if (Input::getInstance()->wasKeyPressed(VK_F3)) {
             doImportMeshAction();
         }
     }
@@ -223,25 +222,25 @@ namespace editor {
         cameraMover->update();
         ImGui::Begin("Mesh Viewer");
         //ImGui::SetWindowSize("Mesh Viewer", {1000, 600});
-        activateFrameBuffer(skeletalMeshWindowFrameBuffer.get());
-        bindCamera(getMeshViewerCamera());
+        StatefulRenderer::activateFrameBuffer(skeletalMeshWindowFrameBuffer.get());
+        StatefulRenderer::bindCamera(getMeshViewerCamera());
         glViewport(0, 0, skeletalMeshWindowFrameBuffer->width(),
                  skeletalMeshWindowFrameBuffer->height());
 
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        static auto gridData = createGrid(100);
+        static auto gridData = StatefulRenderer::createGrid(100);
         gridData->camera = getMeshViewerCamera();
         gridData->color = glm::vec4(.5, .5, 0, 1);
         gridData->scale = 0.25f;
-        drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()});
+        StatefulRenderer::drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()});
 
 
-        wireframeOn(3.0f);
+        StatefulRenderer::wireframeOn(3.0f);
         gridData->scale = 1.0f;
-        drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()});
-        wireframeOff();
+        StatefulRenderer::drawGrid(gridData, glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()});
+        StatefulRenderer::wireframeOff();
 
 
 
@@ -328,13 +327,13 @@ namespace editor {
             } else {
                 dd.shader = staticMeshShader;
             }
-            drawMesh(dd);
+            Renderer::getInstance()->drawMesh(dd);
 
             // Now draw the wireframe version
-            wireframeOn();
+            StatefulRenderer::wireframeOn();
             dd.color = glm::vec4(0, 0, 1, 1);
-            drawMesh(dd);
-            wireframeOff();
+            Renderer::getInstance()->drawMesh(dd);
+            StatefulRenderer::wireframeOff();
 
 
         }
@@ -367,7 +366,7 @@ namespace editor {
                         dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
                         dd.worldTransform = finalTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
-                        drawMesh(dd);
+                        Renderer::getInstance()->drawMesh(dd);
                     }
 
                 }
@@ -420,7 +419,7 @@ namespace editor {
                         std::memcpy(&modelTransform, &ltm_job.output[jointIndex], sizeof(glm::mat4));
                         dd.worldTransform = modelTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
-                        drawMesh(dd);
+                        Renderer::getInstance()->drawMesh(dd);
                     }
 
                 }
@@ -429,10 +428,10 @@ namespace editor {
 
         // Rest to normal viewport:
         //glViewport(0, 0, skeletalMeshWindowFrameBuffer->texture->width(), skeletalMeshWindowFrameBuffer->texture->height());
-        glViewport(0, 0, scaled_width, scaled_height);
+        glViewport(0, 0, getApplication()->scaled_width(), getApplication()->scaled_height());
 
         // Activate main framebuffer again:
-        activateFrameBuffer(nullptr);
+        StatefulRenderer::activateFrameBuffer(nullptr);
 
         // We render a 2-column table, with the 3D window on the left, and another table with
         // detailed skeleton information on the right.
@@ -675,7 +674,7 @@ namespace editor {
             if (ImGui::MenuItem("Load Texture")) {
                 lastImporteTextureFileName = showFileDialog("All\0*.*\0png\0*.png\0jpg\0*.jpg\0bmp\0*.bmp");
                 if (!lastImporteTextureFileName.empty()) {
-                    importedTexture = createTextureFromFile(lastImporteTextureFileName);
+                    importedTexture = std::make_unique<Texture>(lastImporteTextureFileName);
                 }
             }
 
@@ -802,12 +801,13 @@ namespace editor {
         _uiCamera.location = {0, 0, 1};
         _uiCamera.lookAtTarget = {0, 0, -1};
         _uiCamera.type = CameraType::Ortho;
-        bindTexture(nullptr);
-        bindCamera(&_uiCamera);
-        location({0, 0, -0.5});
-        scale({100, 64, 1});
-        forceShader(gradientShader);
-        drawPlane();
+        using SF = StatefulRenderer;
+        SF::bindTexture(nullptr);
+        SF::bindCamera(&_uiCamera);
+        SF::location({0, 0, -0.5});
+        SF::scale({100, 64, 1});
+        SF::forceShader(gradientShader);
+        SF::drawPlane();
 
         // static auto texture = createEmptyTexture(1024, 512);
         // static auto pb = new PixelBuffer(texture);
@@ -1055,15 +1055,15 @@ namespace editor {
 
     }
 
-    Editor::Editor() {
+    Editor::Editor(HWND hwnd) : hwnd_(hwnd) {
         state = new EditorState();
         level = new Level();
 
         // Create images (textures):
         //playButtonTexture = createTextureFromFile("../src/engine/editor/assets/button_play.png");
-        assetLoader = new FolderAssetLoader();
+        assetLoader = new FolderAssetLoader(hwnd_);
         assetLoader->load("../src/engine/editor/assets");
-        skeletalMeshWindowFrameBuffer = createFrameBuffer(1024, 1024);
+        skeletalMeshWindowFrameBuffer = StatefulRenderer::createFrameBuffer(1024, 1024);
         cameraMover = new CameraMover(getMeshViewerCamera());
         cameraMover->setMovementSpeed(30);
         animationPlayer = new AnimationPlayer();
@@ -1087,8 +1087,7 @@ namespace editor {
 
     void EditorGame::init() {
         DefaultGame::init();
-
-        editor = new Editor();
+        editor = new Editor(hwnd);
     }
 
     EditorGame::~EditorGame() {

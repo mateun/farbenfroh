@@ -3,7 +3,6 @@
 //
 
 #include "dungeon_shoot.h"
-#include "graphics.h"
 #include "../src/engine/editor/editor.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <lua.hpp>

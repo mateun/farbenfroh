@@ -2,7 +2,6 @@
 // Created by mgrus on 15.01.2024.
 //
 #include "ingame_editor.h"
-#include "graphics.h"
 
 static void renderColoredRectangle(int w, int h, int x, int y, float depth);
 static void renderPlayControlWindowBody(EditorWindow* win);

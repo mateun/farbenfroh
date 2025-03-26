@@ -37,35 +37,42 @@ add_executable(game WIN32
         ${LUA_SRC}
         ${ENGINE_SRC}
         src/imgui-build.cpp
-        #src/game-build.cpp
 
 )
 target_compile_definitions(game PRIVATE USE_RAW_WIN32=1)
 
 add_executable(game_with_app_framework WIN32
-        ${GAME_FX_SRC}
         ${ENGINE_SRC}
+        ${GAME_FX_SRC}
+        src/imgui-build.cpp
 )
 
 target_compile_definitions(game_with_app_framework PRIVATE USE_WIN32_APP_FRAMEWORK=1)
 
 add_executable(animtest WIN32
+        ${ENGINE_SRC}
         src/imgui-build.cpp
-        src/engine/tests/test_units.cpp
         src/engine/tests/AnimationTests.cpp
 
 )
 target_compile_definitions(animtest PRIVATE USE_RAW_WIN32=1)
 
 add_executable(quadtree_test
+        ${ENGINE_SRC}
         src/engine/algo/QuadTree.cpp
         src/engine/tests/QuadTreeTests.cpp
 )
+target_compile_definitions(quadtree_test PRIVATE USE_RAW_WIN32=1)
+
 add_executable(collisiongrid_test
+        ${ENGINE_SRC}
         src/engine/algo/CollisionGrid.cpp
         src/engine/tests/CollisionGridTests.cpp
 )
+target_compile_definitions(collisiongrid_test PRIVATE COLLISION_GRID_TESTS=1)
 
-target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation)
-target_link_libraries(game_with_app_framework opengl32 gdi32 dsound assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation)
+target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
+target_link_libraries(game_with_app_framework dxgi dxguid opengl32  gdi32 dsound assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
 target_link_libraries(animtest dsound dxgi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation)
+
+message(STATUS "Detected source files: ${ENGINE_SRC}")
