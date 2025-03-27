@@ -14,31 +14,29 @@
 #include <engine/graphics/Texture.h>
 
 #include "Mesh.h"
+#include "TrueTypeFont.h"
 
 
 class TrueTypeTextRenderer {
   public:
-    TrueTypeTextRenderer(const std::string& fontFileName);
+    TrueTypeTextRenderer(const std::shared_ptr<TrueTypeFont>& font);
 
     // Will return a mesh which represents all quads for the given text.
     // Each quad has a dedicated position following the flow of the text
     // and the correct uvs into the atlas texture.
     // To render the actual text you need to render this mesh
     // and provide the atlasTexture (see getFontAtlas()).
-    std::shared_ptr<Mesh> renderText(const std::string& text);
+    std::shared_ptr<Mesh> renderText(const std::string& text, glm::vec2* textDimensions);
     std::shared_ptr<Texture> getFontAtlas();
 
 private:
-    std::vector<stbtt_bakedchar> bakedChars;
-    int atlas_bitmap_width_ = 512;
-    int atlas_bitmap_height_ = 512;
+
     GLuint vao;
     GLuint vboPos;
     GLuint vboUVs;
     GLuint vboIndices;
-    std::unique_ptr<Bitmap> atlas_bitmap_;
-    std::shared_ptr<Texture> atlas_texture_;
-
+    std::shared_ptr<TrueTypeFont> font;
+    const std::shared_ptr<TrueTypeFont> &font_;
 };
 
 

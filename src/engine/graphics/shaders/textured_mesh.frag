@@ -7,6 +7,6 @@ out vec4 color;
 
 void main() {
     float r =  texture(diffuseTexture, fs_uvs).r;
-    color = vec4(r * 0.8, r * 0.8, r * 0.8, r);
+    color = vec4(.6, .6 , .5, r);
 
 }

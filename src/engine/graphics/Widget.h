@@ -22,6 +22,8 @@ public:
     void resize(int w, int h);
     void setOrigin(int x, int y);
 
+    glm::vec2 origin() const;
+
 protected:
     int width = 0;
     int height = 0;
@@ -37,25 +39,34 @@ private:
 
 };
 
+class Container;
+
 /**
 * Manages the placement of the child widgets.
 */
 class Layout {
 public:
-    glm::vec2 calculateChildSize(const Widget* parent, const Widget* child);
-    glm::vec2 calculateChildOrigin(const Widget* parent, const Widget* child);
+    virtual glm::vec2 calculateChildSize(const Container* parent, const Widget* child);
+    virtual glm::vec2 calculateChildOrigin(const Container* parent, const Widget* child);
+};
 
+class VBoxLayout : public Layout {
+public:
+    glm::vec2 calculateChildOrigin(const Container *parent, const Widget *child) override;
+    glm::vec2 calculateChildSize(const Container *parent, const Widget *child) override;
 };
 
 class Container : public Widget {
+
   public:
     Container(std::unique_ptr<Layout> layout);
     void addChild(std::shared_ptr<Widget> child);
     void draw(Camera* camera) override;
     void setSize(int width, int height);
+    std::vector<std::shared_ptr<Widget>> children() const;
 
 private:
-    std::vector<std::shared_ptr<Widget>> children;
+    std::vector<std::shared_ptr<Widget>> children_;
     std::unique_ptr<Layout> layout_;
 };
 

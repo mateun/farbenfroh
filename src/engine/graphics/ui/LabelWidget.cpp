@@ -9,23 +9,22 @@
 #include <engine/graphics/Renderer.h>
 #include <engine/graphics/TrueTypeTextRenderer.h>
 
-LabelWidget::LabelWidget(const std::string &text): text_(text) {
+LabelWidget::LabelWidget(const std::string &text, const std::shared_ptr<TrueTypeFont>& font): text_(text),
+    font_(font) {
     quadMesh = gru::Geometry::createQuadMesh(PlanePivot::bottomleft);
-
-    textRenderer_ = std::make_shared<TrueTypeTextRenderer>("../assets/calibri.ttf");
+    textRenderer_ = std::make_shared<TrueTypeTextRenderer>(font_);
 
 }
 
 void LabelWidget::draw(Camera* camera) {
 
-    auto textMesh = textRenderer_->renderText("Hello world! with great 12334$%");
-
+    glm::vec2 dim1;
+    auto textMesh = textRenderer_->renderText(text_, &dim1);
 
     MeshDrawData mdd;
     mdd.mesh = textMesh.get();
-    mdd.texture = textRenderer_->getFontAtlas().get();
-    //mdd.color = glm::vec4{1, 0,1, 1};
-    mdd.location = {10, 300, -1};
+    mdd.texture = font_->getAtlas().get();
+    mdd.location = {origin_x, origin_y, -1};
     mdd.scale = {1, 1, 1};
     mdd.camera = camera;
     mdd.shader = getDefaultWidgetShader().get();
@@ -34,3 +33,8 @@ void LabelWidget::draw(Camera* camera) {
 
 
 }
+
+void LabelWidget::setText(const std::string &text) {
+    text_ = text;
+}
+

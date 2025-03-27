@@ -11,6 +11,15 @@
 
 class Bitmap;
 
+struct TextureCreationData {
+    GLint internalFormat;
+    GLint format;
+    GLint magFilterType;
+    GLint minFilterType;
+
+
+};
+
 class Texture {
 
   public:
@@ -25,7 +34,7 @@ class Texture {
 
     static std::unique_ptr<Texture> createEmptyFloatTexture(int w, int h);
     static std::unique_ptr<Texture> createEmptyTexture(int w, int h);
-    static std::unique_ptr<Texture> createTextureFromBitmap(Bitmap* bm, GLint internalFormat = GL_SRGB8_ALPHA8, GLenum format = GL_RGBA);
+    static std::unique_ptr<Texture> createTextureFromBitmap(Bitmap* bm, const TextureCreationData& textureData = {GL_SRGB8_ALPHA8, GL_RGBA, GL_LINEAR, GL_LINEAR});
 
     GLsizei height();
     GLsizei width();

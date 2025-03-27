@@ -20,6 +20,10 @@ void Widget::setOrigin(int x, int y) {
     origin_y = y;
 }
 
+glm::vec2 Widget::origin() const {
+    return glm::vec2(origin_x, origin_y);
+}
+
 std::shared_ptr<Camera> Widget::getCamera() {
     if (!camera_) {
         camera_ = std::make_shared<Camera>(CameraType::Ortho);
@@ -40,14 +44,30 @@ std::shared_ptr<Shader> Widget::getDefaultWidgetShader() {
     return default_widget_shader_;
 }
 
-glm::vec2 Layout::calculateChildSize(const Widget *parent, const Widget *child) {
-
+glm::vec2 Layout::calculateChildSize(const Container *parent, const Widget *child) {
+    // TODO really implement good default size
     return {100, 100};
-
 }
 
-glm::vec2 Layout::calculateChildOrigin(const Widget *parent, const Widget *child) {
-    return {10, 10};
+glm::vec2 Layout::calculateChildOrigin(const Container *parent, const Widget *child) {
+    return child->origin();
+}
+
+glm::vec2 VBoxLayout::calculateChildOrigin(const Container *parent, const Widget *child) {
+    for (auto c : parent->children()) {
+
+
+        // if (Container* container = dynamic_cast<Container*>(c.get())) {
+        //     // widget is a Container (or derived from Container)
+        // } else {
+        //     // widget is not a Container
+        // }
+
+    }
+}
+
+glm::vec2 VBoxLayout::calculateChildSize(const Container *parent, const Widget *child) {
+    return Layout::calculateChildSize(parent, child);
 }
 
 Container::Container(std::unique_ptr<Layout> layout): layout_(std::move(layout)) {
@@ -61,7 +81,7 @@ Container::Container(std::unique_ptr<Layout> layout): layout_(std::move(layout))
  * - Therefore the drawing of the child widget always takes place in child local space.
  */
 void Container::draw(Camera* camera) {
-    for (auto c : children) {
+    for (auto c : children_) {
         glm::vec2 size = layout_->calculateChildSize(this, c.get());
         glm::vec2 origin = layout_->calculateChildOrigin(this, c.get());
         c->resize(size.x, size.y);
@@ -76,6 +96,11 @@ void Container::draw(Camera* camera) {
     }
 
 }
+
+std::vector<std::shared_ptr<Widget>> Container::children() const{
+    return children_;
+}
+
 
 void EmptyContainer::draw(Camera* camera) {
 

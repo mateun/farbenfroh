@@ -14,13 +14,15 @@
 class LabelWidget : public Widget {
 
 public:
-    LabelWidget(const std::string & text);
+    LabelWidget(const std::string & text, const std::shared_ptr<TrueTypeFont> & font);
     void draw(Camera* camera) override;
+    void setText(const std::string & text);
 
 private:
     std::string text_;
     std::unique_ptr<Mesh> quadMesh;
     std::shared_ptr<TrueTypeTextRenderer> textRenderer_;
+    std::shared_ptr<TrueTypeFont> font_;
 };
 
 
