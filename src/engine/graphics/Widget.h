@@ -21,6 +21,7 @@ public:
     virtual void draw(Camera* camera) = 0;
     void resize(int w, int h);
     void setOrigin(int x, int y);
+    bool isContainer();
 
     glm::vec2 origin() const;
 

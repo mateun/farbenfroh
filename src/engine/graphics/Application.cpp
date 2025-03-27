@@ -125,12 +125,15 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
         MessageBox(NULL, "Window Creation Failed", "Error", MB_ICONEXCLAMATION | MB_OK);
     }
 
+
+
     ShowWindow(_window, SW_NORMAL);
     UpdateWindow(_window);
     hdc = GetDC(_window);
+    render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, _window, width, height);
     // registerRawInput(hwnd);
 
-    render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, _window, width, height);
+
 
 }
 

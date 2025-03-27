@@ -20,6 +20,11 @@ void Widget::setOrigin(int x, int y) {
     origin_y = y;
 }
 
+bool Widget::isContainer() {
+    auto cont = (dynamic_cast<Container*>(this));
+    return (cont != nullptr);
+}
+
 glm::vec2 Widget::origin() const {
     return glm::vec2(origin_x, origin_y);
 }
@@ -53,24 +58,13 @@ glm::vec2 Layout::calculateChildOrigin(const Container *parent, const Widget *ch
     return child->origin();
 }
 
-glm::vec2 VBoxLayout::calculateChildOrigin(const Container *parent, const Widget *child) {
-    for (auto c : parent->children()) {
 
-
-        // if (Container* container = dynamic_cast<Container*>(c.get())) {
-        //     // widget is a Container (or derived from Container)
-        // } else {
-        //     // widget is not a Container
-        // }
-
-    }
-}
-
-glm::vec2 VBoxLayout::calculateChildSize(const Container *parent, const Widget *child) {
-    return Layout::calculateChildSize(parent, child);
-}
 
 Container::Container(std::unique_ptr<Layout> layout): layout_(std::move(layout)) {
+}
+
+void Container::addChild(std::shared_ptr<Widget> child) {
+    children_.push_back(child);
 }
 
 /**
@@ -81,18 +75,23 @@ Container::Container(std::unique_ptr<Layout> layout): layout_(std::move(layout))
  * - Therefore the drawing of the child widget always takes place in child local space.
  */
 void Container::draw(Camera* camera) {
+    // We might not yet have a render_backend set - then we don't draw at all.
+    if (!getApplication()->getRenderBackend()) return;
+
     for (auto c : children_) {
         glm::vec2 size = layout_->calculateChildSize(this, c.get());
         glm::vec2 origin = layout_->calculateChildOrigin(this, c.get());
         c->resize(size.x, size.y);
         c->setOrigin(origin.x, origin.y);
-        // TODO is it better to have all this abstracted by the Camera? (projection and viewport)?
+
         getApplication()->getRenderBackend()->getOrthoCameraForViewport(origin_x, origin_y, size.x, size.y);
-        getApplication()->getRenderBackend()->setViewport(origin_x, origin_y, size.x, size.y);
+        if (c->isContainer()) {
+            getApplication()->getRenderBackend()->setViewport(origin_x, origin_y, size.x, size.y);
+        }
+
 
         // Now the child can draw itself and all coordinates are based from local 0,0.
         c->draw(camera);
-
     }
 
 }

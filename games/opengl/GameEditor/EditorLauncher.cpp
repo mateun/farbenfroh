@@ -6,8 +6,12 @@
 
 #include <engine/graphics/ui/LabelWidget.h>
 
+std::shared_ptr<Application> app;
 std::shared_ptr<Application> getApplication() {
-    return std::make_shared<EditorLauncher>(800, 600, false);
+    if (!app) {
+        app = std::make_shared<EditorLauncher>(800, 600, false);
+    }
+    return app;
 }
 
 EditorLauncher::EditorLauncher(int width, int height, bool fullscreen) : Application(width, height, fullscreen){
@@ -15,13 +19,15 @@ EditorLauncher::EditorLauncher(int width, int height, bool fullscreen) : Applica
 
 void EditorLauncher::onCreated() {
 
-    Layout layout;
-
-    auto topVBox = std::make_shared<Container>();
+    auto vboxLayout = std::make_unique<VBoxLayout>();
+    auto leftVBox = std::make_shared<Container>(std::move(vboxLayout));
 
     std::shared_ptr<TrueTypeFont> fontConsola = std::make_shared<TrueTypeFont>("../assets/consola.ttf", 16);
     auto lblProjects = std::make_shared<LabelWidget>("Projects", fontConsola);
-    lblProjects->setOrigin(100, 200);
+    auto lblSettings = std::make_shared<LabelWidget>("Settings", fontConsola);
+    leftVBox->addChild(lblProjects);
+    leftVBox->addChild(lblSettings);
 
-    setTopLevelWidget(lblProjects);
+    setTopLevelWidget(leftVBox);
 }
+
