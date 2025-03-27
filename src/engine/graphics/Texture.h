@@ -25,7 +25,7 @@ class Texture {
 
     static std::unique_ptr<Texture> createEmptyFloatTexture(int w, int h);
     static std::unique_ptr<Texture> createEmptyTexture(int w, int h);
-    static std::unique_ptr<Texture> createTextureFromBitmap(Bitmap* bm);
+    static std::unique_ptr<Texture> createTextureFromBitmap(Bitmap* bm, GLint internalFormat = GL_SRGB8_ALPHA8, GLenum format = GL_RGBA);
 
     GLsizei height();
     GLsizei width();

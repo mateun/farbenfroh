@@ -11,10 +11,13 @@
 #include <engine/game/Timing.h>
 #include <engine/input/Input.h>
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include <engine/graphics/stb_truetype.h>
+
 // This function must be provided by any Application implementor.
 extern std::shared_ptr<Application> getApplication();
 
-Application::Application(int w, int h, bool fullscreen) : width(w), height(h), fullscreen(fullscreen){
+Application::Application(int w, int h, bool fullscreen) : width(w), height(h), fullscreen(fullscreen), scaled_width_(width), scaled_height_(height) {
 
 }
 
@@ -193,7 +196,11 @@ void Application::mainLoop() {
 
 	    if (topLevelWidget) {
 	        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	        topLevelWidget->draw();
+
+	        // We provide an ortho camera which represents the application window dimensions.
+	        render_backend_->setViewport(0,0, scaled_width(), scaled_height());
+	        auto camera = render_backend_->getOrthoCameraForViewport(0, 0, scaled_width(), scaled_height());
+	        topLevelWidget->draw(camera.get());
 	        SwapBuffers(hdc);
 	    }
 	    performance_timer.stop();

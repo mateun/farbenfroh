@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
+#include <engine/graphics/Camera.h>
 
 
 /**
@@ -17,7 +18,7 @@
 class Widget {
 
 public:
-    virtual void draw() = 0;
+    virtual void draw(Camera* camera) = 0;
     void resize(int w, int h);
     void setOrigin(int x, int y);
 
@@ -26,6 +27,13 @@ protected:
     int height = 0;
     int origin_x = 0;
     int origin_y = 0;
+
+    std::shared_ptr<Camera> getCamera();
+    std::shared_ptr<Shader> getDefaultWidgetShader();
+
+private:
+    std::shared_ptr<Camera> camera_;
+    std::shared_ptr<Shader> default_widget_shader_;
 
 };
 
@@ -43,7 +51,7 @@ class Container : public Widget {
   public:
     Container(std::unique_ptr<Layout> layout);
     void addChild(std::shared_ptr<Widget> child);
-    void draw() override;
+    void draw(Camera* camera) override;
     void setSize(int width, int height);
 
 private:
@@ -53,7 +61,7 @@ private:
 
 class EmptyContainer : public Widget {
 public:
-    void draw() override;
+    void draw(Camera* camera) override;
 };
 
 

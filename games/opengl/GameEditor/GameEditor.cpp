@@ -2,21 +2,23 @@
 // Created by mgrus on 23.03.2025.
 //
 
-#include "AnimationEditor.h"
+#include "GameEditor.h"
 #include <engine/graphics/Widget.h>
 
+#ifdef GAME_EDITOR
 std::shared_ptr<Application> getApplication() {
-    return std::make_shared<AnimationEditor>(800, 600, false);
+    return std::make_shared<GameEditor>(800, 600, false);
 }
+#endif
 
 
-AnimationEditor::AnimationEditor(int width, int height, bool fullscreen) : Application(width, height, fullscreen) {
+GameEditor::GameEditor(int width, int height, bool fullscreen) : Application(width, height, fullscreen) {
 }
 
 /**
  * Here we create our actual editor widgets
  */
-void AnimationEditor::onCreated() {
+void GameEditor::onCreated() {
     setTopLevelWidget(std::make_shared<EmptyContainer>());
 
 }

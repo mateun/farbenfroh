@@ -203,8 +203,6 @@ void RenderBackend::initOpenGL() {
     };
     enableVsync(false);
 
-
-
     GLint samples = 0, sampleBuffers = 0;
     glGetIntegerv(GL_SAMPLES, &samples);
     glGetIntegerv(GL_SAMPLE_BUFFERS, &sampleBuffers);

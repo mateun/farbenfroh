@@ -25,8 +25,7 @@ class Renderer {
 
     static Renderer* getInstance();
     static void drawMesh(const MeshDrawData& mdd);
-
-    std::shared_ptr<Texture> getDefaultNormalMap();
+    static std::shared_ptr<Texture> getDefaultNormalMap();
 
 
 private:

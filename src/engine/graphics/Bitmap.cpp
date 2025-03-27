@@ -25,6 +25,12 @@ Bitmap::Bitmap() {
 }
 
 
+
+Bitmap::Bitmap(int w, int h, int bytesPerPixel) : width(w), height(h), bytes_per_pixel_(bytesPerPixel) {
+    pixels = new uint8_t[width * height * bytesPerPixel];
+}
+
+
 Bitmap::Bitmap(const std::string &fileName) {
             auto f = fileName.c_str();
             if (FileHelper::isPngFile(fileName) || FileHelper::isJpgFile(fileName)) {

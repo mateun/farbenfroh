@@ -279,7 +279,6 @@ public:
     // This can be used with textures, will multiply with the texel color
     static void tint(glm::vec4 col);
 
-    static std::shared_ptr<Texture> getDefaultNormalMap();
     static void scale(glm::vec3 val);
     static void textScale(glm::vec2 val);
     static void panUVS(glm::vec2 pan);

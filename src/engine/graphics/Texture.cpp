@@ -79,7 +79,7 @@ GLsizei Texture::width() {
 }
 
 
-std::unique_ptr<Texture> Texture::createTextureFromBitmap(Bitmap *bm) {
+std::unique_ptr<Texture> Texture::createTextureFromBitmap(Bitmap *bm, GLint internalFormat, GLenum format) {
   GLuint handle;
   glGenTextures(1, &handle);
 
@@ -90,13 +90,17 @@ std::unique_ptr<Texture> Texture::createTextureFromBitmap(Bitmap *bm) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+
   glTexImage2D(GL_TEXTURE_2D,
                0,
-               GL_SRGB8_ALPHA8,
+               internalFormat,
                bm->width, bm->height,
                0,
-               GL_RGBA,
+               format,
                GL_UNSIGNED_BYTE, bm->pixels);
+
+  GL_ERROR_EXIT(7771);
+
 
   return std::make_unique<Texture>(handle, bm);
 }

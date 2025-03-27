@@ -194,7 +194,6 @@ void drawGrid(GridData* gridData = {}, glm::ivec2 viewPortDimensions = glm::ivec
 void drawBitmap(int x, int y, uint8_t* bitmapPixels);
 glm::mat4 getWorldMatrixFromGlobalState();
 std::unique_ptr<Texture> createTextureFromFile(const std::string& fileName, GLenum colorFormat = GL_RGBA, GLint internalColorFormat = GL_SRGB8_ALPHA8);
-std::unique_ptr<Texture> createTextureFromBitmap(Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
 std::unique_ptr<Texture> createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType = "png");
 std::unique_ptr<FrameBuffer> createShadowMapFramebufferObject(glm::vec2 size);
 void beginBatch();

@@ -139,6 +139,8 @@ std::unique_ptr<Texture> StatefulRenderer::createTextureFromFile(const std::stri
     throw std::runtime_error("Not implemented");
 }
 
+
+
 void StatefulRenderer::scale(glm::vec3 val) {
 }
 
