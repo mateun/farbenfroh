@@ -83,6 +83,7 @@ std::shared_ptr<Mesh> TrueTypeTextRenderer::renderText(const std::string &text, 
         textDimensions->y = maxY - minY;
     }
 
+    GL_ERROR_EXIT(77721);
     glBindBuffer(GL_ARRAY_BUFFER, vboPos);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * positions.size(), positions.data(), GL_DYNAMIC_DRAW);
     GL_ERROR_EXIT(7772);

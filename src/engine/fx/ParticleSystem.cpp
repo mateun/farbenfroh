@@ -273,7 +273,7 @@ void gru::ParticleEmitter::draw(const Camera* camera) const {
     mdd.location = location;
     // TODO orientation?!
     mdd.mesh = mesh;
-    mdd.texture = texture.get();
+    mdd.texture = texture;
     mdd.shader = particleShader;
 
     mdd.camera = camera;

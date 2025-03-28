@@ -21,7 +21,7 @@ Camera* DefaultGame::getGameplayCamera() {
         _gameplayCamera = new Camera();
         _gameplayCamera->location = {0, 5, 5};
         _gameplayCamera->lookAtTarget = {0, 0, 0};
-        _gameplayCamera->type = CameraType::Perspective;
+        _gameplayCamera->type_ = CameraType::Perspective;
     }
 
     return _gameplayCamera;
@@ -53,7 +53,7 @@ Camera *DefaultGame::getUICamera() {
         _uiCamera = new Camera();
         _uiCamera->location = {0, 0, 1};
         _uiCamera->lookAtTarget = {0, 0, -1};
-        _uiCamera->type = CameraType::Ortho;
+        _uiCamera->type_ = CameraType::Ortho;
     }
 
     return _uiCamera;
@@ -213,7 +213,7 @@ Camera *DefaultGame::getShadowMapCamera() {
         auto shadowCamLoc = getGameplayCamera()->location + shadowCamOffsetToNormalCam;
         _shadowMapCamera->location =  {shadowCamLoc.x, shadowCamLoc.y, shadowCamLoc.z};
         _shadowMapCamera->lookAtTarget = {-2, 0, -2.99};
-        _shadowMapCamera->type = CameraType::OrthoGameplay;
+        _shadowMapCamera->type_ = CameraType::OrthoGameplay;
     }
 
     return _shadowMapCamera;

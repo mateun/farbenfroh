@@ -35,7 +35,6 @@ private:
     GLuint vboPos;
     GLuint vboUVs;
     GLuint vboIndices;
-    std::shared_ptr<TrueTypeFont> font;
     const std::shared_ptr<TrueTypeFont> &font_;
 };
 

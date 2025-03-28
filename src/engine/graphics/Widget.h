@@ -103,7 +103,7 @@ protected:
     // in its own space.
     // We store the origin here nonetheless so the widget can be asked by its parent
     // or layout manager where it actually is located.
-    glm::vec2 origin_;
+    glm::vec2 origin_ = {};
 
     // The width and height of this widget.
     // This should never be set by the widget itself, but by some parent or
@@ -111,7 +111,7 @@ protected:
     // The reason is the layouting only makes sense when knowing all the participating
     // widgets for a certain area, the widget itself could never position and size itself correctly.
     // The dimension is though important for self drawing, as it gives the widget the information how big it actually is.
-    glm::vec2 size_;
+    glm::vec2 size_ = {};
 
     std::vector<std::shared_ptr<Widget>> children_;
     std::unique_ptr<Layout> layout_;

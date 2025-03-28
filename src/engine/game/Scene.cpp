@@ -31,7 +31,7 @@ Scene::Scene() {
 
 
     debugFlyCam = std::make_unique<Camera>();
-    debugFlyCam->type = CameraType::Perspective;
+    debugFlyCam->type_ = CameraType::Perspective;
     debugFlyCam->location = glm::vec3(10, 10, -5);
     debugFlyCam->lookAtTarget = glm::vec3(0, 0, 0);
     debugFlyCam->updateNearFar(0.1, 400);
@@ -388,8 +388,8 @@ void Scene::render() const {
 
         mdd.mesh = std::shared_ptr<Mesh>(m->mesh);
         mdd.tint = m->meshData.tint;
-        mdd.texture = m->texture;
-        mdd.normalMap = m->normalMap;
+        mdd.texture = std::shared_ptr<Texture>(m->texture);
+        mdd.normalMap = std::shared_ptr<Texture>(m->normalMap);
         mdd.shader = std::shared_ptr<Shader>(m->shader);
         mdd.uvPan = m->meshData.uvPan;
         mdd.uvScale = m->uvScale;
@@ -442,7 +442,7 @@ void Scene::render() const {
         mdd.shader = quadShader;
         mdd.location = { getApplication()->scaled_width()/2, getApplication()->scaled_height()/2, -5};
         mdd.scale = { getApplication()->scaled_width(), getApplication()->scaled_height(), 1};
-        mdd.texture = currentFB->texture().get();
+        mdd.texture = currentFB->texture();
         Renderer::drawMesh(mdd);
 
 

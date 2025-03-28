@@ -5,6 +5,7 @@
 #include <engine/graphics/Widget.h>
 
 void VBoxLayout::apply(Widget *target) {
+
     float minPrefX = std::numeric_limits<float>::max();
     float minPrefY = std::numeric_limits<float>::max();
     float maxPrefX = std::numeric_limits<float>::min();
@@ -33,10 +34,10 @@ void VBoxLayout::apply(Widget *target) {
 
         // Assign the positions from top to bottom
         float topY = target->size().y;
-        float marginH = 5;
+        float margin = 5;
         int counter = 0;
         for (auto c : target->children()) {
-            c->setOrigin({marginH, topY - (counter * c->getPreferredSize().y)});
+            c->setOrigin({margin, topY - margin - (counter * c->getPreferredSize().y)});
             counter++;
         }
     }

@@ -5,6 +5,7 @@
 #include "LabelWidget.h"
 
 #include <engine/graphics/Application.h>
+#include <engine/graphics/ErrorHandling.h>
 #include <engine/graphics/Geometry.h>
 #include <engine/graphics/MeshDrawData.h>
 #include <engine/graphics/Renderer.h>
@@ -18,27 +19,25 @@ LabelWidget::LabelWidget(const std::string &text, const std::shared_ptr<TrueType
 }
 
 void LabelWidget::draw() {
-
     glm::vec2 dim1;
+
     auto textMesh = textRenderer_->renderText(text_, &dim1);
 
     MeshDrawData mdd;
     mdd.mesh = textMesh;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader();
-    //mdd.camera = getApplication()->getRenderBackend()->getOrthoCameraForViewport(origin_.x, origin_.y, size_.x, size_.y).get();
-    auto cam = new Camera();
-    cam->updateLocation({0, 0, -2});
+
+    auto cam = std::make_shared<Camera>(CameraType::Ortho);
+    cam->updateLocation({0, 0, 2});
     cam->updateLookupTarget({0, 0, -1});
-    //cam->setProjectionMetrics(0, size_.x, 0, size_.y);
-    mdd.camera_shared = std::shared_ptr<Camera>(cam);
+    mdd.camera_shared = cam;
     mdd.viewPortDimensions =  size_;
     mdd.setViewport = true;
-    mdd.viewport = {origin_.x, origin_.y, size_.x, size_.y};
-    mdd.texture = font_->getAtlas().get();
-    mdd.location = {origin_.x, origin_.y, -1};
+    mdd.viewport = {origin_.x,  origin_.y - size_.y, size_.x, size_.y};
+    mdd.texture = font_->getAtlas();
+    mdd.location = {2, 10, -1};
     mdd.scale = {1, 1, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
-
 
 }
 

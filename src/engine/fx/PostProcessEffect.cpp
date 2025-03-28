@@ -28,7 +28,7 @@ const FrameBuffer* GammaCorrectionEffect::apply(const FrameBuffer *sourceFrameBu
     mdd.camera = camera;
     mdd.location = { scaled_width/2, scaled_height/2, -1};
     mdd.scale = { scaled_width, scaled_height, 1};
-    mdd.texture = sourceFrameBuffer->texture().get();
+    mdd.texture = sourceFrameBuffer->texture();
     mdd.shader = std::shared_ptr<Shader>(gammaCorrectionShader);
     StatefulRenderer::activateFrameBuffer( effectFrameBuffer.get());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -74,7 +74,7 @@ const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, con
     float scaled_height = getApplication()->scaled_height();
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
-    mdd.texture = sourceFrameBuffer->texture().get();
+    mdd.texture = sourceFrameBuffer->texture();
     Renderer::drawMesh(mdd);
 
     // Step 2: Do a gaussian blur on the brightness Framebuffer.
@@ -84,7 +84,7 @@ const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, con
     mdd.shader = gaussShader;
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
-    mdd.texture = bloomFBO->texture2().get();
+    mdd.texture = bloomFBO->texture2();
 
     glUseProgram(gaussShader->handle);
     bool horizontal = true, first_iteration = true;
@@ -98,7 +98,7 @@ const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, con
     {
         StatefulRenderer::activateFrameBuffer(blurFBOs[horizontal].get());
         gaussShader->setIntValue(horizontal, "horizontal");
-        mdd.texture = first_iteration ? bloomFBO->texture2().get() : blurFBOs[!horizontal]->texture().get();
+        mdd.texture = first_iteration ? bloomFBO->texture2() : blurFBOs[!horizontal]->texture();
         Renderer::drawMesh(mdd);;
         horizontal = !horizontal;
         if (first_iteration)
@@ -115,7 +115,7 @@ const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, con
     mdd.shader = bloomShader;
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
-    mdd.texture = sourceFrameBuffer->texture().get();
+    mdd.texture = sourceFrameBuffer->texture();
     // Index 0 is the last texturen written to, if the amount is even!
     blurFBOs[0]->texture()->bindAt(1);
     Renderer::drawMesh(mdd);

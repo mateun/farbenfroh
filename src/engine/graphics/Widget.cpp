@@ -6,6 +6,8 @@
 #include "Application.h"
 #include <engine/graphics/MeshDrawData.h>
 
+#include "ErrorHandling.h"
+
 class Application;
 
 extern std::shared_ptr<Application> getApplication();

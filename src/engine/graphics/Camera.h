@@ -22,21 +22,36 @@ enum class CameraType {
     OrthoGameplay,
 };
 
+
+
+
 class Camera {
 
 public:
 
     Camera(CameraType type = CameraType::Perspective);
+    //~Camera();
 
     std::vector<glm::vec3> getFrustumWorldCorners() const;
 
     float getMaxFrustumDiagonal();
     void addPostProcessEffect(PostProcessEffect* effect);
     std::vector<PostProcessEffect*> getPostProcessEffects() const;
-
     void setProjectionMetrics(float left, float right, float bottom, float top);
+    void setInitialForward(glm::vec3 fwd);
+    void follow(const std::shared_ptr<PositionProvider>& followedObject, glm::vec3 offset);
+    void updateFollow();
+    void updateLocation(glm::vec3 loc);
+    void updateLookupTarget(glm::vec3 t);
+    glm::mat4 getViewMatrix() const;
+    glm::vec3 getInitialFoward() const;
+    glm::vec3 getForward() const;
+    glm::vec3 getUp() const;
+    glm::vec3 getRight() const;
+    glm::vec4 frustumToWorld(glm::vec4 ndc) const;
+    glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) const;
+    void updateNearFar(float nearPlane, float farPlane);
 
-    CameraType type;
     glm::vec3 location;
     glm::vec3 lookAtTarget;
     glm::vec3 _initialForward;
@@ -55,31 +70,6 @@ public:
     float top_ = -1;
 
 
-    void setInitialForward(glm::vec3 fwd);
-
-
-    void follow(const std::shared_ptr<PositionProvider>& followedObject, glm::vec3 offset);
-
-    void updateFollow();
-
-    void updateLocation(glm::vec3 loc);
-
-    void updateLookupTarget(glm::vec3 t);
-
-    glm::mat4 getViewMatrix() const;
-
-    glm::vec3 getInitialFoward() const;
-
-    glm::vec3 getForward() const;
-    glm::vec3 getUp() const;
-    glm::vec3 getRight() const;
-
-    glm::vec4 frustumToWorld(glm::vec4 ndc) const;
-    glm::mat4 getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverride = std::nullopt, std::optional<float> fovOverride = 50.0f) const;
-
-    void updateNearFar(float nearPlane, float farPlane);
-
-
 private:
     // Can be used to debug draw the cameras frustum in world space,
     // e.g. for shadow mapping debugging.
@@ -91,7 +81,6 @@ private:
 
     std::vector<PostProcessEffect*> postProcessEffects;
 };
-
 
 
 

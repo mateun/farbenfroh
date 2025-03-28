@@ -27,8 +27,8 @@ public:
     glm::vec3 location = {0, 0, 0};
     glm::vec3 scale = {1, 1, 1};
     glm::vec3 rotationEulers = {0, 0, 0};
-    std::vector<glm::mat4> boneMatrices;
-    std::optional<glm::mat4> worldTransform;
+    std::vector<glm::mat4> boneMatrices = {};
+    std::optional<glm::mat4> worldTransform = {};
     std::shared_ptr<Mesh> mesh;
     std::shared_ptr<Shader> shader;
     // Gives the renderer the hint to change the viewport before the actual drawcall.
@@ -38,7 +38,7 @@ public:
     // x, y, width, height
     glm::vec4 viewport = glm::vec4(0, 0, 0, 0);
 
-    std::optional<glm::mat4> rotationMatrix;
+    std::optional<glm::mat4> rotationMatrix = {};
 
     // This is the camera through which a mesh is rendered.
     // Can also be used during shadow map (depth) rendering to allow for the shadow map
@@ -50,10 +50,10 @@ public:
     // This is the "camera" which renders the mesh into the shadow depth buffer.
     // We want to have both here as for the shadow map rendering we may try to fit the shadow map frustum
     // into the view frustum (provided by the actual viewing camera).
-    Camera* shadowMapCamera = nullptr;
+    std::shared_ptr<Camera> shadowMapCamera;
 
-    Texture* texture = nullptr;
-    Texture* normalMap = nullptr;
+    std::shared_ptr<Texture> texture;
+    std::shared_ptr<Texture> normalMap;
     glm::vec4 color = {1, 0, 1, 1}; // Nice magenta if we have no texture set.
     glm::vec4 tint = {1, 1,1,1};
     std::vector<Light*> directionalLights;

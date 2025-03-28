@@ -343,7 +343,7 @@ void Light::renderWorldFrustum(Camera *viewCamera, const Camera* originalFitting
 		uiCamera = new Camera();
 		uiCamera->location = {0, 0, 1};
 		uiCamera->lookAtTarget = {0, 0, -1};
-		uiCamera->type = CameraType::Ortho;
+		uiCamera->type_ = CameraType::Ortho;
 	}
 
 //	lightingOff();

@@ -9,8 +9,7 @@
 
 #include "Application.h"
 
-
-Camera::Camera(CameraType type): type(type) {
+Camera::Camera(CameraType type): type_(type) {
 }
 
 /**
@@ -131,15 +130,15 @@ glm::mat4 Camera::getProjectionMatrix(std::optional<glm::ivec2> widthHeightOverr
         fov = fovOverride.value();
     }
 
-    if (type == CameraType::Ortho) {
+    if (type_ == CameraType::Ortho) {
         return glm::ortho<float>(0, w, 0, h, nearPlane, farPlane);
     }
 
-    if (type == CameraType::OrthoGameplay) {
+    if (type_ == CameraType::OrthoGameplay) {
         return glm::ortho<float>(-10, 10, -8, 8, nearPlane, farPlane);
     }
 
-    if (type == CameraType::Perspective) {
+    if (type_ == CameraType::Perspective) {
         return glm::perspectiveFov<float>(glm::radians(fov), w, h, nearPlane, farPlane);
     }
     return glm::mat4(1.0f);

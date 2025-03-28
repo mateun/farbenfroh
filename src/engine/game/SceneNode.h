@@ -103,8 +103,8 @@ private:
     std::string id;
     std::shared_ptr<Mesh> mesh;
     std::shared_ptr<gru::ParticleSystem> particleSystem = nullptr;
-    Texture* texture = nullptr;
-    Texture* normalMap = nullptr;
+    std::shared_ptr<Texture> texture;
+    std::shared_ptr<Texture> normalMap;
     std::shared_ptr<Shader> shader;
     Camera* camera = nullptr;
     Light* light = nullptr;

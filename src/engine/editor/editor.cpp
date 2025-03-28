@@ -121,7 +121,7 @@ namespace editor {
             _meshViewerCamera = new Camera();
             _meshViewerCamera->location = {-2, 3, 6};
             _meshViewerCamera->lookAtTarget = {1, 1, 0};
-            _meshViewerCamera->type = CameraType::Perspective;
+            _meshViewerCamera->type_ = CameraType::Perspective;
         }
 
         return _meshViewerCamera;
@@ -258,7 +258,7 @@ namespace editor {
 
             // Draw the filled mesh
             MeshDrawData dd;
-            dd.mesh = importedMesh;
+            dd.mesh = std::shared_ptr<Mesh>(importedMesh);
             dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()};
             dd.location = {0, 0, 0};
             dd.camera = getMeshViewerCamera();
@@ -289,7 +289,7 @@ namespace editor {
 
                     if (finalPose) {
                         dd.skinnedDraw = true;
-                        dd.shader = skinnedMeshShader;
+                        dd.shader = std::shared_ptr<Shader>(skinnedMeshShader);
                         dd.boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(finalPose);
                         if (finalPose) {
                             delete finalPose;
@@ -313,7 +313,7 @@ namespace editor {
             else if (currentAnimation && !animationPlaying) {
                 auto finalPose = BoneMatrixCalculator().calculatePose(currentAnimation, importedMesh->skeleton, currentAnimation->currentDebugTimestamp);
                 dd.skinnedDraw = true;
-                dd.shader = skinnedMeshShader;
+                dd.shader = std::shared_ptr<Shader>(skinnedMeshShader);
                 dd.boneMatrices = BoneMatrixCalculator().calculateFinalSkinMatrices(finalPose);
                 if (finalPose) {
                     delete finalPose;
@@ -322,10 +322,10 @@ namespace editor {
             else if ((currentAnimation || blendedAnimations.size() == 2)  && animationPlaying) {
                 animationPlayer->update();
                 dd.skinnedDraw = true;
-                dd.shader = skinnedMeshShader;
+                dd.shader = std::shared_ptr<Shader>(skinnedMeshShader);
                 dd.boneMatrices = animationPlayer->getCurrentBoneMatrices();
             } else {
-                dd.shader = staticMeshShader;
+                dd.shader = std::shared_ptr<Shader>(staticMeshShader);
             }
             Renderer::drawMesh(dd);
 
@@ -359,11 +359,11 @@ namespace editor {
                          }
 
                         MeshDrawData dd;
-                        dd.mesh = assetLoader->getMesh("bone_mesh");
+                        dd.mesh = std::shared_ptr<Mesh>(assetLoader->getMesh("bone_mesh"));
                         dd.color = {0.7, 0.1, .1, 1};
                         dd.camera = getMeshViewerCamera();
                         dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()};
-                        dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
+                        dd.shader = std::shared_ptr<Shader>(staticMeshShader);       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
                         dd.worldTransform = finalTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
                         Renderer::drawMesh(dd);
@@ -410,11 +410,11 @@ namespace editor {
                 for (auto jointIndex = 0; jointIndex < importedMesh->ozzSkeleton->num_joints(); jointIndex++) {
 
                         MeshDrawData dd;
-                        dd.mesh = assetLoader->getMesh("bone_mesh");
+                        dd.mesh = std::shared_ptr<Mesh>(assetLoader->getMesh("bone_mesh"));
                         dd.color = {0.7, 0.1, .1, 1};
                         dd.camera = getMeshViewerCamera();
                         dd.viewPortDimensions = glm::ivec2{skeletalMeshWindowFrameBuffer->width(), skeletalMeshWindowFrameBuffer->height()};
-                        dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
+                        dd.shader = std::shared_ptr<Shader>(staticMeshShader);       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
                         glm::mat4 modelTransform;
                         std::memcpy(&modelTransform, &ltm_job.output[jointIndex], sizeof(glm::mat4));
                         dd.worldTransform = modelTransform;
@@ -800,7 +800,7 @@ namespace editor {
         Camera _uiCamera;
         _uiCamera.location = {0, 0, 1};
         _uiCamera.lookAtTarget = {0, 0, -1};
-        _uiCamera.type = CameraType::Ortho;
+        _uiCamera.type_ = CameraType::Ortho;
         using SF = StatefulRenderer;
         SF::bindTexture(nullptr);
         SF::bindCamera(&_uiCamera);

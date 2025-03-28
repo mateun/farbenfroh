@@ -15,6 +15,8 @@
 #include <engine/input/Input.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
+#include <iostream>
+#include <ostream>
 #include <engine/graphics/stb_truetype.h>
 
 #include "Renderer.h"
@@ -206,12 +208,12 @@ void Application::mainLoop() {
 	        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	        // We provide an ortho camera which represents the application window dimensions.
-	        render_backend_->setViewport(0,0, scaled_width(), scaled_height());
-	        auto camera = render_backend_->getOrthoCameraForViewport(0, 0, scaled_width(), scaled_height());
+	        //render_backend_->setViewport(0,0, scaled_width(), scaled_height());
+	        //auto camera = render_backend_->getOrthoCameraForViewport(0, 0, scaled_width(), scaled_height());
 	        topLevelWidget->draw();
             Renderer::submitDeferredWidgetCalls();
-	        // Finally present to the main framebuffer.
-	        SwapBuffers(hdc);
+	        // // Finally present to the main framebuffer.
+	         SwapBuffers(hdc);
 	    }
 	    performance_timer.stop();
 	    Timing::frameTimeSecs = performance_timer.durationInSeconds();
