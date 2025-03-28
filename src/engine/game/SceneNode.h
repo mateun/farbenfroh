@@ -101,11 +101,11 @@ private:
 
     // These are type specific fields and can be null
     std::string id;
-    Mesh* mesh = nullptr;
+    std::shared_ptr<Mesh> mesh;
     std::shared_ptr<gru::ParticleSystem> particleSystem = nullptr;
     Texture* texture = nullptr;
     Texture* normalMap = nullptr;
-    Shader* shader = nullptr;
+    std::shared_ptr<Shader> shader;
     Camera* camera = nullptr;
     Light* light = nullptr;
     MeshDrawData meshData;

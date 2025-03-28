@@ -34,6 +34,8 @@ public:
     void addPostProcessEffect(PostProcessEffect* effect);
     std::vector<PostProcessEffect*> getPostProcessEffects() const;
 
+    void setProjectionMetrics(float left, float right, float bottom, float top);
+
     CameraType type;
     glm::vec3 location;
     glm::vec3 lookAtTarget;
@@ -47,6 +49,10 @@ public:
     GLuint shadowPositionBuffer = 0;
     Shader* frustumShader = nullptr;
     CameraType type_;
+    float left_ = -1;
+    float right_= -1;
+    float bottom_ = -1;
+    float top_ = -1;
 
 
     void setInitialForward(glm::vec3 fwd);

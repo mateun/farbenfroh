@@ -208,6 +208,14 @@ void RenderBackend::initOpenGL() {
     glGetIntegerv(GL_SAMPLE_BUFFERS, &sampleBuffers);
     printf("MSAA: %d sample buffers, %d samples\n", sampleBuffers, samples);
 
+    ortho_camera_ = std::make_shared<Camera>(CameraType::Ortho);
+    ortho_camera_->updateLocation({0, 0, 2});
+    ortho_camera_->updateLookupTarget({0, 0, -1});
+
+    default_widget_shader_ = std::make_shared<Shader>();
+    default_widget_shader_->initFromFiles("../src/engine/graphics/shaders/textured_mesh.vert",
+        "../src/engine/graphics/shaders/textured_mesh.frag");
+
 }
 
 RenderBackend::RenderBackend(RenderBackendType type, HDC hdc, HWND hwnd, int width, int height) : hdc_(hdc), hwnd_(hwnd),
@@ -223,6 +231,10 @@ void RenderBackend::setViewport(int x, int y, int width, int height) {
     switch (type_) {
         case RenderBackendType::OpenGL: glViewport(x, y, width, height); break;
     }
+}
+
+std::shared_ptr<Shader> RenderBackend::getWidgetDefaultShader() {
+    return default_widget_shader_;
 }
 
 std::shared_ptr<Camera>  RenderBackend::getOrthoCameraForViewport(int origin_x, int origin_y, float x, float y) {

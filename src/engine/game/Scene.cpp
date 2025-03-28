@@ -290,10 +290,10 @@ void Scene::render() const {
                 dd.location = m->getHierarchicalWorldLocation(m->_location);
                 dd.scale = m->_scale;
                 dd.color == m->foregroundColor;
-                dd.shader = shadowMapShader.get();
+                dd.shader = shadowMapShader;
                 auto worldOrientation = m->getWorldOrientation();
                 dd.rotationEulers = degrees(eulerAngles(worldOrientation));
-                dd.mesh = m->mesh;
+                dd.mesh = std::shared_ptr<Mesh>(m->mesh);
                 dd.viewPortDimensions = {l->light->shadowMapFBO->width(), l->light->shadowMapFBO->height()};
                 dd.directionalLights.push_back(l->light);
                 if (m->skinnedMesh) {
@@ -386,11 +386,11 @@ void Scene::render() const {
         auto worldOrientation = m->getWorldOrientation();
         mdd.rotationEulers = degrees(eulerAngles(worldOrientation));
 
-        mdd.mesh = m->mesh;
+        mdd.mesh = std::shared_ptr<Mesh>(m->mesh);
         mdd.tint = m->meshData.tint;
         mdd.texture = m->texture;
         mdd.normalMap = m->normalMap;
-        mdd.shader = m->shader;
+        mdd.shader = std::shared_ptr<Shader>(m->shader);
         mdd.uvPan = m->meshData.uvPan;
         mdd.uvScale = m->uvScale;
         mdd.normalUVScale2 = m->meshData.normalUVScale2;
@@ -416,7 +416,7 @@ void Scene::render() const {
         if (m->_type == SceneNodeType::ParticleSystem) {
             m->particleSystem->render(activeCamera);
         } else {
-            Renderer::getInstance()->drawMesh(mdd);
+            Renderer::drawMesh(mdd);
         }
 
 
@@ -435,18 +435,15 @@ void Scene::render() const {
             currentFB = pp->apply(currentFB, uiCamera.get());
         }
 
-
-
-
         StatefulRenderer::activateFrameBuffer(nullptr);
         MeshDrawData mdd;
         mdd.camera = uiCamera.get();
-        mdd.mesh = quadMesh.get();
-        mdd.shader = quadShader.get();
+        mdd.mesh = quadMesh;
+        mdd.shader = quadShader;
         mdd.location = { getApplication()->scaled_width()/2, getApplication()->scaled_height()/2, -5};
         mdd.scale = { getApplication()->scaled_width(), getApplication()->scaled_height(), 1};
         mdd.texture = currentFB->texture().get();
-        Renderer::getInstance()->drawMesh(mdd);
+        Renderer::drawMesh(mdd);
 
 
     }

@@ -19,6 +19,6 @@ GameEditor::GameEditor(int width, int height, bool fullscreen) : Application(wid
  * Here we create our actual editor widgets
  */
 void GameEditor::onCreated() {
-    setTopLevelWidget(std::make_shared<EmptyContainer>());
+    setTopLevelWidget(std::make_shared<Widget>());
 
 }

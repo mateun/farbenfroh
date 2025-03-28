@@ -4,7 +4,10 @@
 
 #include "Application.h"
 
+#include <ranges>
+
 #include <engine/profiling/PerformanceTimer.h>
+#include <engine/graphics/MeshDrawData.h>
 #include <GL/glew.h>
 #include "RenderBackend.h"
 #include "Widget.h"
@@ -13,6 +16,8 @@
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <engine/graphics/stb_truetype.h>
+
+#include "Renderer.h"
 
 // This function must be provided by any Application implementor.
 extern std::shared_ptr<Application> getApplication();
@@ -174,7 +179,7 @@ void Application::setTopLevelWidget(const std::shared_ptr<Widget>& widget) {
 
     // The top level widget is always the full application window size.
     // Further down the hierarchy, e.g. splitted windows have smaller sizes.
-    topLevelWidget->resize(width, height);
+    topLevelWidget->setSize({width, height});
 }
 
 void Application::mainLoop() {
@@ -203,7 +208,9 @@ void Application::mainLoop() {
 	        // We provide an ortho camera which represents the application window dimensions.
 	        render_backend_->setViewport(0,0, scaled_width(), scaled_height());
 	        auto camera = render_backend_->getOrthoCameraForViewport(0, 0, scaled_width(), scaled_height());
-	        topLevelWidget->draw(camera.get());
+	        topLevelWidget->draw();
+            Renderer::submitDeferredWidgetCalls();
+	        // Finally present to the main framebuffer.
 	        SwapBuffers(hdc);
 	    }
 	    performance_timer.stop();

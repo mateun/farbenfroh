@@ -327,12 +327,12 @@ namespace editor {
             } else {
                 dd.shader = staticMeshShader;
             }
-            Renderer::getInstance()->drawMesh(dd);
+            Renderer::drawMesh(dd);
 
             // Now draw the wireframe version
             StatefulRenderer::wireframeOn();
             dd.color = glm::vec4(0, 0, 1, 1);
-            Renderer::getInstance()->drawMesh(dd);
+            Renderer::drawMesh(dd);
             StatefulRenderer::wireframeOff();
 
 
@@ -366,7 +366,7 @@ namespace editor {
                         dd.shader = staticMeshShader;       // We can use the static mesh shader here, as the bones themselves are not skeletal animated.
                         dd.worldTransform = finalTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
-                        Renderer::getInstance()->drawMesh(dd);
+                        Renderer::drawMesh(dd);
                     }
 
                 }
@@ -419,7 +419,7 @@ namespace editor {
                         std::memcpy(&modelTransform, &ltm_job.output[jointIndex], sizeof(glm::mat4));
                         dd.worldTransform = modelTransform;
                         dd.depthTest = false;               // We want to see the bones always, otherwise they would be hidden by the mesh itself.
-                        Renderer::getInstance()->drawMesh(dd);
+                        Renderer::drawMesh(dd);
                     }
 
                 }

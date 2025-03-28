@@ -24,16 +24,16 @@ const FrameBuffer* GammaCorrectionEffect::apply(const FrameBuffer *sourceFrameBu
     float scaled_width = getApplication()->scaled_width();
     float scaled_height = getApplication()->scaled_height();
     MeshDrawData mdd;
-    mdd.mesh = quadMesh.get();
+    mdd.mesh = quadMesh;
     mdd.camera = camera;
     mdd.location = { scaled_width/2, scaled_height/2, -1};
     mdd.scale = { scaled_width, scaled_height, 1};
     mdd.texture = sourceFrameBuffer->texture().get();
-    mdd.shader = gammaCorrectionShader;
+    mdd.shader = std::shared_ptr<Shader>(gammaCorrectionShader);
     StatefulRenderer::activateFrameBuffer( effectFrameBuffer.get());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    Renderer::getInstance()->drawMesh(mdd);
+    Renderer::drawMesh(mdd);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     return effectFrameBuffer.get();
 
@@ -42,11 +42,11 @@ const FrameBuffer* GammaCorrectionEffect::apply(const FrameBuffer *sourceFrameBu
 BloomEffect::BloomEffect() {
     float scaled_width = getApplication()->scaled_width();
     float scaled_height = getApplication()->scaled_height();
-    bloomShader = new Shader();
+    bloomShader = std::make_shared<Shader>();
     bloomShader->initFromFiles("../src/engine/fx/shaders/bloom.vert", "../src/engine/fx/shaders/bloom.frag");
-    quadShader = new Shader();
+    quadShader = std::make_shared<Shader>();
     quadShader->initFromFiles("../src/engine/fx/shaders/quad.vert", "../src/engine/fx/shaders/quad.frag");
-    gaussShader = new Shader();
+    gaussShader = std::make_shared<Shader>();
     gaussShader->initFromFiles("../src/engine/fx/shaders/gauss.vert", "../src/engine/fx/shaders/gauss.frag");
     using SF = StatefulRenderer;
     effectFrameBuffer = SF::createFrameBuffer(scaled_width, scaled_height, true);
@@ -68,19 +68,19 @@ const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, con
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     MeshDrawData mdd;
     mdd.camera = camera;
-    mdd.mesh = quadMesh.get();
+    mdd.mesh = quadMesh;
     mdd.shader = quadShader;
     float scaled_width = getApplication()->scaled_width();
     float scaled_height = getApplication()->scaled_height();
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
     mdd.texture = sourceFrameBuffer->texture().get();
-    Renderer::getInstance()->drawMesh(mdd);
+    Renderer::drawMesh(mdd);
 
     // Step 2: Do a gaussian blur on the brightness Framebuffer.
     // We alternate between horizontal and vertical blurs.
     mdd.camera = camera;
-    mdd.mesh = quadMesh.get();
+    mdd.mesh = quadMesh;
     mdd.shader = gaussShader;
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
@@ -99,7 +99,7 @@ const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, con
         StatefulRenderer::activateFrameBuffer(blurFBOs[horizontal].get());
         gaussShader->setIntValue(horizontal, "horizontal");
         mdd.texture = first_iteration ? bloomFBO->texture2().get() : blurFBOs[!horizontal]->texture().get();
-        Renderer::getInstance()->drawMesh(mdd);;
+        Renderer::drawMesh(mdd);;
         horizontal = !horizontal;
         if (first_iteration)
             first_iteration = false;
@@ -111,14 +111,14 @@ const FrameBuffer*  BloomEffect::apply(const FrameBuffer *sourceFrameBuffer, con
     StatefulRenderer::activateFrameBuffer(effectFrameBuffer.get());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    mdd.mesh = quadMesh.get();
+    mdd.mesh = quadMesh;
     mdd.shader = bloomShader;
     mdd.location = { scaled_width/2, scaled_height/2, -5};
     mdd.scale = { scaled_width, scaled_height, 1};
     mdd.texture = sourceFrameBuffer->texture().get();
     // Index 0 is the last texturen written to, if the amount is even!
     blurFBOs[0]->texture()->bindAt(1);
-    Renderer::getInstance()->drawMesh(mdd);
+    Renderer::drawMesh(mdd);
 
     return effectFrameBuffer.get();
 

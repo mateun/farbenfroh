@@ -20,7 +20,8 @@ EditorLauncher::EditorLauncher(int width, int height, bool fullscreen) : Applica
 void EditorLauncher::onCreated() {
 
     auto vboxLayout = std::make_unique<VBoxLayout>();
-    auto leftVBox = std::make_shared<Container>(std::move(vboxLayout));
+    auto leftVBox = std::make_shared<Widget>();
+    leftVBox->setLayout(std::move(vboxLayout));
 
     std::shared_ptr<TrueTypeFont> fontConsola = std::make_shared<TrueTypeFont>("../assets/consola.ttf", 16);
     auto lblProjects = std::make_shared<LabelWidget>("Projects", fontConsola);

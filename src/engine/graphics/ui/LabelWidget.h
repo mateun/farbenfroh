@@ -15,8 +15,11 @@ class LabelWidget : public Widget {
 
 public:
     LabelWidget(const std::string & text, const std::shared_ptr<TrueTypeFont> & font);
-    void draw(Camera* camera) override;
+    void draw() override;
     void setText(const std::string & text);
+    glm::vec2 getPreferredSize() override;
+    glm::vec2 getMinSize() override;
+    glm::vec2 getMaxSize() override;
 
 private:
     std::string text_;

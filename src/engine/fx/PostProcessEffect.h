@@ -18,8 +18,8 @@ public:
     virtual const FrameBuffer* apply(const FrameBuffer* sourceFrameBuffer, const Camera* camera) = 0;
 
 protected:
-    std::unique_ptr<Mesh> quadMesh;
-    std::unique_ptr<FrameBuffer> effectFrameBuffer;
+    std::shared_ptr<Mesh> quadMesh;
+    std::shared_ptr<FrameBuffer> effectFrameBuffer;
 };
 
 class GammaCorrectionEffect : public PostProcessEffect {
@@ -38,10 +38,10 @@ public:
     const FrameBuffer* apply(const FrameBuffer *sourceFrameBuffer, const Camera* camera) override;
 
 private:
-    Shader* bloomShader = nullptr;
-    Shader * quadShader = nullptr;
-    Shader * gaussShader = nullptr;
-    std::unique_ptr<FrameBuffer> bloomFBO = nullptr;
+    std::shared_ptr<Shader> bloomShader;
+    std::shared_ptr<Shader> quadShader;
+    std::shared_ptr<Shader> gaussShader;
+    std::shared_ptr<FrameBuffer> bloomFBO = nullptr;
     std::vector<std::unique_ptr<FrameBuffer>> blurFBOs;
 };
 

@@ -3,6 +3,7 @@
 //
 
 #include "Renderer.h"
+#include <ranges>
 #include <GL\glew.h>
 #include <engine/graphics/Camera.h>
 #include <engine/graphics/Bitmap.h>
@@ -14,19 +15,12 @@
 
 #include "StatefulRenderer.h"
 
-Renderer * Renderer::getInstance() {
-    // if (!instance_) {
-    //     instance_ = new Renderer();
-    // }
-    //
-    // return instance_;
-    return nullptr;
-}
 
 void Renderer::drawMesh(const MeshDrawData &drawData) {
     glBindVertexArray(drawData.mesh->vao);
     GL_ERROR_EXIT(123434);
     drawData.shader->bind();
+    GL_ERROR_EXIT(1234341);
 
     if (drawData.texture) {
         drawData.texture->bindAt(0);
@@ -117,11 +111,11 @@ void Renderer::drawMesh(const MeshDrawData &drawData) {
             drawData.shader->setMat4Value(matworld, "mat_world");
 
         }
-        drawData.shader->setMat4Value(drawData.camera->getViewMatrix(), "mat_view");
-        drawData.shader->setMat4Value(drawData.camera->getProjectionMatrix(drawData.viewPortDimensions), "mat_projection");
+        drawData.shader->setMat4Value(drawData.camera_shared->getViewMatrix(), "mat_view");
+        drawData.shader->setMat4Value(drawData.camera_shared->getProjectionMatrix(drawData.viewPortDimensions), "mat_projection");
 
-        drawData.shader->setVec3Value(drawData.camera->getUp(), "cameraUp");
-        drawData.shader->setVec3Value(drawData.camera->getRight(), "cameraRight");
+        drawData.shader->setVec3Value(drawData.camera_shared->getUp(), "cameraUp");
+        drawData.shader->setVec3Value(drawData.camera_shared->getRight(), "cameraRight");
 
     }
     GL_ERROR_EXIT(9930);
@@ -162,6 +156,11 @@ void Renderer::drawMesh(const MeshDrawData &drawData) {
         }, shaderParam.value);
     }
 
+    // Check to see if we must set a specific viewport and/or scissor rect:
+    if (drawData.setViewport) {
+        glViewport(drawData.viewport.x, drawData.viewport.y, drawData.viewport.z, drawData.viewport.w);
+    }
+
     if (drawData.instanceCount > 0) {
         //glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, drawData.instanceCount);
         glDrawElementsInstanced(GL_TRIANGLES, drawData.mesh->indices.size(), GL_UNSIGNED_INT, nullptr, drawData.instanceCount );
@@ -177,7 +176,43 @@ void Renderer::drawMesh(const MeshDrawData &drawData) {
     }
     glBindVertexArray(0);
 
+    if (drawData.setViewport) {
+        glViewport(0, 0, getApplication()->scaled_width(), getApplication()->scaled_height());
+    }
 
+}
+
+
+
+/**
+ * This method collects and interprets the incoming widget drawing command
+ * but does not immediately call GL to render the mesh.
+ * It does collect the drawData in a list to formulate batched drawing call
+ * efficiently later.
+ *
+ * @param mdd The draw data on which to base the draw call on.
+ */
+void Renderer::drawWidgetMeshDeferred(const MeshDrawData &mdd, const Widget * widget) {
+    batchedDrawData_[widget] = mdd;
+}
+
+void Renderer::submitDeferredWidgetCalls() {
+    // TODO sort the drawData items
+    // by useful criteria, e.g. the texture.
+    // Then we can collect all mesh positions and uvs and
+    // put them into one big vbo.
+    // Attention: the drawData items (in terms of location) are
+    // all in relation to the respective widgets child space.
+    // So to actually calculate the correct world space location we would need
+    // to walk the complete widget graph.
+
+    for (auto mdd: batchedDrawData_ | std::views::values) {
+        // TODO temp: for now just call the imm. interface:
+        drawMesh(mdd);
+    }
+    // TODO: this fails!!
+    ---
+    batchedDrawData_.clear();
 }
 
 /**

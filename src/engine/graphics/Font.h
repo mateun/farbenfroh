@@ -37,9 +37,9 @@ public:
     void drawBitmap(int posx, int posy, Bitmap *bitmap);
 
 private:
-    std::unique_ptr<Texture> texture = nullptr;
-    std::unique_ptr<Bitmap> bitmap = nullptr;
-    std::unique_ptr<Mesh> quadMesh = nullptr;
+    std::shared_ptr<Texture> texture = nullptr;
+    std::shared_ptr<Bitmap> bitmap = nullptr;
+    std::shared_ptr<Mesh> quadMesh = nullptr;
 };
 
 

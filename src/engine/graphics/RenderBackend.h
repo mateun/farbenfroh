@@ -24,6 +24,7 @@ public:
     RenderBackend(RenderBackendType type, HDC hdc, HWND hwnd, int width, int height);
     void setViewport(int x, int y, int width, int height);
 
+    std::shared_ptr<Shader> getWidgetDefaultShader();
     std::shared_ptr<Camera> getOrthoCameraForViewport(int origin_x, int origin_y, float x, float y);
 
 private:
@@ -35,6 +36,9 @@ private:
     int width_;
     int height_;
     RenderBackendType type_;
+
+    std::shared_ptr<Camera> ortho_camera_;
+    std::shared_ptr<Shader> default_widget_shader_;
 };
 
 

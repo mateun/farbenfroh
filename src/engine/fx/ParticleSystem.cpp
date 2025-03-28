@@ -272,16 +272,16 @@ void gru::ParticleEmitter::draw(const Camera* camera) const {
     MeshDrawData mdd;
     mdd.location = location;
     // TODO orientation?!
-    mdd.mesh = mesh.get();
+    mdd.mesh = mesh;
     mdd.texture = texture.get();
-    mdd.shader = particleShader.get();
+    mdd.shader = particleShader;
 
     mdd.camera = camera;
     mdd.instanceCount = numParticles;
     computeShader->bindSSBO(particleSSBO);
 
     glDepthMask(GL_FALSE);
-    Renderer::getInstance()->drawMesh(mdd);
+    Renderer::drawMesh(mdd);
     glDepthMask(GL_TRUE);
 
 

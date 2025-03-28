@@ -11,32 +11,111 @@
 #include <engine/graphics/Camera.h>
 
 
+class MeshDrawData;
+class Layout;
+
 /**
 * This is the top level ui element.
 * Applications contain exactly one top level widget.
+* A widget may have children.
+* Layouts allow for automatic placement of child widgets.
+* Without a layout, the creator/owner of the widget must set origin and size.
+* Otherwise the layout takes care of this.
 */
 class Widget {
 
 public:
-    virtual void draw(Camera* camera) = 0;
-    void resize(int w, int h);
-    void setOrigin(int x, int y);
-    bool isContainer();
 
+    Widget();
+
+    /**
+    * This method allows the widget to draw its visual representation.
+    * The caller is responsible to have called "setSize" beforehand so the widget knows how large it is.
+    *
+    * Please note that the widget normally does NOT immediately draw itself, but provides a list of
+    * MeshDrawData objects which describe what the widget wants to draw.
+    * This is mainly for performance reasons as it allows the framework to batch the resulting
+    * draw commands more efficiently.
+    */
+    virtual void draw();
+
+
+    /**
+    * Adds a child widget to the hierarchy.
+    */
+    void addChild(std::shared_ptr<Widget> child);
+
+
+    /**
+    * This is normally only called by a parent widget or layout.
+    * Only they can know where this widget should be placed.
+    */
+    void setOrigin(glm::vec2 origin);
+
+    /**
+    * Retrieve the origin of this widget in parent space.
+    */
     glm::vec2 origin() const;
 
+    /**
+    * This is normally only called by a parent or layout.
+    * Only items which are above this widget can know where it
+    * should be placed and how large it should be.
+    */
+    void setSize(glm::vec2 size);
+
+    /**
+    * Retrieve the size of this widget (width, height).
+    */
+    glm::vec2 size() const;
+
+
+    /**
+    * Get the list of all children.
+    */
+    std::vector<std::shared_ptr<Widget>> children() const;
+
+
+    /**
+    * This allows the widget to communicate the dim
+    */
+    virtual glm::vec2 getPreferredSize();
+
+    /**
+    * Retrieve the minimum size this widget is allowed to have.
+    * The parent layout is not allowed to crop below this.
+    */
+    virtual glm::vec2 getMinSize();
+
+    /**
+    * Retrieve the largest extent this widget ever wants to have.
+    */
+    virtual glm::vec2 getMaxSize();
+
+
+    void setLayout(std::unique_ptr<Layout> layout);
+
+
 protected:
-    int width = 0;
-    int height = 0;
-    int origin_x = 0;
-    int origin_y = 0;
+    // This is the location in parent-space.
+    // For the widget itself this is normally not "interesting",
+    // as for its own drawing purposes it always assumes a (0,0) origin
+    // in its own space.
+    // We store the origin here nonetheless so the widget can be asked by its parent
+    // or layout manager where it actually is located.
+    glm::vec2 origin_;
 
-    std::shared_ptr<Camera> getCamera();
-    std::shared_ptr<Shader> getDefaultWidgetShader();
+    // The width and height of this widget.
+    // This should never be set by the widget itself, but by some parent or
+    // layout in the hierarchy above it.
+    // The reason is the layouting only makes sense when knowing all the participating
+    // widgets for a certain area, the widget itself could never position and size itself correctly.
+    // The dimension is though important for self drawing, as it gives the widget the information how big it actually is.
+    glm::vec2 size_;
 
-private:
-    std::shared_ptr<Camera> camera_;
-    std::shared_ptr<Shader> default_widget_shader_;
+    std::vector<std::shared_ptr<Widget>> children_;
+    std::unique_ptr<Layout> layout_;
+
 
 };
 
@@ -47,33 +126,13 @@ class Container;
 */
 class Layout {
 public:
-    virtual glm::vec2 calculateChildSize(const Container* parent, const Widget* child);
-    virtual glm::vec2 calculateChildOrigin(const Container* parent, const Widget* child);
+
+    virtual void apply(Widget* target) = 0;
 };
 
 class VBoxLayout : public Layout {
 public:
-    glm::vec2 calculateChildOrigin(const Container *parent, const Widget *child) override;
-    glm::vec2 calculateChildSize(const Container *parent, const Widget *child) override;
-};
-
-class Container : public Widget {
-
-  public:
-    Container(std::unique_ptr<Layout> layout);
-    void addChild(std::shared_ptr<Widget> child);
-    void draw(Camera* camera) override;
-    void setSize(int width, int height);
-    std::vector<std::shared_ptr<Widget>> children() const;
-
-private:
-    std::vector<std::shared_ptr<Widget>> children_;
-    std::unique_ptr<Layout> layout_;
-};
-
-class EmptyContainer : public Widget {
-public:
-    void draw(Camera* camera) override;
+    void apply(Widget* target) override;
 };
 
 

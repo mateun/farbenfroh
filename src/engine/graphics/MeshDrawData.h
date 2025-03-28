@@ -29,8 +29,14 @@ public:
     glm::vec3 rotationEulers = {0, 0, 0};
     std::vector<glm::mat4> boneMatrices;
     std::optional<glm::mat4> worldTransform;
-    Mesh* mesh = nullptr;
-    Shader* shader = nullptr;
+    std::shared_ptr<Mesh> mesh;
+    std::shared_ptr<Shader> shader;
+    // Gives the renderer the hint to change the viewport before the actual drawcall.
+    // Should set the viewport member then as well!
+    bool setViewport = false;
+
+    // x, y, width, height
+    glm::vec4 viewport = glm::vec4(0, 0, 0, 0);
 
     std::optional<glm::mat4> rotationMatrix;
 
@@ -38,6 +44,8 @@ public:
     // Can also be used during shadow map (depth) rendering to allow for the shadow map
     // frustum to be fit inside the view frustum tightly.
     const Camera* camera = nullptr;
+
+    std::shared_ptr<Camera> camera_shared;
 
     // This is the "camera" which renders the mesh into the shadow depth buffer.
     // We want to have both here as for the shadow map rendering we may try to fit the shadow map frustum

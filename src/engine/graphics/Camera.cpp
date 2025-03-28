@@ -51,6 +51,13 @@ std::vector<PostProcessEffect *> Camera::getPostProcessEffects() const {
     return postProcessEffects;
 }
 
+void Camera::setProjectionMetrics(float left, float right, float bottom, float top) {
+    left_ = left;
+    right_ = right;
+    bottom_ = bottom;
+    top_ = top;
+}
+
 
 void Camera::setInitialForward(glm::vec3 fwd) {
     _initialForward = fwd;

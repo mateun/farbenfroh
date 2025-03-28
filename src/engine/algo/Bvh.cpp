@@ -248,8 +248,8 @@
 
         MeshDrawData mdd;
         mdd.camera = camera;
-        mdd.mesh = getCubeMesh();
-        mdd.shader = getShader();
+        mdd.mesh = std::shared_ptr<Mesh>(getCubeMesh());
+        mdd.shader = std::shared_ptr<Shader>(getShader());
 
         // We need to calculate an offset to add to our AABB.
         // The model might not be symmetrical, but our unit cube is.

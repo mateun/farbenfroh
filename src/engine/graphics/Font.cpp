@@ -75,7 +75,7 @@ void FBFont::updateAndDrawText(const char *text, int screenPosX, int screenPosY,
 
     mdd.location = glm::vec3{static_cast<float>(screenPosX), static_cast<float>(screenPosY), screenPosZ};
     mdd.texture = texture.get();
-	mdd.mesh = quadMesh.get();
+	mdd.mesh = quadMesh;
     Renderer::drawMesh(mdd);
 
 

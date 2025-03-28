@@ -64,11 +64,11 @@ private:
     std::shared_ptr<FrameBuffer> raytracedShadowPositionFBO = nullptr;
     std::shared_ptr<FrameBuffer> fullScreenFBO = nullptr;
 
-    std::unique_ptr<Shader> worldPosShader = nullptr;
-    std::unique_ptr<Shader> shadowMapShader = nullptr;
-    std::unique_ptr<Shader> quadShader = nullptr;
+    std::shared_ptr<Shader> worldPosShader = nullptr;
+    std::shared_ptr<Shader> shadowMapShader = nullptr;
+    std::shared_ptr<Shader> quadShader = nullptr;
 
-    std::unique_ptr<Mesh> quadMesh = nullptr;
+    std::shared_ptr<Mesh> quadMesh = nullptr;
 
 };
 
