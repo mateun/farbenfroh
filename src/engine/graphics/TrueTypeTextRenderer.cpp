@@ -34,6 +34,27 @@ TrueTypeTextRenderer::TrueTypeTextRenderer(const std::shared_ptr<TrueTypeFont>& 
 
 }
 
+glm::vec2 TrueTypeTextRenderer::calculateTextDimension(const std::string& text) {
+    float minX =  std::numeric_limits<float>::max();
+    float maxX = -std::numeric_limits<float>::max();
+    float minY =  std::numeric_limits<float>::max();
+    float maxY = -std::numeric_limits<float>::max();
+
+    float x = 0, y = 0;
+    for (auto c : text) {
+        auto q = font_->getBakedQuad(c, &x, &y);
+
+        // Track min/max for bounding box
+        if (q.x0 < minX) minX = q.x0;
+        if (q.y0 < minY) minY = q.y0;
+        if (q.x1 > maxX) maxX = q.x1;
+        if (q.y1 > maxY) maxY = q.y1;
+
+    }
+    return {abs(maxX - minX),abs(maxY - minY)};
+
+}
+
 std::shared_ptr<Mesh> TrueTypeTextRenderer::renderText(const std::string &text, glm::vec2* textDimensions) {
     glBindVertexArray(vao);
     std::vector<glm::vec3> positions;

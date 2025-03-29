@@ -19,6 +19,7 @@
 #include <ostream>
 #include <engine/graphics/stb_truetype.h>
 
+#include "FrameMessageSubscriber.h"
 #include "Renderer.h"
 
 // This function must be provided by any Application implementor.
@@ -70,6 +71,10 @@ bool Application::changeResolution(int width, int height, int refreshRate, const
     //  and just stay with the bordered window.
     return true;
 
+}
+
+std::vector<MSG> Application::getLastMessages() {
+    return frame_messages;
 }
 
 
@@ -154,6 +159,10 @@ RenderBackend * Application::getRenderBackend() const {
     return render_backend_.get();
 }
 
+void Application::addMessageSubscriber(std::shared_ptr<FrameMessageSubscriber> subscriber) {
+    messageSubscribers.push_back(subscriber);
+}
+
 int Application::scaled_width() {
     return scaled_width_;
 }
@@ -193,16 +202,23 @@ void Application::mainLoop() {
 
     PerformanceTimer performance_timer;
 	MSG msg;
+
 	while (running) {
 	    performance_timer.start();
+	    frame_messages.clear();
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) > 0) {
             if (msg.message == WM_QUIT) {
                 running = false;
             }
+            frame_messages.push_back(msg);
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
 
+	    // Send raw frame messages to all subscribers:
+	    for (auto& msgSub : messageSubscribers) {
+	        msgSub->onFrameMessages(frame_messages);
+	    }
 
 	    if (topLevelWidget) {
 	        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

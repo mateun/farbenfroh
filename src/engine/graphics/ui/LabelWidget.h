@@ -16,16 +16,20 @@ class LabelWidget : public Widget {
 public:
     LabelWidget(const std::string & text, const std::shared_ptr<TrueTypeFont> & font);
     void draw() override;
-    void setText(const std::string & text);
     glm::vec2 getPreferredSize() override;
     glm::vec2 getMinSize() override;
     glm::vec2 getMaxSize() override;
+
+    // Label specific properties
+    void setText(const std::string & text);
+
 
 private:
     std::string text_;
     std::unique_ptr<Mesh> quadMesh;
     std::shared_ptr<TrueTypeTextRenderer> textRenderer_;
     std::shared_ptr<TrueTypeFont> font_;
+
 };
 
 

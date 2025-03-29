@@ -34,10 +34,9 @@ void VBoxLayout::apply(Widget *target) {
 
         // Assign the positions from top to bottom
         float topY = target->size().y;
-        float margin = 5;
         int counter = 0;
         for (auto c : target->children()) {
-            c->setOrigin({margin, topY - margin - (counter * c->getPreferredSize().y)});
+            c->setOrigin({margin_horizontal_, topY - margin_vertical_ - (counter *  c->getPreferredSize().y)});
             counter++;
         }
     }
@@ -62,13 +61,20 @@ void VBoxLayout::apply(Widget *target) {
             }
 
             float topY = target->size().y;
-            float marginH = 5;
             int counter = 0;
             for (auto c : target->children()) {
-                c->setOrigin({marginH, topY - (counter * c->getMinSize().y)});
+                c->setOrigin({margin_horizontal_, topY - margin_vertical_ - (counter * c->getMinSize().y)});
                 counter++;
             }
         }
     }
 
+}
+
+void VBoxLayout::setMarginHorizontal(int margin) {
+    margin_horizontal_ = margin;
+}
+
+void VBoxLayout::setMarginVertical(int margin) {
+    margin_vertical_ = margin;
 }

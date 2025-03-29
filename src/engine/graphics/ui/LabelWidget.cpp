@@ -35,7 +35,7 @@ void LabelWidget::draw() {
     mdd.setViewport = true;
     mdd.viewport = {origin_.x,  origin_.y - size_.y, size_.x, size_.y};
     mdd.texture = font_->getAtlas();
-    mdd.location = {2, 10, -1};
+    mdd.location = {0, abs(dim1.y), -1};
     mdd.scale = {1, 1, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
@@ -46,17 +46,17 @@ void LabelWidget::setText(const std::string &text) {
 }
 
 glm::vec2 LabelWidget::getPreferredSize() {
-    // TODO make dependent on the text size
-    return {200, 50};
+    auto textSize = textRenderer_->calculateTextDimension(text_);
+    return {textSize.x, textSize.y * 3};
 }
 
 glm::vec2 LabelWidget::getMinSize() {
-    // TODO make dep. on text
-    return {80, 50};
+    return getPreferredSize();
 }
 
 glm::vec2 LabelWidget::getMaxSize() {
-    // TODO make dep. on text
-    return {300, 50};
+    auto dim = textRenderer_->calculateTextDimension(text_);
+    return {dim.x + 20, dim.y + 20};
 }
+
 

@@ -27,6 +27,18 @@ class TrueTypeTextRenderer {
     // To render the actual text you need to render this mesh
     // and provide the atlasTexture (see getFontAtlas()).
     std::shared_ptr<Mesh> renderText(const std::string& text, glm::vec2* textDimensions);
+
+    /**
+    * Returns a vec2 containing width and height of the given text with the current font of this
+    * TrueTypeTextRenderer
+    */
+    glm::vec2 calculateTextDimension(const std::string& text);
+
+    /**
+    * Returns the atlas texture which holds 96 glyphs for the given font in the desired size.
+    * This texture should be passed when rendering the text as the UVs for the glyph quad
+    * reference into this atlas texture.
+    */
     std::shared_ptr<Texture> getFontAtlas();
 
 private:

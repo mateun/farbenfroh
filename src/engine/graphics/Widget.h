@@ -14,6 +14,18 @@
 class MeshDrawData;
 class Layout;
 
+enum class MessageType {
+    KeyUp,
+    KeyDown,
+    MouseMove,
+    MouseUp,
+    MouseDown,
+};
+
+class UIMessage {
+
+};
+
 /**
 * This is the top level ui element.
 * Applications contain exactly one top level widget.
@@ -25,8 +37,14 @@ class Layout;
 class Widget {
 
 public:
-
     Widget();
+    virtual ~Widget() = default;
+
+    /**
+    * Widgets can get messages regarding mouse movement, mouse clicks,
+    * keyboard events etc.
+    */
+    virtual void onMessage(const UIMessage& message);
 
     /**
     * This method allows the widget to draw its visual representation.
@@ -133,6 +151,13 @@ public:
 class VBoxLayout : public Layout {
 public:
     void apply(Widget* target) override;
+
+    void setMarginHorizontal(int margin);
+    void setMarginVertical(int margin);
+
+private:
+    int margin_horizontal_ = 4;
+    int margin_vertical_ = 12;
 };
 
 

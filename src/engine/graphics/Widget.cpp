@@ -34,7 +34,10 @@ glm::vec2 Widget::size() const {
 
 Widget::Widget() {
 
+}
 
+
+void Widget::onMessage(const UIMessage &message) {
 }
 
 void Widget::draw() {
