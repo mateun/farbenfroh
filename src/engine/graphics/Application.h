@@ -11,7 +11,8 @@
 #include "RenderBackend.h"
 
 class Widget;
-class  FrameMessageSubscriber;
+class FrameMessageSubscriber;
+class RawWin32Message;
 
 class Application {
   public:
@@ -22,7 +23,7 @@ class Application {
     int run();
 
     bool changeResolution(int width, int height, int refreshRate, const std::string &deviceName, bool goFullscreen);
-    std::vector<MSG> getLastMessages();
+    std::vector<RawWin32Message> getLastMessages();
 
     RenderBackend* getRenderBackend() const;
 
@@ -51,7 +52,7 @@ private:
     std::unique_ptr<RenderBackend> render_backend_;
     int scaled_width_ = -1;
     int scaled_height_ = -1;
-    std::vector<MSG> frame_messages;
+    std::vector<RawWin32Message> frame_messages_;
     std::vector<std::shared_ptr<FrameMessageSubscriber>> messageSubscribers;
 };
 

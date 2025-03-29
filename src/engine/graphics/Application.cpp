@@ -14,13 +14,18 @@
 #include <engine/game/Timing.h>
 #include <engine/input/Input.h>
 
+
+#include <engine/graphics/RawWin32Message.h>
+#include <engine/graphics/ui/FrameMessageSubscriber.h>
+#include <engine/graphics/Renderer.h>
+#include <engine/graphics/ui/FocusManager.h>
+#include <engine/graphics/ui/MessageDispatcher.h>
+
 #define STB_TRUETYPE_IMPLEMENTATION
-#include <iostream>
-#include <ostream>
 #include <engine/graphics/stb_truetype.h>
 
-#include "FrameMessageSubscriber.h"
-#include "Renderer.h"
+
+
 
 // This function must be provided by any Application implementor.
 extern std::shared_ptr<Application> getApplication();
@@ -73,8 +78,8 @@ bool Application::changeResolution(int width, int height, int refreshRate, const
 
 }
 
-std::vector<MSG> Application::getLastMessages() {
-    return frame_messages;
+std::vector<RawWin32Message> Application::getLastMessages() {
+    return frame_messages_;
 }
 
 
@@ -201,23 +206,29 @@ void Application::mainLoop() {
 	bool running = true;
 
     PerformanceTimer performance_timer;
-	MSG msg;
 
+
+    FocusManager focus_manager;
+    MessageDispatcher message_dispatcher(focus_manager);
+    addMessageSubscriber(std::shared_ptr<FrameMessageSubscriber>(&focus_manager));
+    addMessageSubscriber(std::shared_ptr<FrameMessageSubscriber>(&message_dispatcher));
+
+    MSG msg;
 	while (running) {
 	    performance_timer.start();
-	    frame_messages.clear();
+	    frame_messages_.clear();
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) > 0) {
             if (msg.message == WM_QUIT) {
                 running = false;
             }
-            frame_messages.push_back(msg);
+
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
 
 	    // Send raw frame messages to all subscribers:
 	    for (auto& msgSub : messageSubscribers) {
-	        msgSub->onFrameMessages(frame_messages);
+	        msgSub->onFrameMessages(frame_messages_);
 	    }
 
 	    if (topLevelWidget) {
@@ -239,22 +250,25 @@ void Application::mainLoop() {
 }
 
 LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    Application* pThis = nullptr;
+    Application* appPtr = nullptr;
     if (message == WM_NCCREATE) {
         // On WM_NCCREATE, extract the 'this' pointer from the CREATESTRUCT
         LPCREATESTRUCT pcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
-        pThis = reinterpret_cast<Application*>(pcs->lpCreateParams);
-        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
+        appPtr = reinterpret_cast<Application*>(pcs->lpCreateParams);
+        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(appPtr));
     } else {
-        pThis = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+        appPtr = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
     }
 
 #define ID_LEFT_CHILD  101
 #define ID_RIGHT_CHILD 102
-
-
+    if (appPtr) {
+        appPtr->frame_messages_.push_back(RawWin32Message{message, wParam, lParam});
+    }
 
     switch (message) {
+
+
 
         case WM_CLOSE:
         DestroyWindow(hWnd);

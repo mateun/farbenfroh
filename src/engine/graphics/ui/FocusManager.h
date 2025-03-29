@@ -5,7 +5,7 @@
 #ifndef FOCUSMANAGER_H
 #define FOCUSMANAGER_H
 
-#include <engine/graphics/FrameMessageSubscriber.h>
+#include <engine/graphics/ui/FrameMessageSubscriber.h>
 
 class Widget;
 
@@ -23,6 +23,7 @@ class Widget;
 class FocusManager : public FrameMessageSubscriber {
 
   public:
+    FocusManager();
     /**
     * This must be called regularly (e.g. each frame)
     * so the FocusManager can update itself with all latest system messages.
@@ -37,7 +38,9 @@ class FocusManager : public FrameMessageSubscriber {
     /**
     * Here we retrieve the frame messages.
     */
-    void onFrameMessages(const std::vector<MSG> &msgs) override;
+    void onFrameMessages(const std::vector<RawWin32Message>& msgs) override;
+
+    int mouse_x = 0, mouse_y = 0;
 };
 
 

@@ -3,8 +3,12 @@
 //
 
 #include "MessageDispatcher.h"
+#include <engine/graphics/RawWin32Message.h>
 
-void MessageDispatcher::onFrameMessages(const std::vector<MSG> &msgs) {
+MessageDispatcher::MessageDispatcher(FocusManager &focusManager): focus_manager_(focusManager) {
+}
+
+void MessageDispatcher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
     // TODO ask FocusManager for the currently focused widget.
     // Then transform relevant messages into UIMessage objects and pass them on.
 
@@ -13,3 +17,4 @@ void MessageDispatcher::onFrameMessages(const std::vector<MSG> &msgs) {
         // ask
     }
 }
+
