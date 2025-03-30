@@ -23,6 +23,8 @@ SplitterWidget::SplitterWidget(SplitterType type, std::shared_ptr<Widget> first,
 
 void SplitterWidget::draw() {
 
+    int splitterSize = 2;
+
     static bool splitterInitialized = false;
     if (!splitterInitialized) {
         splitterInitialized = true;
@@ -45,16 +47,16 @@ void SplitterWidget::draw() {
     mdd.viewPortDimensions =  size_;
     mdd.setViewport = true;
     mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
-    mdd.shaderParameters = {ShaderParameter{"uScreenHeight", size_.y}, ShaderParameter{"gradientTargetColor", glm::vec4{0.25, 0.09, 0, 1}}};
+    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.02, 0.02, 0.02, 1}}};
     if (mouse_over_splitter_) {
         mdd.color = {0.4, 0.12,0.01, 1};
     } else {
-        mdd.color = {0.2, 0.09,.0, 1};
+        mdd.color = {0.02, 0.02,.03, 1};
     }
 
     if (type_ == SplitterType::Vertical) {
-        mdd.location = {splitterPosition_.x, splitterPosition_.y, -0.5};
-        mdd.scale = {5, size_.y, 1};
+        mdd.location = {splitterPosition_.x + splitterSize/2, splitterPosition_.y, -0.5};
+        mdd.scale = {splitterSize, size_.y, 1};
 
         // Calculate size and positions of the 2 children:
         first_->setOrigin({origin_.x, origin_.y});
@@ -71,14 +73,14 @@ void SplitterWidget::draw() {
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
     // Draw background gradients for debugging
-    mdd.shaderParameters = {ShaderParameter{"uScreenHeight", size_.y},ShaderParameter{ "gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
-    mdd.color = {0.01, 0.01, 0.01, 1};
+    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{ "gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
+    mdd.color = {0.015, 0.015, 0.017, 1};
     mdd.location = {origin_.x + 2, origin_.y + 2, -1.1};
-    mdd.scale = {splitterPosition_.x - 4, size_.y - 5, 1};
+    mdd.scale = {splitterPosition_.x - splitterSize - 1, size_.y - 5, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
-    mdd.location = {splitterPosition_.x + 7, origin_.y + 2, -1.1};
-    mdd.scale = {size_.x - splitterPosition_.x - 9, size_.y - 5, 1};
+    mdd.location = {splitterPosition_.x + splitterSize + 3, origin_.y + 2, -1.1};
+    mdd.scale = {size_.x - splitterPosition_.x - (splitterSize + 5), size_.y - 5, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
 
@@ -94,7 +96,10 @@ void SplitterWidget::draw() {
 
 MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
     if (message.type == MessageType::MouseMove) {
-        if (message.mouseMoveMessage.x >= splitterPosition_.x - 5 && message.mouseMoveMessage.x <= splitterPosition_.x + 5) {
+        printf("mouse_y: %d\n", message.mouseMoveMessage.y);
+        if (message.mouseMoveMessage.x >= splitterPosition_.x - 5 && message.mouseMoveMessage.x <= splitterPosition_.x + 5 &&
+            message.mouseMoveMessage.y <= origin_.y + size_.y) {
+
             mouse_over_splitter_ = true;
         } else {
             // Only relieve this if we are not dragging already.

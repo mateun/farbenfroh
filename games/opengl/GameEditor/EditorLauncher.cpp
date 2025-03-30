@@ -4,8 +4,11 @@
 
 #include "EditorLauncher.h"
 
+#include <engine/graphics/ui/ButtonWidget.h>
 #include <engine/graphics/ui/LabelWidget.h>
 #include <engine/graphics/ui/SplitterWidget.h>
+#include <engine/graphics/ui/ToolBarWidget.h>
+#include <engine/graphics/Texture.h>
 
 std::shared_ptr<Application> app;
 std::shared_ptr<Application> getApplication() {
@@ -38,6 +41,19 @@ void EditorLauncher::onCreated() {
 
     auto mainSplitter = std::make_shared<SplitterWidget>(SplitterType::Vertical, leftVBox, rightVBox);
 
-    setTopLevelWidget(mainSplitter);
+    auto mainWidget = std::make_shared<Widget>();
+    auto topToolbar = std::make_shared<ToolBarWidget>();
+    auto areaLayout = std::make_shared<AreaLayout>(topToolbar, nullptr, nullptr, nullptr, mainSplitter);
+    mainWidget->setLayout(areaLayout);
+    mainWidget->addChild(topToolbar);
+    mainWidget->addChild(mainSplitter);
+
+    // Add buttons to the toolbar:
+    auto btnStart = std::make_shared<ButtonWidget>();
+    auto startButtonTexture = std::make_shared<Texture>("../assets/button_start_path.png");
+    btnStart->setTexture(startButtonTexture);
+    topToolbar->addChild(btnStart);
+
+    setTopLevelWidget(mainWidget);
 }
 

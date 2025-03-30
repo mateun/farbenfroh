@@ -25,7 +25,10 @@ public:
     void setViewport(int x, int y, int width, int height);
 
     std::shared_ptr<Shader> getWidgetDefaultShader(bool textured = true) const;
+    std::shared_ptr<Shader> getWidgetDefaultTextShader() const;
+
     std::shared_ptr<Camera> getOrthoCameraForViewport(int origin_x, int origin_y, float x, float y);
+
 
 private:
     void initOpenGL();
@@ -40,6 +43,7 @@ private:
     std::shared_ptr<Camera> ortho_camera_;
     std::shared_ptr<Shader> default_widget_textured_shader_;
     std::shared_ptr<Shader> default_widget_colored_shader_;
+    std::shared_ptr<Shader> default_text_shader_;
 };
 
 

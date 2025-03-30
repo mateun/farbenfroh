@@ -10,6 +10,8 @@
 #include <glm/glm.hpp>
 #include <engine/graphics/Camera.h>
 
+#include "Texture.h"
+
 
 class MeshDrawData;
 class Layout;
@@ -122,6 +124,8 @@ public:
     void setLayout(std::shared_ptr<Layout> layout);
 
 
+
+
 protected:
     // This is the location in parent-space.
     // For the widget itself this is normally not "interesting",
@@ -166,6 +170,31 @@ public:
 private:
     int margin_horizontal_ = 4;
     int margin_vertical_ = 12;
+};
+
+class HBoxLayout : public Layout {
+public:
+    void apply(Widget* target) override;
+
+    void setMarginHorizontal(int margin);
+    void setMarginVertical(int margin);
+
+private:
+    int margin_horizontal_ = 2;
+    int margin_vertical_ = 2;
+};
+
+
+class AreaLayout : public Layout {
+public:
+    AreaLayout(std::shared_ptr<Widget> top, std::shared_ptr<Widget> bottom, std::shared_ptr<Widget> left, std::shared_ptr<Widget> right, std::shared_ptr<Widget> center);
+    void apply(Widget* target) override;
+
+    std::shared_ptr<Widget> top_;
+    std::shared_ptr<Widget> bottom_;
+    std::shared_ptr<Widget> left_;
+    std::shared_ptr<Widget> right_;
+    std::shared_ptr<Widget> center_;
 };
 
 

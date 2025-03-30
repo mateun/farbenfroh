@@ -5,6 +5,7 @@
 #include "MessageTransformer.h"
 
 #include <windowsx.h>
+#include <engine/graphics/Application.h>
 #include <engine/graphics/RawWin32Message.h>
 #include <engine/graphics/Widget.h>
 
@@ -15,7 +16,7 @@ UIMessage MessageTransformer::transform(RawWin32Message message) {
         case WM_MOUSEMOVE: {
             result.type = MessageType::MouseMove;
             result.mouseMoveMessage.x = GET_X_LPARAM(message.lParam);
-            result.mouseMoveMessage.y = GET_Y_LPARAM(message.lParam);
+            result.mouseMoveMessage.y = getApplication()->scaled_height()- GET_Y_LPARAM(message.lParam);
             break;
         }
 

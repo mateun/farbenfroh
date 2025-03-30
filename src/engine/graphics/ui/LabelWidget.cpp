@@ -27,7 +27,7 @@ void LabelWidget::draw() {
 
     MeshDrawData mdd;
     mdd.mesh = textMesh;
-    mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader();
+    mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultTextShader();
 
     auto cam = std::make_shared<Camera>(CameraType::Ortho);
     cam->updateLocation({0, 0, 2});

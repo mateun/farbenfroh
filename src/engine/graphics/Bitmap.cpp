@@ -39,7 +39,7 @@ Bitmap::Bitmap(const std::string &fileName) {
                 auto pixels = stbi_load(f, &w, &h,
                         &imageChannels,
                         4);
-                pixels = pixels;
+                this->pixels = pixels;
                 width = w;
                 height = h;
             }

@@ -6,7 +6,7 @@ in vec2 fs_uvs;
 out vec4 color;
 
 void main() {
-    color =   texture(diffuseTexture, fs_uvs);
-
+    float r =  texture(diffuseTexture, fs_uvs).r;
+    color = vec4(.6, .6 , .5, r);
 
 }

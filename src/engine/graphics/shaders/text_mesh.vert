@@ -13,7 +13,7 @@ out vec2 fs_uvs;
 void main() {
     gl_Position = mat_projection * mat_view * mat_world* vec4(pos, 1);
     fs_uvs = uvs;
-
+    //fs_uvs.y = 1 - fs_uvs.y;
 
 
 }

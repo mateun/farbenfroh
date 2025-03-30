@@ -220,6 +220,11 @@ void RenderBackend::initOpenGL() {
     default_widget_colored_shader_->initFromFiles("../src/engine/graphics/shaders/colored_mesh.vert",
         "../src/engine/graphics/shaders/colored_mesh.frag");
 
+    default_text_shader_ = std::make_shared<Shader>();
+    default_text_shader_->initFromFiles("../src/engine/graphics/shaders/text_mesh.vert",
+        "../src/engine/graphics/shaders/text_mesh.frag");
+
+
 }
 
 RenderBackend::RenderBackend(RenderBackendType type, HDC hdc, HWND hwnd, int width, int height) : hdc_(hdc), hwnd_(hwnd),
@@ -235,6 +240,10 @@ void RenderBackend::setViewport(int x, int y, int width, int height) {
     switch (type_) {
         case RenderBackendType::OpenGL: glViewport(x, y, width, height); break;
     }
+}
+
+std::shared_ptr<Shader> RenderBackend::getWidgetDefaultTextShader() const {
+    return default_text_shader_;
 }
 
 std::shared_ptr<Shader> RenderBackend::getWidgetDefaultShader(bool textured) const {
@@ -258,4 +267,6 @@ std::shared_ptr<Camera>  RenderBackend::getOrthoCameraForViewport(int origin_x, 
     }
     return nullptr;
 }
+
+
 
