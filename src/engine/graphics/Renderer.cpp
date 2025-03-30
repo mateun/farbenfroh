@@ -192,8 +192,8 @@ void Renderer::drawMesh(const MeshDrawData &drawData) {
  *
  * @param mdd The draw data on which to base the draw call on.
  */
-void Renderer::drawWidgetMeshDeferred(const MeshDrawData &mdd, const Widget * widget) {
-    batchedDrawData_[widget] = mdd;
+void Renderer::drawWidgetMeshDeferred(MeshDrawData mdd, const Widget * widget) {
+    batchedDrawData_[widget].push_back(mdd);
 }
 
 void Renderer::submitDeferredWidgetCalls() {
@@ -206,9 +206,11 @@ void Renderer::submitDeferredWidgetCalls() {
     // So to actually calculate the correct world space location we would need
     // to walk the complete widget graph.
 
-    for (auto& mdd: batchedDrawData_ | std::views::values) {
+    for (auto& mdds: batchedDrawData_ | std::views::values) {
         // TODO temp: for now just call the imm. interface:
-        drawMesh(mdd);
+        for (auto& mdd: mdds) {
+            drawMesh(mdd);
+        }
     }
     batchedDrawData_.clear();
 }

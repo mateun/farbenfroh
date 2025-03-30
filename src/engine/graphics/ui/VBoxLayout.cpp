@@ -36,7 +36,7 @@ void VBoxLayout::apply(Widget *target) {
         float topY = target->size().y;
         int counter = 0;
         for (auto c : target->children()) {
-            c->setOrigin({margin_horizontal_, topY - margin_vertical_ - (counter *  c->getPreferredSize().y)});
+            c->setOrigin({target->origin().x + margin_horizontal_, topY - margin_vertical_ - (counter *  c->getPreferredSize().y)});
             counter++;
         }
     }

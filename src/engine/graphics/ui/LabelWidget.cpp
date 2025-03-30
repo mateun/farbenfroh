@@ -11,8 +11,10 @@
 #include <engine/graphics/Renderer.h>
 #include <engine/graphics/TrueTypeTextRenderer.h>
 
+#include "MessageHandleResult.h"
+
 LabelWidget::LabelWidget(const std::string &text, const std::shared_ptr<TrueTypeFont>& font): text_(text),
-    font_(font) {
+                                                                                              font_(font) {
     quadMesh = gru::Geometry::createQuadMesh(PlanePivot::bottomleft);
     textRenderer_ = std::make_shared<TrueTypeTextRenderer>(font_);
 
@@ -57,6 +59,10 @@ glm::vec2 LabelWidget::getMinSize() {
 glm::vec2 LabelWidget::getMaxSize() {
     auto dim = textRenderer_->calculateTextDimension(text_);
     return {dim.x + 20, dim.y + 20};
+}
+
+MessageHandleResult LabelWidget::onMessage(const UIMessage &message) {
+    return Widget::onMessage(message);
 }
 
 

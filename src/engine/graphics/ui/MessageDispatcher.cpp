@@ -3,12 +3,28 @@
 //
 
 #include "MessageDispatcher.h"
+
+#include <engine/graphics/Application.h>
 #include <engine/graphics/RawWin32Message.h>
 
-MessageDispatcher::MessageDispatcher(FocusManager &focusManager): focus_manager_(focusManager) {
+#include <engine/graphics/ui/MessageTransformer.h>
+
+#include "MessageHandleResult.h"
+
+SimpleMessageDispatcher::SimpleMessageDispatcher(std::shared_ptr<Widget> topLevelWidget): top_level_widget_(
+    std::move(topLevelWidget)) {
 }
 
-void MessageDispatcher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
+void SimpleMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
+    for (auto& msg : msgs) {
+        top_level_widget_->onMessage(MessageTransformer::transform(msg));
+    }
+}
+
+FocusBasedMessageDispatcher::FocusBasedMessageDispatcher(FocusManager &focusManager): focus_manager_(focusManager) {
+}
+
+void FocusBasedMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
     // TODO ask FocusManager for the currently focused widget.
     // Then transform relevant messages into UIMessage objects and pass them on.
 

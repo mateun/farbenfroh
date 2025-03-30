@@ -5,8 +5,8 @@
 #include "Widget.h"
 #include "Application.h"
 #include <engine/graphics/MeshDrawData.h>
+#include <engine/graphics/ui/MessageHandleResult.h>
 
-#include "ErrorHandling.h"
 
 class Application;
 
@@ -37,7 +37,25 @@ Widget::Widget() {
 }
 
 
-void Widget::onMessage(const UIMessage &message) {
+/**
+ * This is the default message handling implementation - it tries
+ * to be as useful as possible, while leaving it open to subclasses to implement their own behavior.
+ * We check if we have children - if yes, we send the event to every child until we find one that declared itself
+ * as the handler of this event. Then we are happy.
+ * If no widget wanted to handle the event, it is also fine, then nothing happens!
+ *
+ * @param message The incoming message we may or may not "handle".
+ */
+MessageHandleResult Widget::onMessage(const UIMessage &message) {
+    for (auto& c : children_) {
+        auto result = c->onMessage(message);
+        if (result.wasHandled) return result;
+    }
+
+    MessageHandleResult result;
+    result.wasHandled = false;
+    return result;
+
 }
 
 void Widget::draw() {
@@ -86,8 +104,8 @@ glm::vec2 Widget::getMaxSize() {
     return {getApplication()->scaled_width(), getApplication()->scaled_height()};
 }
 
-void Widget::setLayout(std::unique_ptr<Layout> layout) {
-    this->layout_ = std::move(layout);
+void Widget::setLayout(std::shared_ptr<Layout> layout) {
+    this->layout_ = layout;
 }
 
 

@@ -20,6 +20,8 @@ public:
     glm::vec2 getMinSize() override;
     glm::vec2 getMaxSize() override;
 
+    MessageHandleResult onMessage(const UIMessage &message) override;
+
     // Label specific properties
     void setText(const std::string & text);
 

@@ -9,15 +9,19 @@
 #include <string>
 
 #include "RenderBackend.h"
+#include <engine/graphics/RawWin32Message.h>
+#include <engine/graphics/ui/MessageDispatcher.h>
 
+class FocusManager;
 class Widget;
 class FrameMessageSubscriber;
-class RawWin32Message;
+
 
 class Application {
   public:
     Application(int w, int h, bool fullscreen);
     ~Application();
+
 
     void initialize(HINSTANCE hinstance, HINSTANCE h_prev_instance, LPSTR lpstr, int n_show_cmd);
     int run();
@@ -43,8 +47,8 @@ protected:
 private:
     void mainLoop();
     static LRESULT CALLBACK AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-    int height = 0;
-    int width = 0;
+    int height_ = -1;
+    int width_ = -1;
     int fullscreen = 0;
     HWND _window;
     HDC hdc;
@@ -54,6 +58,10 @@ private:
     int scaled_height_ = -1;
     std::vector<RawWin32Message> frame_messages_;
     std::vector<std::shared_ptr<FrameMessageSubscriber>> messageSubscribers;
+    std::shared_ptr<FocusManager> focus_manager_;
+    std::shared_ptr<FocusBasedMessageDispatcher> message_dispatcher_;
+    std::shared_ptr<SimpleMessageDispatcher> simple_message_dispatcher_;
+
 };
 
 std::shared_ptr<Application> getApplication();

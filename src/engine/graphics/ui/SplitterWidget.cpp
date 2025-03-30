@@ -4,13 +4,118 @@
 
 #include "SplitterWidget.h"
 
+#include <engine/game/Timing.h>
+#include <engine/graphics/Application.h>
+#include <engine/graphics/Geometry.h>
+#include <engine/graphics/MeshDrawData.h>
+#include <engine/graphics/Renderer.h>
 #include <engine/graphics/Widget.h>
 
+#include "MessageHandleResult.h"
 
-SplitterWidget::SplitterWidget(SplitterType type, Widget *first, Widget *second): type_(type), first_(first),
-    second_(second) {
+
+SplitterWidget::SplitterWidget(SplitterType type, std::shared_ptr<Widget> first, std::shared_ptr<Widget> second): type_(type), first_(first),
+                                                                                  second_(second) {
+
+    quadMesh_ = gru::Geometry::createQuadMesh(PlanePivot::bottomleft);
+
 }
 
 void SplitterWidget::draw() {
-    Widget::draw();
+
+    static bool splitterInitialized = false;
+    if (!splitterInitialized) {
+        splitterInitialized = true;
+        if (type_ == SplitterType::Horizontal) {
+            splitterPosition_ =  {0, size_.y/2};
+        }
+        else {
+            splitterPosition_ = {size_.x/2 - 100, 0};
+        }
+    }
+
+    MeshDrawData mdd;
+    mdd.mesh = quadMesh_;
+    mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
+
+    auto cam = std::make_shared<Camera>(CameraType::Ortho);
+    cam->updateLocation({0, 0, 2});
+    cam->updateLookupTarget({0, 0, -1});
+    mdd.camera_shared = cam;
+    mdd.viewPortDimensions =  size_;
+    mdd.setViewport = true;
+    mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
+    mdd.shaderParameters = {ShaderParameter{"uScreenHeight", size_.y}, ShaderParameter{"gradientTargetColor", glm::vec4{0.25, 0.09, 0, 1}}};
+    if (mouse_over_splitter_) {
+        mdd.color = {0.4, 0.12,0.01, 1};
+    } else {
+        mdd.color = {0.2, 0.09,.0, 1};
+    }
+
+    if (type_ == SplitterType::Vertical) {
+        mdd.location = {splitterPosition_.x, splitterPosition_.y, -0.5};
+        mdd.scale = {5, size_.y, 1};
+
+        // Calculate size and positions of the 2 children:
+        first_->setOrigin({origin_.x, origin_.y});
+        second_->setOrigin({splitterPosition_.x + 5, 0});
+
+        first_->setSize({splitterPosition_.x, size_.y});
+        second_->setSize({size_.x - splitterPosition_.x, size_.y});
+
+    } else {
+        mdd.location = {splitterPosition_.x, splitterPosition_.y, -0.5};
+        mdd.scale = {size_.x, 5, 1};
+    }
+
+    Renderer::drawWidgetMeshDeferred(mdd, this);
+
+    // Draw background gradients for debugging
+    mdd.shaderParameters = {ShaderParameter{"uScreenHeight", size_.y},ShaderParameter{ "gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
+    mdd.color = {0.01, 0.01, 0.01, 1};
+    mdd.location = {origin_.x + 2, origin_.y + 2, -1.1};
+    mdd.scale = {splitterPosition_.x - 4, size_.y - 5, 1};
+    Renderer::drawWidgetMeshDeferred(mdd, this);
+
+    mdd.location = {splitterPosition_.x + 7, origin_.y + 2, -1.1};
+    mdd.scale = {size_.x - splitterPosition_.x - 9, size_.y - 5, 1};
+    Renderer::drawWidgetMeshDeferred(mdd, this);
+
+
+
+    // end debug
+
+    first_->draw();
+    second_->draw();
+
+
+
+}
+
+MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
+    if (message.type == MessageType::MouseMove) {
+        if (message.mouseMoveMessage.x >= splitterPosition_.x - 5 && message.mouseMoveMessage.x <= splitterPosition_.x + 5) {
+            mouse_over_splitter_ = true;
+        } else {
+            // Only relieve this if we are not dragging already.
+            if (!mouse_down_) {
+                mouse_over_splitter_ = false;
+            } else {
+                splitterPosition_.x = message.mouseMoveMessage.x;
+            }
+        }
+        return {true, "", true};
+    }
+    if (message.type == MessageType::MouseDown) {
+        if (mouse_over_splitter_) {
+            mouse_down_ = true;
+        }
+        return {true, "", true};
+    }
+    if (message.type == MessageType::MouseUp) {
+        mouse_down_ = false;
+        return {true, "", true};
+    }
+
+    return MessageHandleResult{false, "", false};
 }

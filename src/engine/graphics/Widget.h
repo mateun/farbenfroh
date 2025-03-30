@@ -13,6 +13,7 @@
 
 class MeshDrawData;
 class Layout;
+class MessageHandleResult;
 
 enum class MessageType {
     KeyUp,
@@ -22,7 +23,14 @@ enum class MessageType {
     MouseDown,
 };
 
-class UIMessage {
+struct MouseMoveMessage {
+    int x;
+    int y;
+};
+
+struct UIMessage {
+    MessageType type;
+    MouseMoveMessage mouseMoveMessage;
 
 };
 
@@ -44,7 +52,7 @@ public:
     * Widgets can get messages regarding mouse movement, mouse clicks,
     * keyboard events etc.
     */
-    virtual void onMessage(const UIMessage& message);
+    virtual MessageHandleResult onMessage(const UIMessage& message);
 
     /**
     * This method allows the widget to draw its visual representation.
@@ -111,7 +119,7 @@ public:
     virtual glm::vec2 getMaxSize();
 
 
-    void setLayout(std::unique_ptr<Layout> layout);
+    void setLayout(std::shared_ptr<Layout> layout);
 
 
 protected:
@@ -132,7 +140,7 @@ protected:
     glm::vec2 size_ = {};
 
     std::vector<std::shared_ptr<Widget>> children_;
-    std::unique_ptr<Layout> layout_;
+    std::shared_ptr<Layout> layout_;
 
 
 };

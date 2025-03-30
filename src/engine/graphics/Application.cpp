@@ -23,18 +23,21 @@
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <engine/graphics/stb_truetype.h>
-
+#include <crtdbg.h>
 
 
 
 // This function must be provided by any Application implementor.
 extern std::shared_ptr<Application> getApplication();
 
-Application::Application(int w, int h, bool fullscreen) : width(w), height(h), fullscreen(fullscreen), scaled_width_(width), scaled_height_(height) {
+Application::Application(int w, int h, bool fullscreen) : width_(w), height_(h), fullscreen(fullscreen), scaled_width_(width_), scaled_height_(height_) {
 
 }
 
 Application::~Application() {
+    this->frame_messages_.clear();
+    this->messageSubscribers.clear();
+
 }
 
 
@@ -43,10 +46,17 @@ bool Application::changeResolution(int width, int height, int refreshRate, const
     ZeroMemory(&devMode, sizeof(devMode));
     devMode.dmSize = sizeof(devMode);
 
+    width_ = width;
+    height_ = height;
+
     auto dpi = GetDpiForWindow(_window);
     auto dpiScaleFactor = static_cast<float>(dpi) / 96.0f;
     scaled_width_ = width / dpiScaleFactor;
     scaled_height_ = height / dpiScaleFactor;
+
+    if (topLevelWidget) {
+        topLevelWidget->setSize({scaled_width_, scaled_height_});
+    }
 
     devMode.dmPelsWidth = width;
     devMode.dmPelsHeight = height;
@@ -69,11 +79,9 @@ bool Application::changeResolution(int width, int height, int refreshRate, const
 
         fullscreen = true;
 
-        return true;
-
     }
-    // TODO: currently nothing done if none fullscreen change. then we assume we are developing
-    //  and just stay with the bordered window.
+
+
     return true;
 
 }
@@ -121,7 +129,7 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
         exit(1);
     }
 
-    RECT corrRect = {0, 0, width, height};
+    RECT corrRect = {0, 0, width_, height_};
     AdjustWindowRect(&corrRect, WS_OVERLAPPEDWINDOW, false);
 
     auto winWidthHalf = (corrRect.right  - corrRect.left) / 2;
@@ -142,12 +150,10 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
         MessageBox(NULL, "Window Creation Failed", "Error", MB_ICONEXCLAMATION | MB_OK);
     }
 
-
-
     ShowWindow(_window, SW_NORMAL);
     UpdateWindow(_window);
     hdc = GetDC(_window);
-    render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, _window, width, height);
+    render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, _window, width_, height_);
     // registerRawInput(hwnd);
 
 
@@ -182,6 +188,14 @@ int APIENTRY WinMain(HINSTANCE hInstance,
                      LPSTR lpCmdLine,
                      int nShowCmd) {
 
+    // This should catch heap corruption - but does not, so maybe I don't have any anyway.
+    // But it slows down the program completely, so only turn it off when really needed:
+#ifdef DEBUG_HEAP_CORRUPTION
+    // int dbgFlags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+    // dbgFlags |= _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_DELAY_FREE_MEM_DF;
+    // _CrtSetDbgFlag(dbgFlags);
+#endif
+
 	std::shared_ptr<Application> app = getApplication();
 	app->initialize(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
 	return app->run();
@@ -195,7 +209,7 @@ void Application::setTopLevelWidget(const std::shared_ptr<Widget>& widget) {
 
     // The top level widget is always the full application window size.
     // Further down the hierarchy, e.g. splitted windows have smaller sizes.
-    topLevelWidget->setSize({width, height});
+    topLevelWidget->setSize({width_, height_});
 }
 
 void Application::mainLoop() {
@@ -207,11 +221,12 @@ void Application::mainLoop() {
 
     PerformanceTimer performance_timer;
 
-
-    FocusManager focus_manager;
-    MessageDispatcher message_dispatcher(focus_manager);
-    addMessageSubscriber(std::shared_ptr<FrameMessageSubscriber>(&focus_manager));
-    addMessageSubscriber(std::shared_ptr<FrameMessageSubscriber>(&message_dispatcher));
+    focus_manager_ = std::make_shared<FocusManager>();
+    message_dispatcher_ = std::make_shared<FocusBasedMessageDispatcher>(*focus_manager_);
+    simple_message_dispatcher_ = std::make_shared<SimpleMessageDispatcher>(topLevelWidget);
+    addMessageSubscriber(simple_message_dispatcher_);
+    addMessageSubscriber(focus_manager_);
+    addMessageSubscriber(message_dispatcher_);
 
     MSG msg;
 	while (running) {
@@ -235,7 +250,7 @@ void Application::mainLoop() {
 	        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	        // We provide an ortho camera which represents the application window dimensions.
-	        //render_backend_->setViewport(0,0, scaled_width(), scaled_height());
+	        render_backend_->setViewport(0,0, scaled_width(), scaled_height());
 	        //auto camera = render_backend_->getOrthoCameraForViewport(0, 0, scaled_width(), scaled_height());
 	        topLevelWidget->draw();
             Renderer::submitDeferredWidgetCalls();
@@ -301,6 +316,10 @@ LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
             // return 0;
         }
 
+        case WM_SIZE:
+            appPtr->changeResolution(LOWORD(lParam), HIWORD(lParam), 120, "", false);
+            break;
+
         case WM_SYSKEYDOWN:
 
         case WM_KEYDOWN:
@@ -319,20 +338,20 @@ LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
             break;
         }
 
-         case WM_SETCURSOR:{
-            POINT pt;
-            GetCursorPos(&pt);
-            ScreenToClient(hWnd, &pt);
-            if (abs(pt.x - 400) <= 4) {
-                SetCursor(LoadCursor(NULL, IDC_SIZEWE));
-                return TRUE;
-            }
-
-            SetCursor(LoadCursor(NULL, IDC_ARROW));
-            return TRUE;
-
-
-        }
+        //  case WM_SETCURSOR:{
+        //     POINT pt;
+        //     GetCursorPos(&pt);
+        //     ScreenToClient(hWnd, &pt);
+        //     if (abs(pt.x - 400) <= 4) {
+        //         SetCursor(LoadCursor(NULL, IDC_SIZEWE));
+        //         return TRUE;
+        //     }
+        //
+        //     SetCursor(LoadCursor(NULL, IDC_ARROW));
+        //     return TRUE;
+        //
+        //
+        // }
         default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }

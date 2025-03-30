@@ -5,6 +5,8 @@
 #ifndef SPLITTERWIDGET_H
 #define SPLITTERWIDGET_H
 
+#include <memory>
+#include <engine/graphics/Mesh.h>
 #include <engine/graphics/Widget.h>
 
 
@@ -22,14 +24,20 @@ enum class SplitterType {
 */
 class SplitterWidget : public Widget {
   public:
-    SplitterWidget(SplitterType type, Widget* first, Widget* second);
+    SplitterWidget(SplitterType type, std::shared_ptr<Widget> first, std::shared_ptr<Widget> second);
     void draw() override;
 
-    SplitterType type_;
+    MessageHandleResult onMessage(const UIMessage &message) override;
 
-private:
-  Widget* first_;
-  Widget* second_;
+    SplitterType type_;
+    std::shared_ptr<Mesh> quadMesh_;
+    bool mouse_over_splitter_ = false;
+    bool mouse_down_ = false;
+
+  private:
+  std::shared_ptr<Widget> first_;
+  std::shared_ptr<Widget> second_;
+  glm::vec2 splitterPosition_ = glm::vec2(0.0f);
 };
 
 

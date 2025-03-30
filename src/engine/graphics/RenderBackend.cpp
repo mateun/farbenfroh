@@ -212,9 +212,13 @@ void RenderBackend::initOpenGL() {
     ortho_camera_->updateLocation({0, 0, 2});
     ortho_camera_->updateLookupTarget({0, 0, -1});
 
-    default_widget_shader_ = std::make_shared<Shader>();
-    default_widget_shader_->initFromFiles("../src/engine/graphics/shaders/textured_mesh.vert",
+    default_widget_textured_shader_ = std::make_shared<Shader>();
+    default_widget_textured_shader_->initFromFiles("../src/engine/graphics/shaders/textured_mesh.vert",
         "../src/engine/graphics/shaders/textured_mesh.frag");
+
+    default_widget_colored_shader_ = std::make_shared<Shader>();
+    default_widget_colored_shader_->initFromFiles("../src/engine/graphics/shaders/colored_mesh.vert",
+        "../src/engine/graphics/shaders/colored_mesh.frag");
 
 }
 
@@ -233,9 +237,14 @@ void RenderBackend::setViewport(int x, int y, int width, int height) {
     }
 }
 
-std::shared_ptr<Shader> RenderBackend::getWidgetDefaultShader() {
-    return default_widget_shader_;
+std::shared_ptr<Shader> RenderBackend::getWidgetDefaultShader(bool textured) const {
+    if (textured) {
+        return default_widget_textured_shader_;
+    }
+
+    return default_widget_colored_shader_;
 }
+
 
 std::shared_ptr<Camera>  RenderBackend::getOrthoCameraForViewport(int origin_x, int origin_y, float x, float y) {
     switch (type_) {
