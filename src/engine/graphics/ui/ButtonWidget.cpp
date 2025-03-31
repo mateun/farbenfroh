@@ -37,7 +37,8 @@ void ButtonWidget::draw() {
         mdd.color = {0.5, 0.4,0.0, 1};
     }
     mdd.texture = texture_;
-    mdd.location = {0, 0, -1.3};
+    mdd.location = {0, 0, -1};
+    mdd.debugInfo = "button";
 
     Renderer::drawWidgetMeshDeferred(mdd, this);
 

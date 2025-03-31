@@ -22,8 +22,8 @@ class Light;
 * This holds everything we need to issue a physical draw call.
 * A lot ... but what can you do.
 */
-class MeshDrawData {
-public:
+struct MeshDrawData {
+
     glm::vec3 location = {0, 0, 0};
     glm::vec3 scale = {1, 1, 1};
     glm::vec3 rotationEulers = {0, 0, 0};
@@ -74,6 +74,10 @@ public:
     // This is a customizable callback which will be called when the scene is rendered.
     // E.g. for setting specific shader variables.
     std::function<void(MeshDrawData mdd)> onRender;
+
+    int sequenceNumber = 0;
+    std::string debugInfo = "";
+
 
 };
 

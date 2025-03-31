@@ -83,14 +83,8 @@ void SplitterWidget::draw() {
     mdd.scale = {size_.x - splitterPosition_.x - (splitterSize + 5), size_.y - 5, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
-
-
-    // end debug
-
     first_->draw();
     second_->draw();
-
-
 
 }
 

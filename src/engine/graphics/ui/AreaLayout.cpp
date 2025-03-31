@@ -17,6 +17,8 @@ void AreaLayout::apply(Widget *target) {
     auto preferredHorizontalRight = 0;
     auto preferredVerticalCenter = 0;
 
+    float topMostY = getTopmostY(target);
+
     // First lets see how much vertical space the top item wants:
     if (top_) {
         preferredVerticalTop = top_->getPreferredSize().y;
@@ -27,15 +29,15 @@ void AreaLayout::apply(Widget *target) {
         // Sum of top.y and bottom.y, then check?!
         if (preferredVerticalTop < target->size().y) {
             top_->setSize({target->size().x, top_->getPreferredSize().y});
-            top_->setOrigin({target->origin().x, target->getPreferredSize().y - preferredVerticalTop});
+            top_->setOrigin({target->origin().x, topMostY - preferredVerticalTop});
         }
     }
 
     if (center_) {
         if (top_) {
-            center_->setSize({target->size().x, target->size().y - top_->getPreferredSize().y});
+            center_->setSize({target->size().x, topMostY - top_->size().y});
         }
-        center_->setOrigin(target->origin());
+        center_->setOrigin({target->origin().x, target->origin().y});
 
     }
 

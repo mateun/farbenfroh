@@ -11,6 +11,8 @@ void HBoxLayout::apply(Widget *target) {
     float maxPrefX = std::numeric_limits<float>::min();
     float maxPrefY = std::numeric_limits<float>::min();
 
+    float topY = getTopmostY(target);
+
     // 1. Collect the preferred sizes
     for (auto c : target->children()) {
         auto ps = c->getPreferredSize();
@@ -35,7 +37,7 @@ void HBoxLayout::apply(Widget *target) {
         // Assign the positions from left to right
         int counter = 0;
         for (auto c : target->children()) {
-            c->setOrigin({target->origin().x + margin_horizontal_ + (counter * c->getPreferredSize().x), target->origin().y + margin_vertical_});
+            c->setOrigin({target->origin().x +  (counter * (c->getPreferredSize().x + margin_horizontal_)), target->origin().y + margin_vertical_});
             counter++;
         }
     }

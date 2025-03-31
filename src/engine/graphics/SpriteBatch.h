@@ -10,7 +10,7 @@
 #include <GL/glew.h>
 #include <engine/graphics/TextureTile.h>
 
-class MeshDrawData;
+struct MeshDrawData;
 
 namespace gru {
     /***

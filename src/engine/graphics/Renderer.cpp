@@ -206,6 +206,15 @@ void Renderer::submitDeferredWidgetCalls() {
     // So to actually calculate the correct world space location we would need
     // to walk the complete widget graph.
 
+    for (auto& widgetMdds : batchedDrawData_ ) {
+        for (auto& mdd : widgetMdds.second) {
+                auto debugInfo = mdd.debugInfo;
+            if (!debugInfo.empty()) {
+                std::cout << debugInfo << std::endl;
+            }
+        }
+    }
+
     for (auto& mdds: batchedDrawData_ | std::views::values) {
         // TODO temp: for now just call the imm. interface:
         for (auto& mdd: mdds) {

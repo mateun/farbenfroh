@@ -32,8 +32,9 @@ void ToolBarWidget::draw() {
     mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
     mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
     mdd.color = {0.02, 0.02,0.02, 1};
-    mdd.location = {0, 0, -1.5};
+    mdd.location = {0, 0, -1.8};
     mdd.scale = {size_.x, size_.y, 1};
+    mdd.debugInfo = "toolbar_background";
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
     // Now render all ButtonWidgets

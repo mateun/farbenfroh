@@ -7,6 +7,9 @@
 #include <engine/graphics/MeshDrawData.h>
 #include <engine/graphics/ui/MessageHandleResult.h>
 
+#include "Geometry.h"
+#include "ui/MenuBar.h"
+
 
 class Application;
 
@@ -33,7 +36,7 @@ glm::vec2 Widget::size() const {
 
 
 Widget::Widget() {
-
+    quadMesh_ = gru::Geometry::createQuadMesh(PlanePivot::bottomleft);
 }
 
 
@@ -70,14 +73,27 @@ void Widget::draw() {
     // It must then have been set somewhere else by the owner of the widget.
     if (layout_) {
         layout_->apply(this);
+        if (hasMenuBar()) {
+            menu_bar_->setOrigin({origin_.x, size_.y - 32});
+            menu_bar_->setSize({size_.x, 32});
+            menu_bar_->draw();
+        }
         for (auto c : children_) {
             getApplication()->getRenderBackend()->setViewport(c->origin_.x, c->origin_.y,  c->size_.x, c->size_.y);
             c->draw();
 
         }
     } else {
-        // TODO what todo without layout
+        if (hasMenuBar()) {
+            menu_bar_->setOrigin({origin_.x, size_.y - 32});
+            menu_bar_->setSize({size_.x, 32});
+            menu_bar_->draw();
+        }
+        for (auto c : children_) {
+            getApplication()->getRenderBackend()->setViewport(c->origin_.x, c->origin_.y,  c->size_.x, c->size_.y);
+            c->draw();
 
+        }
 
     }
 
@@ -86,6 +102,10 @@ void Widget::draw() {
 
 void Widget::addChild(std::shared_ptr<Widget> child) {
     children_.push_back(child);
+}
+
+void Widget::setMenuBar(std::shared_ptr<MenuBar> menu_bar) {
+    menu_bar_ = menu_bar;
 }
 
 std::vector<std::shared_ptr<Widget>> Widget::children() const{
@@ -106,6 +126,10 @@ glm::vec2 Widget::getMaxSize() {
 
 void Widget::setLayout(std::shared_ptr<Layout> layout) {
     this->layout_ = layout;
+}
+
+bool Widget::hasMenuBar() {
+    return menu_bar_ != nullptr;
 }
 
 

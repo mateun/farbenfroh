@@ -10,10 +10,11 @@
 #include <glm/glm.hpp>
 #include <engine/graphics/Camera.h>
 
-#include "Texture.h"
+#include "Mesh.h"
 
 
-class MeshDrawData;
+class MenuBar;
+struct MeshDrawData;
 class Layout;
 class MessageHandleResult;
 
@@ -73,6 +74,13 @@ public:
     */
     void addChild(std::shared_ptr<Widget> child);
 
+    /**
+    * Widgets can have a MenuBar - this will always be in the
+    * top row of the Widget. Every layout must account for the presence
+    * or absence of a MenuBar in terms of its positioning.
+    */
+    void setMenuBar(std::shared_ptr<MenuBar> menuBar);
+
 
     /**
     * This is normally only called by a parent widget or layout.
@@ -123,8 +131,7 @@ public:
 
     void setLayout(std::shared_ptr<Layout> layout);
 
-
-
+    bool hasMenuBar();
 
 protected:
     // This is the location in parent-space.
@@ -144,12 +151,18 @@ protected:
     glm::vec2 size_ = {};
 
     std::vector<std::shared_ptr<Widget>> children_;
+
+    // Our layout which implements automatic positioning and sizing of child widgets.
     std::shared_ptr<Layout> layout_;
 
+    // Most widgets will need a quad mesh to render themselves, so we add one
+    // here in the Widget class itself for convenience;
+    std::shared_ptr<Mesh> quadMesh_;
 
+    // The top row menu bar.
+    std::shared_ptr<MenuBar> menu_bar_;
 };
 
-class Container;
 
 /**
 * Manages the placement of the child widgets.
@@ -158,6 +171,7 @@ class Layout {
 public:
 
     virtual void apply(Widget* target) = 0;
+    float getTopmostY(Widget* target) const;
 };
 
 class VBoxLayout : public Layout {
@@ -169,11 +183,13 @@ public:
 
 private:
     int margin_horizontal_ = 4;
-    int margin_vertical_ = 12;
+    int margin_vertical_ = 4;
 };
 
 class HBoxLayout : public Layout {
 public:
+
+
     void apply(Widget* target) override;
 
     void setMarginHorizontal(int margin);

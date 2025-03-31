@@ -20,7 +20,7 @@
 #include <engine/graphics/FrameBuffer.h>
 
 class Light;
-class MeshDrawData;
+struct MeshDrawData;
 
 
 struct Result {

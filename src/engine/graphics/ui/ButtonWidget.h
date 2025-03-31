@@ -7,6 +7,7 @@
 #include <complex.h>
 #include <engine/graphics/Mesh.h>
 #include <engine/graphics/Widget.h>
+#include <engine/graphics/Texture.h>
 
 
 class ButtonWidget : public Widget {

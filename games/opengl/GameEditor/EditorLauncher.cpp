@@ -9,6 +9,8 @@
 #include <engine/graphics/ui/SplitterWidget.h>
 #include <engine/graphics/ui/ToolBarWidget.h>
 #include <engine/graphics/Texture.h>
+#include <engine/graphics/ui/Menu.h>
+#include <engine/graphics/ui/MenuBar.h>
 
 std::shared_ptr<Application> app;
 std::shared_ptr<Application> getApplication() {
@@ -50,9 +52,18 @@ void EditorLauncher::onCreated() {
 
     // Add buttons to the toolbar:
     auto btnStart = std::make_shared<ButtonWidget>();
+    auto btnStop = std::make_shared<ButtonWidget>();
     auto startButtonTexture = std::make_shared<Texture>("../assets/button_start_path.png");
     btnStart->setTexture(startButtonTexture);
+    btnStop->setTexture(startButtonTexture);
     topToolbar->addChild(btnStart);
+    topToolbar->addChild(btnStop);
+
+    auto mainMenuBar = std::make_shared<MenuBar>();
+    mainMenuBar->addMenu(std::make_shared<Menu>("File"));
+    mainMenuBar->addMenu(std::make_shared<Menu>("Game"));
+    mainMenuBar->addMenu(std::make_shared<Menu>("About"));
+    mainWidget->setMenuBar(mainMenuBar);
 
     setTopLevelWidget(mainWidget);
 }

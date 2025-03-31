@@ -14,7 +14,7 @@
 #include <engine/graphics/MeshDrawData.h>
 
 class NodeComponent;
-class MeshDrawData;
+struct MeshDrawData;
 namespace gru {
 class ParticleSystem;
 }

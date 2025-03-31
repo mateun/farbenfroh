@@ -11,6 +11,8 @@ void VBoxLayout::apply(Widget *target) {
     float maxPrefX = std::numeric_limits<float>::min();
     float maxPrefY = std::numeric_limits<float>::min();
 
+    float topY = getTopmostY(target);
+
     // 1. Collect the preferred sizes
     for (auto c : target->children()) {
         auto ps = c->getPreferredSize();
@@ -33,10 +35,10 @@ void VBoxLayout::apply(Widget *target) {
         }
 
         // Assign the positions from top to bottom
-        float topY = target->size().y;
-        int counter = 0;
+
+        int counter = 1;
         for (auto c : target->children()) {
-            c->setOrigin({target->origin().x + margin_horizontal_, topY - margin_vertical_ - (counter *  c->getPreferredSize().y)});
+            c->setOrigin({target->origin().x + margin_horizontal_, topY - margin_vertical_ - (counter *  c->getPreferredSize().y )});
             counter++;
         }
     }
@@ -61,7 +63,7 @@ void VBoxLayout::apply(Widget *target) {
             }
 
             float topY = target->size().y;
-            int counter = 0;
+            int counter = 1;
             for (auto c : target->children()) {
                 c->setOrigin({margin_horizontal_, topY - margin_vertical_ - (counter * c->getMinSize().y)});
                 counter++;
