@@ -17,8 +17,6 @@
 SplitterWidget::SplitterWidget(SplitterType type, std::shared_ptr<Widget> first, std::shared_ptr<Widget> second): type_(type), first_(first),
                                                                                   second_(second) {
 
-    quadMesh_ = gru::Geometry::createQuadMesh(PlanePivot::bottomleft);
-
 }
 
 void SplitterWidget::draw() {

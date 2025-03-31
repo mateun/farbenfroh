@@ -13,11 +13,13 @@
 ToolBarWidget::ToolBarWidget() {
     quadMesh_ = gru::Geometry::createQuadMesh(PlanePivot::bottomleft);
     h_box_layout_ = std::make_shared<HBoxLayout>();
+    h_box_layout_->setMarginHorizontal(10);
 }
 
 void ToolBarWidget::draw() {
 
     h_box_layout_->apply(this);
+
 
     MeshDrawData mdd;
     mdd.mesh = quadMesh_;

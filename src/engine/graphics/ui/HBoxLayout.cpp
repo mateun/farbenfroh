@@ -35,9 +35,14 @@ void HBoxLayout::apply(Widget *target) {
         }
 
         // Assign the positions from left to right
+        // We assume a left alignment for now, so that every
+        // new widget is attached to the preceding one, with the
+        // horizontal margin in between.
         int counter = 0;
+        int cursorX = target->origin().x;
         for (auto c : target->children()) {
-            c->setOrigin({target->origin().x +  (counter * (c->getPreferredSize().x + margin_horizontal_)), target->origin().y + margin_vertical_});
+            c->setOrigin({cursorX, target->origin().y + margin_vertical_});
+            cursorX += c->getPreferredSize().x + margin_horizontal_;
             counter++;
         }
     }

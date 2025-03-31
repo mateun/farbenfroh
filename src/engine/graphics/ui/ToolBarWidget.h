@@ -18,7 +18,6 @@ public:
     glm::vec2 getPreferredSize() override;
 
 private:
-    std::shared_ptr<Mesh> quadMesh_;
     std::shared_ptr<HBoxLayout> h_box_layout_;
 };
 

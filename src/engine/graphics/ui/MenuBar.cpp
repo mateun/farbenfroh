@@ -40,6 +40,7 @@ void MenuBar::draw() {
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
     auto hboxLayout = std::make_shared<HBoxLayout>();
+    hboxLayout->setMarginHorizontal(10);
     hboxLayout->apply(this);
 
     // Next we draw all top level Menus

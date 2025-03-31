@@ -20,7 +20,6 @@ public:
     void setTexture(std::shared_ptr<Texture> tex);
 
 private:
-    std::shared_ptr<Mesh> quadMesh_;
     bool hover_ = false;
     std::shared_ptr<Texture> texture_;
 };

@@ -12,7 +12,6 @@
 #include "MessageHandleResult.h"
 
 ButtonWidget::ButtonWidget() {
-    quadMesh_ = gru::Geometry::createQuadMesh(PlanePivot::bottomleft);
 }
 
 void ButtonWidget::draw() {
@@ -48,13 +47,13 @@ MessageHandleResult ButtonWidget::onMessage(const UIMessage &message) {
 
     switch (message.type) {
         case MessageType::MouseMove: {
-            // TODO create helper for this mouse coordinate checking.
-            if (message.mouseMoveMessage.x >= origin_.x && message.mouseMoveMessage.x <= size_.x &&
-                message.mouseMoveMessage.y <= origin_.y + size_.y) {
-                hover_ = true;
-            } else {
-                hover_ = false;
+            hover_ = checkMouseOver(message.mouseMoveMessage.x, message.mouseMoveMessage.y);
+            if (hover_) {
+                return MessageHandleResult {true, "", true};
             }
+        }
+        case MessageType::MouseDown: {
+            break;
         }
     }
 

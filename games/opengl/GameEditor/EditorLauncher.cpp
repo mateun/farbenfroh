@@ -11,6 +11,7 @@
 #include <engine/graphics/Texture.h>
 #include <engine/graphics/ui/Menu.h>
 #include <engine/graphics/ui/MenuBar.h>
+#include <engine/graphics/ui/MenuItem.h>
 
 std::shared_ptr<Application> app;
 std::shared_ptr<Application> getApplication() {
@@ -53,15 +54,27 @@ void EditorLauncher::onCreated() {
     // Add buttons to the toolbar:
     auto btnStart = std::make_shared<ButtonWidget>();
     auto btnStop = std::make_shared<ButtonWidget>();
+    auto btnPause = std::make_shared<ButtonWidget>();
     auto startButtonTexture = std::make_shared<Texture>("../assets/button_start_path.png");
     btnStart->setTexture(startButtonTexture);
     btnStop->setTexture(startButtonTexture);
+    btnPause->setTexture(startButtonTexture);
+    btnStart->setId("button_start");
+    btnStop->setId("button_stop");
+    btnPause->setId("button_pause");
     topToolbar->addChild(btnStart);
     topToolbar->addChild(btnStop);
+    topToolbar->addChild(btnPause);
+
+    auto menuFile = std::make_shared<Menu>("File");
+    auto menuItemNewGame = std::make_shared<MenuItem>("NewGame");
+    menuFile->addMenuItem(menuItemNewGame);
+
+    auto menuGame = std::make_shared<Menu>("Game");
 
     auto mainMenuBar = std::make_shared<MenuBar>();
-    mainMenuBar->addMenu(std::make_shared<Menu>("File"));
-    mainMenuBar->addMenu(std::make_shared<Menu>("Game"));
+    mainMenuBar->addMenu(menuFile);
+    mainMenuBar->addMenu(menuGame);
     mainMenuBar->addMenu(std::make_shared<Menu>("About"));
     mainWidget->setMenuBar(mainMenuBar);
 

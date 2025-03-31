@@ -133,6 +133,10 @@ public:
 
     bool hasMenuBar();
 
+    bool checkMouseOver(int mouseX, int mouseY) const;
+
+    void setId(const std::string& id);
+
 protected:
     // This is the location in parent-space.
     // For the widget itself this is normally not "interesting",
@@ -161,6 +165,11 @@ protected:
 
     // The top row menu bar.
     std::shared_ptr<MenuBar> menu_bar_;
+
+    // This is an optional identifier, mainly usable for debugging so we know
+    // which widget we are seeing currently.
+    std::string id_ = "";
+
 };
 
 
@@ -196,7 +205,7 @@ public:
     void setMarginVertical(int margin);
 
 private:
-    int margin_horizontal_ = 2;
+    int margin_horizontal_ = 5;
     int margin_vertical_ = 2;
 };
 

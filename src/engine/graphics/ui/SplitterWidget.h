@@ -30,7 +30,6 @@ class SplitterWidget : public Widget {
     MessageHandleResult onMessage(const UIMessage &message) override;
 
     SplitterType type_;
-    std::shared_ptr<Mesh> quadMesh_;
     bool mouse_over_splitter_ = false;
     bool mouse_down_ = false;
 

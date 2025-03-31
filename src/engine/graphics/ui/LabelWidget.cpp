@@ -37,7 +37,7 @@ void LabelWidget::draw() {
     mdd.setViewport = true;
     mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
     mdd.texture = font_->getAtlas();
-    mdd.location = {0, abs(dim1.y), -1};
+    mdd.location = {0, abs(dim1.y), -0.4};
     mdd.scale = {1, 1, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
 

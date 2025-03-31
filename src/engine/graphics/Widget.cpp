@@ -50,6 +50,11 @@ Widget::Widget() {
  * @param message The incoming message we may or may not "handle".
  */
 MessageHandleResult Widget::onMessage(const UIMessage &message) {
+
+    if (menu_bar_) {
+        menu_bar_->onMessage(message);
+    }
+
     for (auto& c : children_) {
         auto result = c->onMessage(message);
         if (result.wasHandled) return result;
@@ -130,6 +135,19 @@ void Widget::setLayout(std::shared_ptr<Layout> layout) {
 
 bool Widget::hasMenuBar() {
     return menu_bar_ != nullptr;
+}
+
+bool Widget::checkMouseOver(int mouse_x, int mouse_y) const {
+    if (mouse_x >= origin_.x && mouse_x <= (origin_.x + size_.x) &&
+        mouse_y <= (origin_.y + size_.y) && mouse_y >= origin_.y) {
+        return true;
+    }
+    return false;
+
+}
+
+void Widget::setId(const std::string &id) {
+    id_ = id;
 }
 
 
