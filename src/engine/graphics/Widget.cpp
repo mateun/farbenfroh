@@ -26,12 +26,13 @@ glm::vec2 Widget::origin() const {
 
 void Widget::setSize(glm::vec2 size) {
     size_ = size;
+
 }
+
 
 glm::vec2 Widget::size() const {
     return size_;
 }
-
 
 
 
@@ -146,11 +147,14 @@ bool Widget::checkMouseOver(int mouse_x, int mouse_y) const {
 
 }
 
-bool Widget::checkMouseOver(int mouse_x, int mouse_y, const Widget* widget) {
-    if (mouse_x >= widget->origin_.x && mouse_x <= (widget->origin_.x + widget->size_.x) &&
-        mouse_y <= (widget->origin_.y + widget->size_.y) && mouse_y >= widget->origin_.y) {
+bool Widget::checkMouseOver(int mouse_x, int mouse_y, const Widget* widget, bool useOffsets, glm::vec2 originOffset, glm::vec2 sizeOffset) {
+    auto size = useOffsets ? widget->size() + sizeOffset : widget->size();
+    auto orig = useOffsets ? widget->origin() + originOffset : widget->origin();
+
+    if (mouse_x >= orig.x && mouse_x <= (orig.x +size.x) &&
+        mouse_y <= (orig.y + size.y) && mouse_y >= orig.y) {
         return true;
-        }
+    }
     return false;
 
 }

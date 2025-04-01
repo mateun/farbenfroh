@@ -36,7 +36,7 @@ private:
   std::vector<std::shared_ptr<MenuItem>> items_;
   std::shared_ptr<Widget> sub_menu_panel_;
 
-  bool sub_menu_open = false;
+  bool sub_menu_open_ = false;
   bool hover_sub_panel_ = false;
 
   void lazyCreateSubMenuPanel();

@@ -100,6 +100,7 @@ public:
     */
     void setSize(glm::vec2 size);
 
+
     /**
     * Retrieve the size of this widget (width, height).
     */
@@ -132,7 +133,8 @@ public:
 
     bool checkMouseOver(int mouseX, int mouseY) const;
 
-    static bool checkMouseOver(int mouseX, int mouseY, const Widget* widget);
+    static bool checkMouseOver(int mouseX, int mouseY, const Widget* widget, bool useOffsets = false,
+        glm::vec2 originOffset = {0, 0}, glm::vec2 sizeOffset = {0, 0});
 
     void setId(const std::string& id);
 
