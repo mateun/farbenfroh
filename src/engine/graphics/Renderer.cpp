@@ -207,12 +207,12 @@ void Renderer::submitDeferredWidgetCalls() {
     // to walk the complete widget graph.
 
     for (auto& widgetMdds : batchedDrawData_ ) {
-        for (auto& mdd : widgetMdds.second) {
-                auto debugInfo = mdd.debugInfo;
-            if (!debugInfo.empty()) {
-                std::cout << debugInfo << std::endl;
-            }
-        }
+        // for (auto& mdd : widgetMdds.second) {
+        //         auto debugInfo = mdd.debugInfo;
+        //     // if (!debugInfo.empty()) {
+        //     //     std::cout << debugInfo << std::endl;
+        //     // }
+        // }
     }
 
     for (auto& mdds: batchedDrawData_ | std::views::values) {

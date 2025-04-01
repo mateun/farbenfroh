@@ -18,7 +18,7 @@ void MenuBar::addMenu(std::shared_ptr<Menu> menu) {
     children_.push_back(menu);
 }
 
-void MenuBar::draw() {
+void MenuBar::draw(float depth) {
 
     // First we draw a background panel:
     MeshDrawData mdd;

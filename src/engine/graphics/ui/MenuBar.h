@@ -15,7 +15,7 @@ class MenuBar : public Widget {
   public:
     MenuBar();
     void addMenu(std::shared_ptr<Menu> menu);
-    void draw() override;
+    void draw(float depth = -0.5) override;
     MessageHandleResult onMessage(const UIMessage &message) override;
 
 private:

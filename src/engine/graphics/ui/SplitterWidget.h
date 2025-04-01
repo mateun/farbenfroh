@@ -25,7 +25,7 @@ enum class SplitterType {
 class SplitterWidget : public Widget {
   public:
     SplitterWidget(SplitterType type, std::shared_ptr<Widget> first, std::shared_ptr<Widget> second);
-    void draw() override;
+    void draw(float depth= -0.5) override;
 
     MessageHandleResult onMessage(const UIMessage &message) override;
 

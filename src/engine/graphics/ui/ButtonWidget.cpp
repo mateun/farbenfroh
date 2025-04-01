@@ -14,7 +14,7 @@
 ButtonWidget::ButtonWidget() {
 }
 
-void ButtonWidget::draw() {
+void ButtonWidget::draw(float depth) {
 
     MeshDrawData mdd;
     mdd.mesh = quadMesh_;

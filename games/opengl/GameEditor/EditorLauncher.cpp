@@ -67,10 +67,16 @@ void EditorLauncher::onCreated() {
     topToolbar->addChild(btnPause);
 
     auto menuFile = std::make_shared<Menu>("File");
-    auto menuItemNewGame = std::make_shared<MenuItem>("NewGame");
-    menuFile->addMenuItem(menuItemNewGame);
+    auto menuNew = std::make_shared<Menu>("New");
+    auto menuOpen = std::make_shared<Menu>("Open");
+    auto menuItemNewGame = std::make_shared<MenuItem>("Game");
+    menuItemNewGame->setId("menu_item_new_game");
+    menuNew->setId("file_new");
+    menuNew->addSubMenu(menuItemNewGame);
+    menuFile->addSubMenu(menuNew);
+    menuFile->addSubMenu(menuOpen);
 
-    auto menuGame = std::make_shared<Menu>("Game");
+    auto menuGame = std::make_shared<Menu>("GameObjects");
 
     auto mainMenuBar = std::make_shared<MenuBar>();
     mainMenuBar->addMenu(menuFile);

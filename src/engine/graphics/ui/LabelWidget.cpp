@@ -20,7 +20,7 @@ LabelWidget::LabelWidget(const std::string &text, const std::shared_ptr<TrueType
 
 }
 
-void LabelWidget::draw() {
+void LabelWidget::draw(float depth) {
     glm::vec2 dim1;
 
     auto textMesh = textRenderer_->renderText(text_, &dim1);
@@ -37,7 +37,7 @@ void LabelWidget::draw() {
     mdd.setViewport = true;
     mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
     mdd.texture = font_->getAtlas();
-    mdd.location = {0, abs(dim1.y), -0.4};
+    mdd.location = {0, abs(dim1.y), depth};
     mdd.scale = {1, 1, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
 

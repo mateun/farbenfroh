@@ -66,7 +66,7 @@ MessageHandleResult Widget::onMessage(const UIMessage &message) {
 
 }
 
-void Widget::draw() {
+void Widget::draw(float depth) {
     assert(getApplication()->getRenderBackend() != nullptr);
 
 
@@ -81,22 +81,22 @@ void Widget::draw() {
         if (hasMenuBar()) {
             menu_bar_->setOrigin({origin_.x, size_.y - 32});
             menu_bar_->setSize({size_.x, 32});
-            menu_bar_->draw();
+            menu_bar_->draw(depth);
         }
         for (auto c : children_) {
             getApplication()->getRenderBackend()->setViewport(c->origin_.x, c->origin_.y,  c->size_.x, c->size_.y);
-            c->draw();
+            c->draw(depth);
 
         }
     } else {
         if (hasMenuBar()) {
             menu_bar_->setOrigin({origin_.x, size_.y - 32});
             menu_bar_->setSize({size_.x, 32});
-            menu_bar_->draw();
+            menu_bar_->draw(depth);
         }
         for (auto c : children_) {
             getApplication()->getRenderBackend()->setViewport(c->origin_.x, c->origin_.y,  c->size_.x, c->size_.y);
-            c->draw();
+            c->draw(depth);
 
         }
 
@@ -122,7 +122,7 @@ glm::vec2 Widget::getPreferredSize() {
 }
 
 glm::vec2 Widget::getMinSize() {
-    return {0, 0};
+    return getPreferredSize();
 }
 
 glm::vec2 Widget::getMaxSize() {
@@ -145,6 +145,17 @@ bool Widget::checkMouseOver(int mouse_x, int mouse_y) const {
     return false;
 
 }
+
+bool Widget::checkMouseOver(int mouse_x, int mouse_y, const Widget* widget) {
+    if (mouse_x >= widget->origin_.x && mouse_x <= (widget->origin_.x + widget->size_.x) &&
+        mouse_y <= (widget->origin_.y + widget->size_.y) && mouse_y >= widget->origin_.y) {
+        return true;
+        }
+    return false;
+
+}
+
+
 
 void Widget::setId(const std::string &id) {
     id_ = id;

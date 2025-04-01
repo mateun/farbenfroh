@@ -15,7 +15,7 @@ class LabelWidget : public Widget {
 
 public:
     LabelWidget(const std::string & text, const std::shared_ptr<TrueTypeFont> & font);
-    void draw() override;
+    void draw(float depth = -0.5) override;
     glm::vec2 getPreferredSize() override;
     glm::vec2 getMinSize() override;
     glm::vec2 getMaxSize() override;

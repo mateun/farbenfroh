@@ -16,7 +16,7 @@ ToolBarWidget::ToolBarWidget() {
     h_box_layout_->setMarginHorizontal(10);
 }
 
-void ToolBarWidget::draw() {
+void ToolBarWidget::draw(float depth) {
 
     h_box_layout_->apply(this);
 

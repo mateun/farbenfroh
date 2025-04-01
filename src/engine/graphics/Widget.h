@@ -66,7 +66,7 @@ public:
     * This is mainly for performance reasons as it allows the framework to batch the resulting
     * draw commands more efficiently.
     */
-    virtual void draw();
+    virtual void draw(float depth = -0.5);
 
 
     /**
@@ -74,13 +74,13 @@ public:
     */
     void addChild(std::shared_ptr<Widget> child);
 
+
     /**
     * Widgets can have a MenuBar - this will always be in the
     * top row of the Widget. Every layout must account for the presence
     * or absence of a MenuBar in terms of its positioning.
     */
     void setMenuBar(std::shared_ptr<MenuBar> menuBar);
-
 
     /**
     * This is normally only called by a parent widget or layout.
@@ -105,12 +105,10 @@ public:
     */
     glm::vec2 size() const;
 
-
     /**
     * Get the list of all children.
     */
     std::vector<std::shared_ptr<Widget>> children() const;
-
 
     /**
     * This allows the widget to communicate the dim
@@ -128,12 +126,13 @@ public:
     */
     virtual glm::vec2 getMaxSize();
 
-
     void setLayout(std::shared_ptr<Layout> layout);
 
     bool hasMenuBar();
 
     bool checkMouseOver(int mouseX, int mouseY) const;
+
+    static bool checkMouseOver(int mouseX, int mouseY, const Widget* widget);
 
     void setId(const std::string& id);
 

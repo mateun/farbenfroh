@@ -27,8 +27,8 @@ void VBoxLayout::apply(Widget *target) {
     // If yes, we are fine, every child can get the size it wants.
     // If no, we need to look at the min. sizes and see if these fit.
     // Otherwise we need to crop or scroll.
-    if (maxPrefX < target->size().x &&
-        maxPrefY < target->size().y) {
+    if (maxPrefX <= target->size().x &&
+        maxPrefY <= target->size().y) {
         // All good, lets give the preferred size to the widdgets:
         for (auto c : target->children()) {
             c->setSize(c->getPreferredSize());
@@ -55,8 +55,8 @@ void VBoxLayout::apply(Widget *target) {
             if (ps.y < minMinY) minMinY = ps.y;
             if (ps.y > maxMinY) maxMinY = ps.y;
         }
-        if (minMinX > target->size().x && maxMinX < target->size().x &&
-        minMinY > target->size().y && maxMinY < target->size().y) {
+        if (minMinX >= target->size().x && maxMinX <= target->size().x &&
+        minMinY >= target->size().y && maxMinY <= target->size().y) {
             // At least everyone is fitting with their minimum sizes.
             for (auto c : target->children()) {
                 c->setSize(c->getMinSize());

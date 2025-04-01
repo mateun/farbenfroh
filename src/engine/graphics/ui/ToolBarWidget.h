@@ -12,7 +12,7 @@ class ToolBarWidget : public Widget {
 
 public:
     ToolBarWidget();
-    void draw() override;
+    void draw(float depth = -0.5) override;
     MessageHandleResult onMessage(const UIMessage &message) override;
 
     glm::vec2 getPreferredSize() override;

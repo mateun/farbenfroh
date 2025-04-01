@@ -19,7 +19,7 @@ SplitterWidget::SplitterWidget(SplitterType type, std::shared_ptr<Widget> first,
 
 }
 
-void SplitterWidget::draw() {
+void SplitterWidget::draw(float depth) {
 
     int splitterSize = 2;
 
@@ -88,7 +88,6 @@ void SplitterWidget::draw() {
 
 MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
     if (message.type == MessageType::MouseMove) {
-        printf("mouse_y: %d\n", message.mouseMoveMessage.y);
         if (message.mouseMoveMessage.x >= splitterPosition_.x - 5 && message.mouseMoveMessage.x <= splitterPosition_.x + 5 &&
             message.mouseMoveMessage.y <= origin_.y + size_.y) {
 
