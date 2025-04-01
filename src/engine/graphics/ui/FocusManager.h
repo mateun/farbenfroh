@@ -5,6 +5,7 @@
 #ifndef FOCUSMANAGER_H
 #define FOCUSMANAGER_H
 
+#include <memory>
 #include <engine/graphics/ui/FrameMessageSubscriber.h>
 
 class Widget;
@@ -41,6 +42,18 @@ class FocusManager : public FrameMessageSubscriber {
     void onFrameMessages(const std::vector<RawWin32Message>& msgs) override;
 
     int mouse_x = 0, mouse_y = 0;
+};
+
+class HitVisitor {
+public:
+    void visit(std::shared_ptr<Widget> widget, int mouse_x, int mouse_y);
+
+    std::shared_ptr<Widget> getHighestHitWidget();
+
+
+private:
+    std::shared_ptr<Widget> current_highest_widget;
+    float hightest_z_value_ = std::numeric_limits<float>::lowest();
 };
 
 

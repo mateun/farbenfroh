@@ -27,6 +27,10 @@ public:
   glm::vec2 getPreferredSize() override;
   void setParent(std::weak_ptr<Menu> parent);
 
+  void setHoverFocus() override;
+  void removeHoverFocus() override;
+
+
 private:
   std::weak_ptr<Menu> parent_menu_;
   std::string text_;
@@ -39,9 +43,18 @@ private:
   bool sub_menu_open_ = false;
   bool hover_sub_panel_ = false;
 
+  bool app_hover_focus_ = false;
+
   void lazyCreateSubMenuPanel();
 };
 
+inline void Menu::removeHoverFocus() {
+  app_hover_focus_ = false;
+}
+
+inline void Menu::setHoverFocus() {
+  app_hover_focus_ = true;
+}
 
 
 #endif //MENU_H

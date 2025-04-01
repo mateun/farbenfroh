@@ -192,8 +192,10 @@ void Renderer::drawMesh(const MeshDrawData &drawData) {
  *
  * @param mdd The draw data on which to base the draw call on.
  */
-void Renderer::drawWidgetMeshDeferred(MeshDrawData mdd, const Widget * widget) {
+void Renderer::drawWidgetMeshDeferred(MeshDrawData mdd, Widget * widget) {
+    batch_draw_list_.push_back(mdd);
     batchedDrawData_[widget].push_back(mdd);
+    widget->setZValue(mdd.location.z);
 }
 
 void Renderer::submitDeferredWidgetCalls() {
@@ -215,13 +217,14 @@ void Renderer::submitDeferredWidgetCalls() {
         // }
     }
 
-    for (auto& mdds: batchedDrawData_ | std::views::values) {
-        // TODO temp: for now just call the imm. interface:
-        for (auto& mdd: mdds) {
-            drawMesh(mdd);
-        }
+
+    for (auto& mdd: batch_draw_list_) {
+        // TODO actually batch - for now just draw immediately
+        drawMesh(mdd);
+
     }
     batchedDrawData_.clear();
+    batch_draw_list_.clear();
 }
 
 /**

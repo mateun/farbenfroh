@@ -131,12 +131,24 @@ public:
 
     bool hasMenuBar();
 
+    std::shared_ptr<Widget> getMenuBar() const;
+
     bool checkMouseOver(int mouseX, int mouseY) const;
 
+    // Indicates to the widget it was currently the highest z-value widget where the mouse was hovering over the last
+    // frame.
+    virtual void setHoverFocus();
+
+    // Called if this widget no longer has the hover focus.
+    virtual void removeHoverFocus();
+
     static bool checkMouseOver(int mouseX, int mouseY, const Widget* widget, bool useOffsets = false,
-        glm::vec2 originOffset = {0, 0}, glm::vec2 sizeOffset = {0, 0});
+                               glm::vec2 originOffset = {0, 0}, glm::vec2 sizeOffset = {0, 0});
 
     void setId(const std::string& id);
+
+    void setZValue(int zValue);
+    float getZValue() const;
 
 protected:
     // This is the location in parent-space.
@@ -171,7 +183,18 @@ protected:
     // which widget we are seeing currently.
     std::string id_ = "";
 
+    // This is the depth ( or z...) value of the widget.
+    float z_value_ = 0.f;
+
 };
+
+inline float Widget::getZValue() const {
+    return z_value_;
+}
+
+inline void Widget::setZValue(int zValue) {
+    z_value_ = zValue;
+}
 
 
 /**

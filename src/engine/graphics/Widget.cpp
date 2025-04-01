@@ -3,6 +3,10 @@
 //
 
 #include "Widget.h"
+
+#include <iostream>
+#include <ostream>
+
 #include "Application.h"
 #include <engine/graphics/MeshDrawData.h>
 #include <engine/graphics/ui/MessageHandleResult.h>
@@ -52,8 +56,15 @@ Widget::Widget() {
  */
 MessageHandleResult Widget::onMessage(const UIMessage &message) {
 
+    MessageHandleResult handleResult = {};
     if (menu_bar_) {
-        menu_bar_->onMessage(message);
+        handleResult = menu_bar_->onMessage(message);
+    }
+
+    // We return early if the menuBar already handled our message, so it is no longer valid
+    // and we avoid double hits etc.
+    if (handleResult.wasHandled) {
+        return handleResult;
     }
 
     for (auto& c : children_) {
@@ -138,6 +149,10 @@ bool Widget::hasMenuBar() {
     return menu_bar_ != nullptr;
 }
 
+std::shared_ptr<Widget> Widget::getMenuBar() const {
+    return menu_bar_;
+}
+
 bool Widget::checkMouseOver(int mouse_x, int mouse_y) const {
     if (mouse_x >= origin_.x && mouse_x <= (origin_.x + size_.x) &&
         mouse_y <= (origin_.y + size_.y) && mouse_y >= origin_.y) {
@@ -145,6 +160,15 @@ bool Widget::checkMouseOver(int mouse_x, int mouse_y) const {
     }
     return false;
 
+}
+
+void Widget::setHoverFocus() {
+    // no op... just debug print for now...
+    std::cout << "go focus: " << id_ << std::endl;
+}
+
+void Widget::removeHoverFocus() {
+    std::cout << "removed focus: " << id_ << std::endl;
 }
 
 bool Widget::checkMouseOver(int mouse_x, int mouse_y, const Widget* widget, bool useOffsets, glm::vec2 originOffset, glm::vec2 sizeOffset) {

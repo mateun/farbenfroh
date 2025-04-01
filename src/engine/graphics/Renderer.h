@@ -35,7 +35,7 @@ class Renderer {
     * May be better for performance if a lot of draw calls are necessary, e.g.
     * UI or bullet hell, particles etc.
     */
-    static void drawWidgetMeshDeferred(MeshDrawData mdd, const Widget* widget);
+    static void drawWidgetMeshDeferred(MeshDrawData mdd, Widget* widget);
 
     /**
     * This creates at minimum one (and as few as possible...) GL draw calls based on
@@ -59,6 +59,7 @@ class Renderer {
     * This list is used for deferred rendering to collect the incoming MeshDrawData items.
     */
     inline static std::map<const Widget*, std::vector<MeshDrawData>> batchedDrawData_ = {};
+    inline static std::vector<MeshDrawData> batch_draw_list_ = {};
 };
 
 

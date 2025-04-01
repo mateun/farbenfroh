@@ -36,7 +36,7 @@ void Menu::addMenuItem(std::shared_ptr<MenuItem> menuItem) {
 void Menu::draw(float depth) {
     label_->setOrigin(origin_ + glm::vec2{2, 2});
     label_->setSize(size_);
-    if (hover_) {
+    if (app_hover_focus_) {
         // Draw a background quad on hovering.
         MeshDrawData mdd;
         mdd.mesh = quadMesh_;
@@ -102,7 +102,7 @@ void Menu::draw(float depth) {
         } else {
             // How much do we move the subpanel to the right?
             int xOffset = 35;
-            sub_menu_panel_->setOrigin(origin_ + + glm::vec2{size_.x + xOffset, 0});
+            sub_menu_panel_->setOrigin(origin_ + glm::vec2{size_.x + xOffset, 0});
             mdd.viewport = {origin_.x + size_.x + xOffset, origin_.y, size_.x * 4, panelSizeY };
         }
 
@@ -131,7 +131,7 @@ MessageHandleResult Menu::onMessage(const UIMessage &message) {
             auto hover_menu = checkMouseOver(message.mouseMoveMessage.x, message.mouseMoveMessage.y);
             bool hover_sub_menu_panel = false;
             if (sub_menu_open_ && sub_menu_panel_) {
-                hover_sub_menu_panel = checkMouseOver(message.mouseMoveMessage.x, message.mouseMoveMessage.y, sub_menu_panel_.get(), true, {-35, -5}, {86, 10});
+                hover_sub_menu_panel = checkMouseOver(message.mouseMoveMessage.x, message.mouseMoveMessage.y, sub_menu_panel_.get(), true, {-35, -3}, {86, 3});
             }
             hover_ = hover_menu;
             hover_sub_panel_ = hover_sub_menu_panel;
@@ -143,6 +143,8 @@ MessageHandleResult Menu::onMessage(const UIMessage &message) {
             // If we are over the sub-panel, we want to allow the submenus/items to handle messages themselves:
             if (hover_sub_menu_panel) {
                 sub_menu_panel_->onMessage(message);
+                return MessageHandleResult {true, "", true};
+
             } else {
                 sub_menu_open_ = false;
             }

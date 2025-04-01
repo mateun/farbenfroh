@@ -46,6 +46,7 @@ void EditorLauncher::onCreated() {
 
     auto mainWidget = std::make_shared<Widget>();
     auto topToolbar = std::make_shared<ToolBarWidget>();
+    topToolbar->setId("toolbar");
     auto areaLayout = std::make_shared<AreaLayout>(topToolbar, nullptr, nullptr, nullptr, mainSplitter);
     mainWidget->setLayout(areaLayout);
     mainWidget->addChild(topToolbar);

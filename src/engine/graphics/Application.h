@@ -36,6 +36,8 @@ class Application {
     int scaled_width();
     int scaled_height();
 
+    std::shared_ptr<Widget> getTopLevelWidget();
+
 protected:
 
     // Gets called right after the successful construction, must be implemented by concrete

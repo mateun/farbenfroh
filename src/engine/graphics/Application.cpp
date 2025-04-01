@@ -182,6 +182,10 @@ int Application::scaled_height() {
     return scaled_height_;
 }
 
+std::shared_ptr<Widget> Application::getTopLevelWidget() {
+    return topLevelWidget;
+}
+
 #ifdef USE_WIN32_APP_FRAMEWORK
 int APIENTRY WinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -210,6 +214,7 @@ void Application::setTopLevelWidget(const std::shared_ptr<Widget>& widget) {
     // The top level widget is always the full application window size.
     // Further down the hierarchy, e.g. splitted windows have smaller sizes.
     topLevelWidget->setSize({width_, height_});
+    topLevelWidget->setZValue(std::numeric_limits<float>::lowest());
 }
 
 void Application::mainLoop() {
@@ -338,20 +343,19 @@ LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
             break;
         }
 
-        //  case WM_SETCURSOR:{
-        //     POINT pt;
-        //     GetCursorPos(&pt);
-        //     ScreenToClient(hWnd, &pt);
-        //     if (abs(pt.x - 400) <= 4) {
-        //         SetCursor(LoadCursor(NULL, IDC_SIZEWE));
-        //         return TRUE;
-        //     }
-        //
-        //     SetCursor(LoadCursor(NULL, IDC_ARROW));
-        //     return TRUE;
-        //
-        //
-        // }
+         case WM_SETCURSOR:{
+            // lParam's low-order word indicates the hit-test result.
+            WORD hitTest = LOWORD(lParam);
+            if (hitTest == HTCLIENT) {
+                // In the client area, explicitly set the cursor to the standard arrow.
+                SetCursor(LoadCursor(NULL, IDC_ARROW));
+                return TRUE; // Message handled.
+            }
+
+            // For non-client areas (like the edges), let Windows handle it.
+            return DefWindowProc(hWnd, message, wParam, lParam);
+
+        }
         default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
