@@ -34,7 +34,7 @@ class FocusManager : public FrameMessageSubscriber {
     /**
     * Return a pointer to a Widget which has currently the focus.
     */
-    Widget* getFocusedWidget();
+    std::shared_ptr<Widget> getFocusedWidget();
 
     /**
     * Here we retrieve the frame messages.
@@ -42,6 +42,7 @@ class FocusManager : public FrameMessageSubscriber {
     void onFrameMessages(const std::vector<RawWin32Message>& msgs) override;
 
     int mouse_x = 0, mouse_y = 0;
+    std::shared_ptr<Widget> previous_focus_widget_;
 };
 
 class HitVisitor {

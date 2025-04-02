@@ -9,12 +9,18 @@
 #include <engine/graphics/Application.h>
 #include <engine/graphics/RawWin32Message.h>
 
+#include "MessageHandleResult.h"
+
 FocusManager::FocusManager() {
     printf("in ctr\n");
 }
 
 void FocusManager::update() {
     // Find the first matching widget
+}
+
+std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
+    return previous_focus_widget_;
 }
 
 /**
@@ -32,11 +38,24 @@ void FocusManager::update() {
 
              auto visitor = HitVisitor();
              visitor.visit(getApplication()->getTopLevelWidget(), mouse_x, mouse_y);
-             auto highestHitWidget = visitor.getHighestHitWidget();
-             if (highestHitWidget) {
-                 // TODO remove focus from previous widget!
-                 // previousFocusWidget->removeHoverFocus();
-                 highestHitWidget->setHoverFocus();
+             if (auto highestHitWidget = visitor.getHighestHitWidget()) {
+                 if (previous_focus_widget_) {
+                     previous_focus_widget_->removeHoverFocus();
+                 }
+                 highestHitWidget->setHoverFocus(previous_focus_widget_);
+
+                 // Send out focues messages
+                 UIMessage msg;
+                 msg.type = MessageType::WidgetGainedFocus;
+                 msg.focusMessage.widget = highestHitWidget;
+                 getApplication()->getTopLevelWidget()->onMessage(msg);
+                 getApplication()->getCentralSubMenuManager()->onMessage(msg);
+                 msg.type = MessageType::WidgetLostFocus;
+                 msg.focusMessage.widget = previous_focus_widget_;
+                 getApplication()->getTopLevelWidget()->onMessage(msg);
+
+                 previous_focus_widget_ = highestHitWidget;
+
              }
 
          }
@@ -45,10 +64,12 @@ void FocusManager::update() {
 }
 
 void HitVisitor::visit(std::shared_ptr<Widget> widget, int mouse_x, int mouse_y) {
+    if (!widget->isVisible()) return;
     if (widget->getZValue() > hightest_z_value_) {
-        hightest_z_value_ = widget->getZValue();
+
         if (widget->checkMouseOver(mouse_x, mouse_y)) {
             current_highest_widget = widget;
+            hightest_z_value_ = widget->getZValue();
         }
     }
 

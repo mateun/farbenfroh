@@ -193,8 +193,14 @@ void Renderer::drawMesh(const MeshDrawData &drawData) {
  * @param mdd The draw data on which to base the draw call on.
  */
 void Renderer::drawWidgetMeshDeferred(MeshDrawData mdd, Widget * widget) {
+    // Inject default ui camera if missing
+    if (!mdd.camera_shared) {
+        mdd.camera_shared = Widget::getDefaultUICam();
+    }
+
     batch_draw_list_.push_back(mdd);
     batchedDrawData_[widget].push_back(mdd);
+
     widget->setZValue(mdd.location.z);
 }
 

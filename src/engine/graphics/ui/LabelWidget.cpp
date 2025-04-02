@@ -29,10 +29,7 @@ void LabelWidget::draw(float depth) {
     mdd.mesh = textMesh;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultTextShader();
 
-    auto cam = std::make_shared<Camera>(CameraType::Ortho);
-    cam->updateLocation({0, 0, 2});
-    cam->updateLookupTarget({0, 0, -1});
-    mdd.camera_shared = cam;
+
     mdd.viewPortDimensions =  size_;
     mdd.setViewport = true;
     mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};

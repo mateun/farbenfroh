@@ -12,6 +12,7 @@
 #include <engine/graphics/ui/Menu.h>
 #include <engine/graphics/ui/MenuBar.h>
 #include <engine/graphics/ui/MenuItem.h>
+#include <engine/graphics/ui/Spacer.h>
 
 std::shared_ptr<Application> app;
 std::shared_ptr<Application> getApplication() {
@@ -64,12 +65,16 @@ void EditorLauncher::onCreated() {
     btnStop->setId("button_stop");
     btnPause->setId("button_pause");
     topToolbar->addChild(btnStart);
+    auto spacer = std::make_shared<Spacer>(glm::vec2{400, 0});
+    topToolbar->addChild(spacer);
     topToolbar->addChild(btnStop);
     topToolbar->addChild(btnPause);
 
     auto menuFile = std::make_shared<Menu>("File");
+    menuFile->setId("menu_file");
     auto menuNew = std::make_shared<Menu>("New");
     auto menuOpen = std::make_shared<Menu>("Open");
+    menuOpen->setId("menu_open");
     auto menuItemNewGame = std::make_shared<MenuItem>("Game");
     menuItemNewGame->setId("menu_item_new_game");
     menuNew->setId("file_new");
@@ -77,12 +82,20 @@ void EditorLauncher::onCreated() {
     menuFile->addSubMenu(menuNew);
     menuFile->addSubMenu(menuOpen);
 
-    auto menuGame = std::make_shared<Menu>("GameObjects");
+    auto menuGameObjects = std::make_shared<Menu>("GameObjects");
+    menuGameObjects->setId("menu_game_objects");
+    auto menuNewCube = std::make_shared<MenuItem>("New Cube");
+    menuNewCube->setId("menu_item_new_cube");
+    menuGameObjects->addSubMenu(menuNewCube);
+    auto menuNewSphere = std::make_shared<MenuItem>("NewSphere");
+    menuGameObjects->addSubMenu(menuNewSphere);
 
     auto mainMenuBar = std::make_shared<MenuBar>();
     mainMenuBar->addMenu(menuFile);
-    mainMenuBar->addMenu(menuGame);
-    mainMenuBar->addMenu(std::make_shared<Menu>("About"));
+    mainMenuBar->addMenu(menuGameObjects);
+    auto menuAbout = std::make_shared<Menu>("About");
+    menuAbout->setId("menu_about");
+    mainMenuBar->addMenu(menuAbout);
     mainWidget->setMenuBar(mainMenuBar);
 
     setTopLevelWidget(mainWidget);

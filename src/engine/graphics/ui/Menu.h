@@ -26,10 +26,19 @@ public:
   MessageHandleResult onMessage(const UIMessage &message) override;
   glm::vec2 getPreferredSize() override;
   void setParent(std::weak_ptr<Menu> parent);
+  std::weak_ptr<Menu> parentMenu();
 
-  void setHoverFocus() override;
+  void setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) override;
   void removeHoverFocus() override;
 
+  void closeSubMenuPanel();
+
+  bool isWidgetAChild(const std::shared_ptr<Menu> & menu);
+
+  //void widgetGotHoverFocus(std::shared_ptr<Widget> widget) override;
+
+  // Checks if "this" is any ancestor (parent, grand-parent..) of the given reference menu.
+  bool isAncestorOf(const std::shared_ptr<Menu> & referenceWidget);
 
 private:
   std::weak_ptr<Menu> parent_menu_;
@@ -48,13 +57,7 @@ private:
   void lazyCreateSubMenuPanel();
 };
 
-inline void Menu::removeHoverFocus() {
-  app_hover_focus_ = false;
-}
 
-inline void Menu::setHoverFocus() {
-  app_hover_focus_ = true;
-}
 
 
 #endif //MENU_H

@@ -24,6 +24,8 @@ enum class MessageType {
     MouseMove,
     MouseUp,
     MouseDown,
+    WidgetGainedFocus,
+    WidgetLostFocus,
 };
 
 struct MouseMoveMessage {
@@ -31,9 +33,15 @@ struct MouseMoveMessage {
     int y;
 };
 
+class Widget;
+struct FocusMessage {
+    std::shared_ptr<Widget> widget;
+};
+
 struct UIMessage {
     MessageType type;
     MouseMoveMessage mouseMoveMessage;
+    FocusMessage focusMessage;
 
 };
 
@@ -100,6 +108,8 @@ public:
     */
     void setSize(glm::vec2 size);
 
+    std::string getId() const;
+
 
     /**
     * Retrieve the size of this widget (width, height).
@@ -137,20 +147,44 @@ public:
 
     // Indicates to the widget it was currently the highest z-value widget where the mouse was hovering over the last
     // frame.
-    virtual void setHoverFocus();
+    virtual void setHoverFocus(std::shared_ptr<Widget> prevFocusHolder);
 
     // Called if this widget no longer has the hover focus.
     virtual void removeHoverFocus();
 
+    // These get called if any widget got or lost focus.
+    // This might be important if you need to change internal state based on another type or specific
+    // widgets focus state.
+    virtual void widgetGotHoverFocus(std::shared_ptr<Widget> widget);
+    virtual void widgetLostHoverFocus(std::shared_ptr<Widget> widget);
+
+
+
     static bool checkMouseOver(int mouseX, int mouseY, const Widget* widget, bool useOffsets = false,
                                glm::vec2 originOffset = {0, 0}, glm::vec2 sizeOffset = {0, 0});
+
+    // Returns a standard ortho camera.
+    static std::shared_ptr<Camera> getDefaultUICam();
 
     void setId(const std::string& id);
 
     void setZValue(int zValue);
     float getZValue() const;
 
+    void setVisible(bool cond);
+    bool isVisible() const;
+
+
+
 protected:
+
+    // This is an optional identifier, mainly usable for debugging so we know
+    // which widget we are seeing currently.
+    std::string id_ = "";
+
+    // This is the depth ( or z...) value of the widget.
+    float z_value_ = 0.f;
+
     // This is the location in parent-space.
     // For the widget itself this is normally not "interesting",
     // as for its own drawing purposes it always assumes a (0,0) origin
@@ -179,14 +213,12 @@ protected:
     // The top row menu bar.
     std::shared_ptr<MenuBar> menu_bar_;
 
-    // This is an optional identifier, mainly usable for debugging so we know
-    // which widget we are seeing currently.
-    std::string id_ = "";
+    bool visible_ = true;
 
-    // This is the depth ( or z...) value of the widget.
-    float z_value_ = 0.f;
+
 
 };
+
 
 inline float Widget::getZValue() const {
     return z_value_;

@@ -10,6 +10,7 @@
 #include <engine/graphics/MeshDrawData.h>
 #include <engine/graphics/Renderer.h>
 #include <engine/graphics/Widget.h>
+#include <engine/graphics/ui/CursorType.h>
 
 #include "MessageHandleResult.h"
 
@@ -38,18 +39,18 @@ void SplitterWidget::draw(float depth) {
     mdd.mesh = quadMesh_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
 
-    auto cam = std::make_shared<Camera>(CameraType::Ortho);
-    cam->updateLocation({0, 0, 2});
-    cam->updateLookupTarget({0, 0, -1});
-    mdd.camera_shared = cam;
+    mdd.camera_shared = getDefaultUICam();
     mdd.viewPortDimensions =  size_;
     mdd.setViewport = true;
     mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
     mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.02, 0.02, 0.02, 1}}};
     if (mouse_over_splitter_) {
         mdd.color = {0.4, 0.12,0.01, 1};
+        getApplication()->setSpecialCursor(CursorType::Resize);
+
     } else {
         mdd.color = {0.02, 0.02,.03, 1};
+        getApplication()->unsetSpecialCursor();
     }
 
     if (type_ == SplitterType::Vertical) {
@@ -92,12 +93,26 @@ MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
             message.mouseMoveMessage.y <= origin_.y + size_.y) {
 
             mouse_over_splitter_ = true;
+
+
+
         } else {
             // Only relieve this if we are not dragging already.
             if (!mouse_down_) {
                 mouse_over_splitter_ = false;
             } else {
-                splitterPosition_.x = message.mouseMoveMessage.x;
+                if (type_ == SplitterType::Vertical) {
+                    splitterPosition_.x = message.mouseMoveMessage.x;
+                    if (splitterPosition_.x < first_->origin().x + first_->getMinSize().x) {
+                        splitterPosition_.x = first_->origin().x + first_->getMinSize().x;
+                    }
+                    if (splitterPosition_.x > (second_->origin().x + second_->size().x) - second_->getMinSize().x) {
+                        splitterPosition_.x = (second_->origin().x + second_->size().x) - second_->getMinSize().x;
+                    }
+                } else {
+                    splitterPosition_.y = message.mouseMoveMessage.y;
+                }
+
             }
         }
         return {true, "", true};

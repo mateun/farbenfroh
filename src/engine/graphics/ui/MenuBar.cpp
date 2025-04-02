@@ -25,10 +25,6 @@ void MenuBar::draw(float depth) {
     mdd.mesh = quadMesh_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
 
-    auto cam = std::make_shared<Camera>(CameraType::Ortho);
-    cam->updateLocation({0, 0, 2});
-    cam->updateLookupTarget({0, 0, -1});
-    mdd.camera_shared = cam;
     mdd.viewPortDimensions =  size_;
     mdd.setViewport = true;
     mdd.viewport = {origin_.x,  origin_.y, size_.x, 32};

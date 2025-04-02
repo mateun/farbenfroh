@@ -42,11 +42,6 @@ void Menu::draw(float depth) {
         mdd.mesh = quadMesh_;
         mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
 
-        // TODO create helper for default ui ortho cam
-        auto cam = std::make_shared<Camera>(CameraType::Ortho);
-        cam->updateLocation({0, 0, 2});
-        cam->updateLookupTarget({0, 0, -1});
-        mdd.camera_shared = cam;
         mdd.viewPortDimensions =  size_;
         mdd.setViewport = true;
         mdd.viewport = {origin_.x-1,  origin_.y, size_.x + 7, size_.y + 4};
@@ -60,9 +55,7 @@ void Menu::draw(float depth) {
         // Make sure we raise the depth above the hover highlight marker
         label_->draw(depth + 0.1);
 
-        // Turn on the submenu latch here, because we are hovered, so this
-        // condition is satisfied:
-        sub_menu_open_ = true;
+
     }
     else {
         // Just draw the label without underlying hover marking:
@@ -79,10 +72,6 @@ void Menu::draw(float depth) {
         MeshDrawData mdd;
         mdd.mesh = quadMesh_;
         mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
-        auto cam = std::make_shared<Camera>(CameraType::Ortho);
-        cam->updateLocation({0, 0, 2});
-        cam->updateLookupTarget({0, 0, -1});
-        mdd.camera_shared = cam;
         mdd.viewPortDimensions =  size_;
         mdd.setViewport = true;
 
@@ -117,7 +106,16 @@ void Menu::draw(float depth) {
         mdd.location = {0, 0, depth + 0.2};
         Renderer::drawWidgetMeshDeferred(mdd, this);
 
+        for (auto c : children_) {
+            c->setVisible(true);
+        }
         sub_menu_panel_->draw(depth + 0.3);
+    }
+
+    if (!sub_menu_open_) {
+        for (auto c : children_) {
+            c->setVisible(false);
+        }
     }
 
 
@@ -125,34 +123,8 @@ void Menu::draw(float depth) {
 
 MessageHandleResult Menu::onMessage(const UIMessage &message) {
     switch (message.type) {
-        case MessageType::MouseMove: {
-            hover_ = false;
-
-            auto hover_menu = checkMouseOver(message.mouseMoveMessage.x, message.mouseMoveMessage.y);
-            bool hover_sub_menu_panel = false;
-            if (sub_menu_open_ && sub_menu_panel_) {
-                hover_sub_menu_panel = checkMouseOver(message.mouseMoveMessage.x, message.mouseMoveMessage.y, sub_menu_panel_.get(), true, {-35, -3}, {86, 3});
-            }
-            hover_ = hover_menu;
-            hover_sub_panel_ = hover_sub_menu_panel;
-            // If we are directly over the menu itself, we are done here:
-            if (hover_menu) {
-                return MessageHandleResult {true, "", true};
-            }
-
-            // If we are over the sub-panel, we want to allow the submenus/items to handle messages themselves:
-            if (hover_sub_menu_panel) {
-                sub_menu_panel_->onMessage(message);
-                return MessageHandleResult {true, "", true};
-
-            } else {
-                sub_menu_open_ = false;
-            }
-            break;
-
-        }
         case MessageType::MouseDown: {
-            if (hover_) {
+            if (app_hover_focus_) {
                 if (sub_menu_panel_) {
                     sub_menu_panel_->onMessage(message);
                 } else {
@@ -177,6 +149,10 @@ void Menu::setParent(std::weak_ptr<Menu> parent) {
     parent_menu_ = parent;
 }
 
+std::weak_ptr<Menu> Menu::parentMenu() {
+    return parent_menu_;
+}
+
 void Menu::lazyCreateSubMenuPanel() {
     if (!sub_menu_panel_) {
         sub_menu_panel_ = std::make_shared<Widget>();
@@ -185,3 +161,45 @@ void Menu::lazyCreateSubMenuPanel() {
     }
 }
 
+
+void Menu::closeSubMenuPanel() {
+    sub_menu_open_ = false;
+}
+
+bool Menu::isWidgetAChild(const std::shared_ptr<Menu> &menu) {
+    return std::find(children_.begin(), children_.end(), menu) != children_.end();
+
+}
+
+
+bool Menu::isAncestorOf(const std::shared_ptr<Menu> &referenceWidget) {
+    if (shared_from_this() == referenceWidget->parentMenu().lock()) {
+        return true;
+    }
+
+    if (!referenceWidget->parentMenu().expired()) {
+        return isAncestorOf(referenceWidget->parentMenu().lock());
+    }
+
+    // if (!parent_menu_.expired()) {
+    //     return parent_menu_.lock()->isAncestorOf(referenceWidget);
+    // }
+
+    return false;
+
+}
+
+
+void Menu::setHoverFocus(std::shared_ptr<Widget> prevHolder) {
+    app_hover_focus_ = true;
+
+    if (!children().empty()) {
+        sub_menu_open_ = true;
+        getApplication()->getCentralSubMenuManager()->registerSubMenuHolder(shared_from_this());
+    }
+
+}
+
+void Menu::removeHoverFocus() {
+    app_hover_focus_ = false;
+}

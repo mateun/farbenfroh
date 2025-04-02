@@ -2,9 +2,10 @@
 // Created by mgrus on 24.03.2025.
 //
 
+#define NOMINMAX
 #include "Widget.h"
 
-#include <iostream>
+#include <limits>
 #include <ostream>
 
 #include "Application.h"
@@ -32,6 +33,19 @@ void Widget::setSize(glm::vec2 size) {
     size_ = size;
 
 }
+
+std::string Widget::getId() const {
+    return id_;
+}
+
+void Widget::setVisible(bool cond) {
+    visible_ = cond;
+}
+
+bool Widget::isVisible() const {
+    return visible_;
+}
+
 
 
 glm::vec2 Widget::size() const {
@@ -123,6 +137,7 @@ void Widget::addChild(std::shared_ptr<Widget> child) {
 
 void Widget::setMenuBar(std::shared_ptr<MenuBar> menu_bar) {
     menu_bar_ = menu_bar;
+    getApplication()->getCentralSubMenuManager()->registerMenuBar(menu_bar_);
 }
 
 std::vector<std::shared_ptr<Widget>> Widget::children() const{
@@ -130,7 +145,20 @@ std::vector<std::shared_ptr<Widget>> Widget::children() const{
 }
 
 glm::vec2 Widget::getPreferredSize() {
-    return {getApplication()->scaled_width(), getApplication()->scaled_height()};
+    float minX = std::numeric_limits<float>::max();
+    auto maxX = std::numeric_limits<float>::min();
+    auto minY = std::numeric_limits<float>::max();
+    auto maxY = std::numeric_limits<float>::min();
+
+    for (auto c : children_) {
+        auto ps = c->getPreferredSize();
+        if (ps.x < minX) minX = ps.x;
+        if (ps.x > maxX) maxX = ps.x;
+        if (ps.y < minY) minY = ps.y;
+        if (ps.y > maxY) maxY = ps.y;
+    }
+
+    return {maxX, maxY};
 }
 
 glm::vec2 Widget::getMinSize() {
@@ -162,13 +190,18 @@ bool Widget::checkMouseOver(int mouse_x, int mouse_y) const {
 
 }
 
-void Widget::setHoverFocus() {
-    // no op... just debug print for now...
-    std::cout << "go focus: " << id_ << std::endl;
+void Widget::setHoverFocus(std::shared_ptr<Widget> prevHolder) {
+    // noop
 }
 
 void Widget::removeHoverFocus() {
-    std::cout << "removed focus: " << id_ << std::endl;
+    // noop
+}
+
+void Widget::widgetGotHoverFocus(std::shared_ptr<Widget> widget) {
+}
+
+void Widget::widgetLostHoverFocus(std::shared_ptr<Widget> widget) {
 }
 
 bool Widget::checkMouseOver(int mouse_x, int mouse_y, const Widget* widget, bool useOffsets, glm::vec2 originOffset, glm::vec2 sizeOffset) {
@@ -187,6 +220,13 @@ bool Widget::checkMouseOver(int mouse_x, int mouse_y, const Widget* widget, bool
 
 void Widget::setId(const std::string &id) {
     id_ = id;
+}
+
+std::shared_ptr<Camera> Widget::getDefaultUICam() {
+    auto cam = std::make_shared<Camera>(CameraType::Ortho);
+    cam->updateLocation({0, 0, 2});
+    cam->updateLookupTarget({0, 0, -1});
+    return cam;
 }
 
 

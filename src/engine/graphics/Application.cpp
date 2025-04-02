@@ -24,7 +24,9 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <engine/graphics/stb_truetype.h>
 #include <crtdbg.h>
+#include <filesystem>
 
+#include "ui/CentralSubMenuManager.h"
 
 
 // This function must be provided by any Application implementor.
@@ -156,7 +158,10 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
     render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, _window, width_, height_);
     // registerRawInput(hwnd);
 
+    // Load the resize cursor (horizontal resize cursor)
+    resize_cursor_ = LoadCursor(NULL, IDC_SIZEWE);
 
+    central_submenu_manager_ = std::make_shared<CentralSubMenuManager>();
 
 }
 
@@ -217,6 +222,34 @@ void Application::setTopLevelWidget(const std::shared_ptr<Widget>& widget) {
     topLevelWidget->setZValue(std::numeric_limits<float>::lowest());
 }
 
+void Application::setAllowCursorOverride(bool allow) {
+    allow_cursor_override_ = allow;
+}
+
+bool Application::allowCursorOverride() {
+    return allow_cursor_override_;
+}
+
+void Application::setSpecialCursor(CursorType cursorType) {
+
+    switch (cursorType) {
+        case CursorType::Resize:SetCursor(resize_cursor_); break;
+
+    }
+    allow_cursor_override_ = true;
+
+    // Restore the previous cursor when done?!
+    //SetCursor(hOldCursor);
+}
+
+void Application::unsetSpecialCursor() {
+    allow_cursor_override_ = false;
+}
+
+std::shared_ptr<CentralSubMenuManager> Application::getCentralSubMenuManager() {
+    return central_submenu_manager_;
+}
+
 void Application::mainLoop() {
 
     //initXInput();
@@ -229,7 +262,8 @@ void Application::mainLoop() {
     focus_manager_ = std::make_shared<FocusManager>();
     message_dispatcher_ = std::make_shared<FocusBasedMessageDispatcher>(*focus_manager_);
     simple_message_dispatcher_ = std::make_shared<SimpleMessageDispatcher>(topLevelWidget);
-    addMessageSubscriber(simple_message_dispatcher_);
+
+    //addMessageSubscriber(simple_message_dispatcher_);
     addMessageSubscriber(focus_manager_);
     addMessageSubscriber(message_dispatcher_);
 
@@ -347,8 +381,14 @@ LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
             // lParam's low-order word indicates the hit-test result.
             WORD hitTest = LOWORD(lParam);
             if (hitTest == HTCLIENT) {
-                // In the client area, explicitly set the cursor to the standard arrow.
-                SetCursor(LoadCursor(NULL, IDC_ARROW));
+                // In the client area, explicitly set the cursor to the standard arrow - unless the application
+                // tells us to allow the cursor override:
+                if (appPtr && appPtr->allowCursorOverride()) {
+                    // do nothing, we just keep the current cursor set by the application
+                } else {
+                    SetCursor(LoadCursor(NULL, IDC_ARROW));
+                }
+
                 return TRUE; // Message handled.
             }
 

@@ -42,12 +42,16 @@ glm::vec2 TrueTypeTextRenderer::calculateTextDimension(const std::string& text) 
 
     float x = 0, y = 0;
     for (auto c : text) {
+
+
         auto q = font_->getBakedQuad(c, &x, &y);
 
         // Track min/max for bounding box
         if (q.x0 < minX) minX = q.x0;
-        if (q.y0 < minY) minY = q.y0;
         if (q.x1 > maxX) maxX = q.x1;
+
+        if (c == 32) continue; // ignore space for Y, as this is always zero and messes things up.
+        if (q.y0 < minY) minY = q.y0;
         if (q.y1 > maxY) maxY = q.y1;
 
     }
@@ -94,8 +98,10 @@ std::shared_ptr<Mesh> TrueTypeTextRenderer::renderText(const std::string &text, 
 
         // Track min/max for bounding box
         if (q.x0 < minX) minX = q.x0;
-        if (q.y0 < minY) minY = q.y0;
         if (q.x1 > maxX) maxX = q.x1;
+
+        if (c == 32) continue; // ignore space for Y, as this is always zero and messes things up.
+        if (q.y0 < minY) minY = q.y0;
         if (q.y1 > maxY) maxY = q.y1;
 
     }

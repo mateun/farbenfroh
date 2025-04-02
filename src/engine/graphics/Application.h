@@ -4,6 +4,7 @@
 
 #ifndef APPLICATION_H
 #define APPLICATION_H
+#include <complex.h>
 #include <Windows.h>
 #include <memory>
 #include <string>
@@ -11,6 +12,9 @@
 #include "RenderBackend.h"
 #include <engine/graphics/RawWin32Message.h>
 #include <engine/graphics/ui/MessageDispatcher.h>
+
+#include "ui/CentralSubMenuManager.h"
+#include "ui/CursorType.h"
 
 class FocusManager;
 class Widget;
@@ -38,6 +42,19 @@ class Application {
 
     std::shared_ptr<Widget> getTopLevelWidget();
 
+    // This lets the application code set the desired windows cursor (e.g. resize cursor)
+    // and not have it reset automatically to the default pointer cursor immediately.
+    void setAllowCursorOverride(bool allow);
+    bool allowCursorOverride();
+
+    void setSpecialCursor(CursorType cursor);
+
+    // This makes the application use the default pointer arrow cursor when in the main windows
+    // client area.
+    void unsetSpecialCursor();
+
+    std::shared_ptr<CentralSubMenuManager> getCentralSubMenuManager();
+
 protected:
 
     // Gets called right after the successful construction, must be implemented by concrete
@@ -46,8 +63,13 @@ protected:
 
     void setTopLevelWidget(const std::shared_ptr<Widget>& widget);
 
+
+
 private:
     void mainLoop();
+
+
+
     static LRESULT CALLBACK AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
     int height_ = -1;
     int width_ = -1;
@@ -63,6 +85,9 @@ private:
     std::shared_ptr<FocusManager> focus_manager_;
     std::shared_ptr<FocusBasedMessageDispatcher> message_dispatcher_;
     std::shared_ptr<SimpleMessageDispatcher> simple_message_dispatcher_;
+    std::shared_ptr<CentralSubMenuManager> central_submenu_manager_;
+    bool allow_cursor_override_ = false;
+    HCURSOR resize_cursor_;
 
 };
 

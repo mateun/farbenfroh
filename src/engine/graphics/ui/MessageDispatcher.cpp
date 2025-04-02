@@ -9,6 +9,7 @@
 
 #include <engine/graphics/ui/MessageTransformer.h>
 
+#include "FocusManager.h"
 #include "MessageHandleResult.h"
 
 SimpleMessageDispatcher::SimpleMessageDispatcher(std::shared_ptr<Widget> topLevelWidget): top_level_widget_(
@@ -27,10 +28,14 @@ FocusBasedMessageDispatcher::FocusBasedMessageDispatcher(FocusManager &focusMana
 void FocusBasedMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
     // TODO ask FocusManager for the currently focused widget.
     // Then transform relevant messages into UIMessage objects and pass them on.
+    auto focused_widget = focus_manager_.getFocusedWidget();
+    if (!focused_widget) {
+        return;
+    }
 
     for (const auto &msg : msgs) {
-        // TODO implement
-        // ask
+        auto transformed = MessageTransformer::transform(msg);
+        focused_widget->onMessage(transformed);
     }
 }
 
