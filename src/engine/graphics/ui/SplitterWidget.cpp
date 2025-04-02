@@ -39,7 +39,6 @@ void SplitterWidget::draw(float depth) {
     mdd.mesh = quadMesh_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
 
-    mdd.camera_shared = getDefaultUICam();
     mdd.viewPortDimensions =  size_;
     mdd.setViewport = true;
     mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};

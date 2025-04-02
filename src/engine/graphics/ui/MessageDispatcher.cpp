@@ -9,6 +9,7 @@
 
 #include <engine/graphics/ui/MessageTransformer.h>
 
+#include "FloatingWindow.h"
 #include "FocusManager.h"
 #include "MessageHandleResult.h"
 
@@ -17,8 +18,13 @@ SimpleMessageDispatcher::SimpleMessageDispatcher(std::shared_ptr<Widget> topLeve
 }
 
 void SimpleMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
+    auto floatingWindows = getApplication()->getFloatingWindows();
     for (auto& msg : msgs) {
-        top_level_widget_->onMessage(MessageTransformer::transform(msg));
+        auto transformedMessage = MessageTransformer::transform(msg);
+        top_level_widget_->onMessage(transformedMessage);
+        for (auto fw: floatingWindows) {
+            fw->onMessage(transformedMessage);
+        }
     }
 }
 

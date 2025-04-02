@@ -27,6 +27,7 @@
 #include <filesystem>
 
 #include "ui/CentralSubMenuManager.h"
+#include "ui/FloatingWindow.h"
 
 
 // This function must be provided by any Application implementor.
@@ -222,6 +223,10 @@ void Application::setTopLevelWidget(const std::shared_ptr<Widget>& widget) {
     topLevelWidget->setZValue(std::numeric_limits<float>::lowest());
 }
 
+void Application::addFloatingWindow(std::shared_ptr<FloatingWindow> window) {
+    floating_windows_.push_back(window);
+}
+
 void Application::setAllowCursorOverride(bool allow) {
     allow_cursor_override_ = allow;
 }
@@ -250,6 +255,17 @@ std::shared_ptr<CentralSubMenuManager> Application::getCentralSubMenuManager() {
     return central_submenu_manager_;
 }
 
+std::vector<std::shared_ptr<FloatingWindow>> Application::getFloatingWindows() {
+    return floating_windows_;
+}
+
+glm::vec2 Application::getCurrentMousePos() {
+    POINT pt;
+    GetCursorPos(&pt);
+    ScreenToClient(_window, &pt);
+    return glm::vec2(pt.x, scaled_height_ - pt.y);
+}
+
 void Application::mainLoop() {
 
     //initXInput();
@@ -263,7 +279,7 @@ void Application::mainLoop() {
     message_dispatcher_ = std::make_shared<FocusBasedMessageDispatcher>(*focus_manager_);
     simple_message_dispatcher_ = std::make_shared<SimpleMessageDispatcher>(topLevelWidget);
 
-    //addMessageSubscriber(simple_message_dispatcher_);
+    addMessageSubscriber(simple_message_dispatcher_);
     addMessageSubscriber(focus_manager_);
     addMessageSubscriber(message_dispatcher_);
 
@@ -293,6 +309,14 @@ void Application::mainLoop() {
 	        //auto camera = render_backend_->getOrthoCameraForViewport(0, 0, scaled_width(), scaled_height());
 	        topLevelWidget->draw();
             Renderer::submitDeferredWidgetCalls();
+
+            // Render all floating windows:
+	        for (auto& fw : floating_windows_) {
+	            fw->draw(1);
+	        }
+	        // TODO maybe render all draw calls at once?!
+	        Renderer::submitDeferredWidgetCalls();
+
 	        // // Finally present to the main framebuffer.
 	         SwapBuffers(hdc);
 	    }

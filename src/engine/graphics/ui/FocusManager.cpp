@@ -9,6 +9,7 @@
 #include <engine/graphics/Application.h>
 #include <engine/graphics/RawWin32Message.h>
 
+#include "FloatingWindow.h"
 #include "MessageHandleResult.h"
 
 FocusManager::FocusManager() {
@@ -37,25 +38,52 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
              mouse_y = getApplication()->scaled_height() - GET_Y_LPARAM(m.lParam);
 
              auto visitor = HitVisitor();
-             visitor.visit(getApplication()->getTopLevelWidget(), mouse_x, mouse_y);
-             if (auto highestHitWidget = visitor.getHighestHitWidget()) {
-                 if (previous_focus_widget_) {
-                     previous_focus_widget_->removeHoverFocus();
+
+             // First we handle the static toplevel widget of the application:
+             {
+
+                 visitor.visit(getApplication()->getTopLevelWidget(), mouse_x, mouse_y);
+                 if (auto highestHitWidget = visitor.getHighestHitWidget()) {
+                     if (previous_focus_widget_) {
+                         previous_focus_widget_->removeHoverFocus();
+                     }
+                     highestHitWidget->setHoverFocus(previous_focus_widget_);
+
+                     // Send out focues messages
+                     UIMessage msg;
+                     msg.type = MessageType::WidgetGainedFocus;
+                     msg.focusMessage.widget = highestHitWidget;
+                     getApplication()->getTopLevelWidget()->onMessage(msg);
+                     getApplication()->getCentralSubMenuManager()->onMessage(msg);
+                     msg.type = MessageType::WidgetLostFocus;
+                     msg.focusMessage.widget = previous_focus_widget_;
+                     getApplication()->getTopLevelWidget()->onMessage(msg);
+
+                     previous_focus_widget_ = highestHitWidget;
+
                  }
-                 highestHitWidget->setHoverFocus(previous_focus_widget_);
+             }
 
-                 // Send out focues messages
-                 UIMessage msg;
-                 msg.type = MessageType::WidgetGainedFocus;
-                 msg.focusMessage.widget = highestHitWidget;
-                 getApplication()->getTopLevelWidget()->onMessage(msg);
-                 getApplication()->getCentralSubMenuManager()->onMessage(msg);
-                 msg.type = MessageType::WidgetLostFocus;
-                 msg.focusMessage.widget = previous_focus_widget_;
-                 getApplication()->getTopLevelWidget()->onMessage(msg);
+             // Next we visit all floating windows
+             {
+                 float floatingWindowHightestZ = std::numeric_limits<float>::lowest();
+                 std::shared_ptr<FloatingWindow> highestFloatingWindow;
+                 for (auto floatingWindow : getApplication()->getFloatingWindows()) {
+                     if (!floatingWindow->isVisible()) continue;
 
-                 previous_focus_widget_ = highestHitWidget;
+                     if (floatingWindow->checkMouseOver(mouse_x, mouse_y)) {
+                         if (floatingWindow->getZValue() > floatingWindowHightestZ) {
+                             floatingWindowHightestZ = floatingWindow->getZValue();
+                             highestFloatingWindow = floatingWindow;
+                         }
 
+                     }
+
+                 }
+
+                 if (highestFloatingWindow) {
+                     highestFloatingWindow->setHoverFocus(nullptr);
+                 }
              }
 
          }

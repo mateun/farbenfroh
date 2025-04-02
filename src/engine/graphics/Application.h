@@ -16,6 +16,7 @@
 #include "ui/CentralSubMenuManager.h"
 #include "ui/CursorType.h"
 
+class FloatingWindow;
 class FocusManager;
 class Widget;
 class FrameMessageSubscriber;
@@ -55,6 +56,10 @@ class Application {
 
     std::shared_ptr<CentralSubMenuManager> getCentralSubMenuManager();
 
+    std::vector<std::shared_ptr<FloatingWindow>> getFloatingWindows();
+
+    glm::vec2 getCurrentMousePos();
+
 protected:
 
     // Gets called right after the successful construction, must be implemented by concrete
@@ -63,6 +68,7 @@ protected:
 
     void setTopLevelWidget(const std::shared_ptr<Widget>& widget);
 
+    void addFloatingWindow(std::shared_ptr<FloatingWindow> window);
 
 
 private:
@@ -77,6 +83,7 @@ private:
     HWND _window;
     HDC hdc;
     std::shared_ptr<Widget> topLevelWidget;
+    std::vector<std::shared_ptr<FloatingWindow>> floating_windows_;
     std::unique_ptr<RenderBackend> render_backend_;
     int scaled_width_ = -1;
     int scaled_height_ = -1;

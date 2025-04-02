@@ -9,10 +9,12 @@
 #include <engine/graphics/ui/SplitterWidget.h>
 #include <engine/graphics/ui/ToolBarWidget.h>
 #include <engine/graphics/Texture.h>
+
 #include <engine/graphics/ui/Menu.h>
 #include <engine/graphics/ui/MenuBar.h>
 #include <engine/graphics/ui/MenuItem.h>
 #include <engine/graphics/ui/Spacer.h>
+#include <engine/graphics/ui/FloatingWindow.h>
 
 std::shared_ptr<Application> app;
 std::shared_ptr<Application> getApplication() {
@@ -99,5 +101,11 @@ void EditorLauncher::onCreated() {
     mainWidget->setMenuBar(mainMenuBar);
 
     setTopLevelWidget(mainWidget);
+
+    auto floatingWindow1 = std::make_shared<FloatingWindow>();
+    floatingWindow1->setId("floating_window1");
+    floatingWindow1->setOrigin({200, 200});
+    floatingWindow1->setSize({200, 150});
+    addFloatingWindow(floatingWindow1);
 }
 

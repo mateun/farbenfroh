@@ -224,7 +224,7 @@ void Widget::setId(const std::string &id) {
 
 std::shared_ptr<Camera> Widget::getDefaultUICam() {
     auto cam = std::make_shared<Camera>(CameraType::Ortho);
-    cam->updateLocation({0, 0, 2});
+    cam->updateLocation({0, 0, 10});
     cam->updateLookupTarget({0, 0, -1});
     return cam;
 }
