@@ -5,6 +5,7 @@
 #include "FocusManager.h"
 
 
+#include <iostream>
 #include <windowsx.h>
 #include <engine/graphics/Application.h>
 #include <engine/graphics/RawWin32Message.h>
@@ -16,16 +17,13 @@ FocusManager::FocusManager() {
     printf("in ctr\n");
 }
 
-void FocusManager::update() {
-    // Find the first matching widget
-}
-
 std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
     return previous_focus_widget_;
 }
 
 /**
- * We focus on mouse click messages to decide on focus.
+ * We focus on mouse mouse move and click messages to decide on focus.
+ * TODO maybe allow for tab cycling later.
  * @param msgs The incoming raw Windows messages from the last frame.
  */
  void FocusManager::onFrameMessages(const std::vector<RawWin32Message>& msgs) {
@@ -39,9 +37,36 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
 
              auto visitor = HitVisitor();
 
-             // First we handle the static toplevel widget of the application:
+             bool foundFocusAmongFloatingWindows = false;
+             // First we visit all floating windows. These are the highest in z-order
+             // and if we can find our one focus element among them, we are good:
              {
+                 float floatingWindowHightestZ = std::numeric_limits<float>::lowest();
+                 std::shared_ptr<FloatingWindow> highestFloatingWindow;
+                 for (auto floatingWindow : getApplication()->getFloatingWindows()) {
+                     if (!floatingWindow->isVisible()) continue;
 
+                     if (floatingWindow->checkMouseOver(mouse_x, mouse_y)) {
+                         if (floatingWindow->getZValue() > floatingWindowHightestZ) {
+                             floatingWindowHightestZ = floatingWindow->getZValue();
+                             highestFloatingWindow = floatingWindow;
+                         }
+
+                     }
+
+                 }
+
+                 if (highestFloatingWindow) {
+                     highestFloatingWindow->setHoverFocus(nullptr);
+                     foundFocusAmongFloatingWindows = true;
+                     previous_focus_widget_ = highestFloatingWindow;
+                 }
+             }
+
+             if (foundFocusAmongFloatingWindows) continue;
+
+             // Next we handle the static toplevel widget of the application:
+             {
                  visitor.visit(getApplication()->getTopLevelWidget(), mouse_x, mouse_y);
                  if (auto highestHitWidget = visitor.getHighestHitWidget()) {
                      if (previous_focus_widget_) {
@@ -61,28 +86,6 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
 
                      previous_focus_widget_ = highestHitWidget;
 
-                 }
-             }
-
-             // Next we visit all floating windows
-             {
-                 float floatingWindowHightestZ = std::numeric_limits<float>::lowest();
-                 std::shared_ptr<FloatingWindow> highestFloatingWindow;
-                 for (auto floatingWindow : getApplication()->getFloatingWindows()) {
-                     if (!floatingWindow->isVisible()) continue;
-
-                     if (floatingWindow->checkMouseOver(mouse_x, mouse_y)) {
-                         if (floatingWindow->getZValue() > floatingWindowHightestZ) {
-                             floatingWindowHightestZ = floatingWindow->getZValue();
-                             highestFloatingWindow = floatingWindow;
-                         }
-
-                     }
-
-                 }
-
-                 if (highestFloatingWindow) {
-                     highestFloatingWindow->setHoverFocus(nullptr);
                  }
              }
 

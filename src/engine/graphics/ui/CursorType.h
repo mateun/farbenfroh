@@ -6,7 +6,8 @@
 #define CURSORTYPE_H
 
 enum class CursorType {
-      Resize,
+      ResizeHorizontal,
+      ResizeVertical,
       Crosshair,
       Arrow,
       Hand,

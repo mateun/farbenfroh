@@ -25,11 +25,6 @@ class FocusManager : public FrameMessageSubscriber {
 
   public:
     FocusManager();
-    /**
-    * This must be called regularly (e.g. each frame)
-    * so the FocusManager can update itself with all latest system messages.
-    */
-    void update();
 
     /**
     * Return a pointer to a Widget which has currently the focus.
@@ -37,7 +32,7 @@ class FocusManager : public FrameMessageSubscriber {
     std::shared_ptr<Widget> getFocusedWidget();
 
     /**
-    * Here we retrieve the frame messages.
+    * Here we are called by the OS with all frame messages.
     */
     void onFrameMessages(const std::vector<RawWin32Message>& msgs) override;
 

@@ -26,12 +26,24 @@ void VBoxLayout::apply(Widget *target) {
     // 2. Compare to my own size, does this fit?
     // If yes, we are fine, every child can get the size it wants.
     // If no, we need to look at the min. sizes and see if these fit.
-    // Otherwise we need to crop or scroll.
+    // Otherwise we need to crop or scroll.f
+    float runningVerticalSum = 0;
     if (maxPrefX <= target->size().x &&
         maxPrefY <= target->size().y) {
         // All good, lets give the preferred size to the widdgets:
+        // TODO: we should probably introduce additional logic here for expanding widgets:
         for (auto c : target->children()) {
-            c->setSize(c->getPreferredSize());
+            auto preferredSize = c->getPreferredSize();
+            bool expandVertical = c->getLayoutHint().expandVertically;
+            if (expandVertical) {
+                // TODO also applying horizontal expansion here.. I know..
+                c->setSize({target->size().x, target->size().y - runningVerticalSum});
+
+            } else {
+                c->setSize(c->getPreferredSize());
+                runningVerticalSum += preferredSize.y;
+            }
+
         }
 
         // Assign the positions from top to bottom

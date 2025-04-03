@@ -13,7 +13,25 @@ void CentralSubMenuManager::registerMenuBar(std::shared_ptr<MenuBar> menuBar) {
     menu_bars_.push_back(menuBar);
 }
 
+/**
+ * We receive frame messages and act on them as follows:
+ * - if we got a FocusGained message, we analyse if and which
+ *   submenu-panels we may close.
+ * - if we got a MouseDown message, we immediately close every subpanel, because
+ *   either we clicked on a menu (which we do not care about here) or we clicked somewhere else,
+ *   in both cases we interpret this click as "close any open submenus".
+ *
+ */
 void CentralSubMenuManager::onMessage(const UIMessage &message) {
+
+    if (message.type == MessageType::MouseDown) {
+        for (auto openSub : open_sub_menus_) {
+            openSub->closeSubMenuPanel();
+        }
+        return;
+    }
+
+    // The only other message type we handle is GainedFocus messages:
     if (message.type != MessageType::WidgetGainedFocus) return;
 
     auto menuWidget = std::dynamic_pointer_cast<Menu>(message.focusMessage.widget);

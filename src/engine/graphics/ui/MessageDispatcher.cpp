@@ -21,10 +21,23 @@ void SimpleMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message>
     auto floatingWindows = getApplication()->getFloatingWindows();
     for (auto& msg : msgs) {
         auto transformedMessage = MessageTransformer::transform(msg);
-        top_level_widget_->onMessage(transformedMessage);
-        for (auto fw: floatingWindows) {
-            fw->onMessage(transformedMessage);
+
+        // Send any message to the centralSubMenuManager.
+        getApplication()->getCentralSubMenuManager()->onMessage(transformedMessage);
+
+        // Send messages to floating windows, as we assume they are highest in z-order.
+        // Stop forwarding the message after the first window handled it.
+        MessageHandleResult handleResult = {};
+        for (const auto& fw: floatingWindows) {
+            handleResult = fw->onMessage(transformedMessage);
+            if (handleResult.wasHandled) break;
         }
+
+        // Only forward to static top level widget if it was not handled already.
+        if (handleResult.wasHandled) continue;
+
+        top_level_widget_->onMessage(transformedMessage);
+
     }
 }
 
@@ -32,7 +45,7 @@ FocusBasedMessageDispatcher::FocusBasedMessageDispatcher(FocusManager &focusMana
 }
 
 void FocusBasedMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
-    // TODO ask FocusManager for the currently focused widget.
+
     // Then transform relevant messages into UIMessage objects and pass them on.
     auto focused_widget = focus_manager_.getFocusedWidget();
     if (!focused_widget) {

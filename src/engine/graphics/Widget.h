@@ -45,6 +45,15 @@ struct UIMessage {
 
 };
 
+// This struct provides additional hinting
+// for layouting e.g. whether to expand,
+// stay strict etc.
+struct LayoutHint {
+    bool expandVertically = false;
+    bool expandHorizontally = false;
+
+};
+
 /**
 * This is the top level ui element.
 * Applications contain exactly one top level widget.
@@ -158,7 +167,8 @@ public:
     virtual void widgetGotHoverFocus(std::shared_ptr<Widget> widget);
     virtual void widgetLostHoverFocus(std::shared_ptr<Widget> widget);
 
-
+    void setLayoutHint(LayoutHint hint);
+    LayoutHint getLayoutHint();
 
     static bool checkMouseOver(int mouseX, int mouseY, const Widget* widget, bool useOffsets = false,
                                glm::vec2 originOffset = {0, 0}, glm::vec2 sizeOffset = {0, 0});
@@ -215,9 +225,9 @@ protected:
 
     bool visible_ = true;
 
-
-
+    LayoutHint layout_hint_;
 };
+
 
 
 inline float Widget::getZValue() const {
@@ -227,6 +237,9 @@ inline float Widget::getZValue() const {
 inline void Widget::setZValue(int zValue) {
     z_value_ = zValue;
 }
+
+
+
 
 
 /**

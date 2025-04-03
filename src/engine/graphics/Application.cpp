@@ -157,12 +157,19 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
     UpdateWindow(_window);
     hdc = GetDC(_window);
     render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, _window, width_, height_);
-    // registerRawInput(hwnd);
 
     // Load the resize cursor (horizontal resize cursor)
-    resize_cursor_ = LoadCursor(NULL, IDC_SIZEWE);
+    resize_cursor_horizontal_ = LoadCursor(NULL, IDC_SIZEWE);
+    resize_cursor_vertical_ = LoadCursor(NULL, IDC_SIZENS);
 
     central_submenu_manager_ = std::make_shared<CentralSubMenuManager>();
+    focus_manager_ = std::make_shared<FocusManager>();
+    message_dispatcher_ = std::make_shared<FocusBasedMessageDispatcher>(*focus_manager_);
+    simple_message_dispatcher_ = std::make_shared<SimpleMessageDispatcher>(topLevelWidget);
+
+    addMessageSubscriber(simple_message_dispatcher_);
+    addMessageSubscriber(focus_manager_);
+    addMessageSubscriber(message_dispatcher_);
 
 }
 
@@ -238,8 +245,8 @@ bool Application::allowCursorOverride() {
 void Application::setSpecialCursor(CursorType cursorType) {
 
     switch (cursorType) {
-        case CursorType::Resize:SetCursor(resize_cursor_); break;
-
+        case CursorType::ResizeHorizontal: SetCursor(resize_cursor_horizontal_); break;
+        case CursorType::ResizeVertical: SetCursor(resize_cursor_vertical_); break;
     }
     allow_cursor_override_ = true;
 
@@ -275,13 +282,7 @@ void Application::mainLoop() {
 
     PerformanceTimer performance_timer;
 
-    focus_manager_ = std::make_shared<FocusManager>();
-    message_dispatcher_ = std::make_shared<FocusBasedMessageDispatcher>(*focus_manager_);
-    simple_message_dispatcher_ = std::make_shared<SimpleMessageDispatcher>(topLevelWidget);
 
-    addMessageSubscriber(simple_message_dispatcher_);
-    addMessageSubscriber(focus_manager_);
-    addMessageSubscriber(message_dispatcher_);
 
     MSG msg;
 	while (running) {

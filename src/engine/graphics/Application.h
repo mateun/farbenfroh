@@ -94,8 +94,8 @@ private:
     std::shared_ptr<SimpleMessageDispatcher> simple_message_dispatcher_;
     std::shared_ptr<CentralSubMenuManager> central_submenu_manager_;
     bool allow_cursor_override_ = false;
-    HCURSOR resize_cursor_;
-
+    HCURSOR resize_cursor_horizontal_;
+    HCURSOR resize_cursor_vertical_;
 };
 
 std::shared_ptr<Application> getApplication();

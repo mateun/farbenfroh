@@ -158,8 +158,23 @@ glm::vec2 Widget::getPreferredSize() {
         if (ps.y > maxY) maxY = ps.y;
     }
 
+    // TODO for now return some default size if we are zero sized currently.
+    // As this would make us totally invisible for any kind of layout applied.
+    if (maxX <= 0.01 && maxY <= 0.01) {
+        return glm::vec2(100, 100);
+    }
+
     return {maxX, maxY};
 }
+
+void Widget::setLayoutHint(LayoutHint layout_hint) {
+    layout_hint_ = layout_hint;
+}
+
+LayoutHint Widget::getLayoutHint() {
+    return layout_hint_;
+}
+
 
 glm::vec2 Widget::getMinSize() {
     return getPreferredSize();

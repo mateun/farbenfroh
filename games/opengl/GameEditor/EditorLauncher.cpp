@@ -32,6 +32,7 @@ void EditorLauncher::onCreated() {
     auto vboxLayout = std::make_shared<VBoxLayout>();
     auto leftVBox = std::make_shared<Widget>();
     auto rightVBox = std::make_shared<Widget>();
+    rightVBox->setId("right_vbox");
     leftVBox->setLayout(vboxLayout);
     rightVBox->setLayout(vboxLayout);
 
@@ -99,6 +100,13 @@ void EditorLauncher::onCreated() {
     menuAbout->setId("menu_about");
     mainMenuBar->addMenu(menuAbout);
     mainWidget->setMenuBar(mainMenuBar);
+
+    auto consoleWidget = std::make_shared<Widget>();
+    auto previewWidget = std::make_shared<Widget>();
+    auto hSplitter = std::make_shared<SplitterWidget>(SplitterType::Horizontal, previewWidget, consoleWidget);
+    hSplitter->setLayoutHint(LayoutHint{true, true});
+    hSplitter->setId("h_splitter");
+    rightVBox->addChild(hSplitter);
 
     setTopLevelWidget(mainWidget);
 
