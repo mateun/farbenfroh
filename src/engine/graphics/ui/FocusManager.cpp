@@ -78,6 +78,7 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
                      UIMessage msg;
                      msg.type = MessageType::WidgetGainedFocus;
                      msg.focusMessage.widget = highestHitWidget;
+                     msg.sender = "FocusManager";
                      getApplication()->getTopLevelWidget()->onMessage(msg);
                      getApplication()->getCentralSubMenuManager()->onMessage(msg);
                      msg.type = MessageType::WidgetLostFocus;

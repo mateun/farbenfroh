@@ -4,6 +4,7 @@
 
 #include "SplitterWidget.h"
 
+#include <iostream>
 #include <engine/game/Timing.h>
 #include <engine/graphics/Application.h>
 #include <engine/graphics/Geometry.h>
@@ -22,15 +23,14 @@ SplitterWidget::SplitterWidget(SplitterType type, std::shared_ptr<Widget> first,
     // can participate in normal message flow etc.
     // OTOH this might complicate things with less control.
     // Anyhow this "should" work - the first, second semantic is a bit wonky anyway.
-    //children_.push_back(first);
-    //children_.push_back(second);
+    children_.push_back(first);
+    children_.push_back(second);
 
 }
 
 void SplitterWidget::draw(float depth) {
 
     int splitterSize = 2;
-
 
     if (!splitter_initialized_) {
         splitter_initialized_ = true;
@@ -107,14 +107,15 @@ void SplitterWidget::draw(float depth) {
         Renderer::drawWidgetMeshDeferred(mdd, this);
     }
 
-
     first_->draw();
     second_->draw();
 
 }
 
 MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
+
     if (message.type == MessageType::MouseMove) {
+        std::cout << "in onMessage [" << std::to_string(message.num) << "] for splitter widget: " << this->id_ << " from " << message.sender <<  std::endl;
         MessageHandleResult message_handle_result = {false, "", false};
         bool overSplit = false;
         if (type_ == SplitterType::Vertical) {
@@ -127,10 +128,13 @@ MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
             }
         } else {
             if (message.mouseMoveMessage.x >= origin_.x && message.mouseMoveMessage.x <= size_.x &&
-                message.mouseMoveMessage.y >= splitterPosition_.y - 5 && message.mouseMoveMessage.y <= splitterPosition_.y + 5) {
+                message.mouseMoveMessage.y >= splitterPosition_.y - 5
+                && message.mouseMoveMessage.y <= splitterPosition_.y + 5
+                ) {
                 mouse_over_splitter_ = true;
                 overSplit = true;
                 message_handle_result.wasHandled = true;
+                std::cout << "over horizontal splitter for widget: " << id_ << std::endl;
             }
         }
 
@@ -180,5 +184,6 @@ MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
         return {true, "", true};
     }
 
+    std::cout << "passing message [" << std::to_string(message.num) << "] to children for widget: " << id_ << " from " << message.sender << std::endl;
     return Widget::onMessage(message);
 }

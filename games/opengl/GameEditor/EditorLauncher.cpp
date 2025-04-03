@@ -33,6 +33,7 @@ void EditorLauncher::onCreated() {
     auto leftVBox = std::make_shared<Widget>();
     auto rightVBox = std::make_shared<Widget>();
     rightVBox->setId("right_vbox");
+    leftVBox->setId("left_vbox");
     leftVBox->setLayout(vboxLayout);
     rightVBox->setLayout(vboxLayout);
 
@@ -47,6 +48,7 @@ void EditorLauncher::onCreated() {
     rightVBox->addChild(lblNewMesh);
 
     auto mainSplitter = std::make_shared<SplitterWidget>(SplitterType::Vertical, leftVBox, rightVBox);
+    mainSplitter->setId("main_splitter");
 
     auto mainWidget = std::make_shared<Widget>();
     auto topToolbar = std::make_shared<ToolBarWidget>();

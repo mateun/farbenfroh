@@ -90,7 +90,7 @@ private:
     std::vector<RawWin32Message> frame_messages_;
     std::vector<std::shared_ptr<FrameMessageSubscriber>> messageSubscribers;
     std::shared_ptr<FocusManager> focus_manager_;
-    std::shared_ptr<FocusBasedMessageDispatcher> message_dispatcher_;
+    std::shared_ptr<FocusBasedMessageDispatcher> focus_based_message_dispatcher_;
     std::shared_ptr<SimpleMessageDispatcher> simple_message_dispatcher_;
     std::shared_ptr<CentralSubMenuManager> central_submenu_manager_;
     bool allow_cursor_override_ = false;

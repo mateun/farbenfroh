@@ -164,12 +164,12 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
 
     central_submenu_manager_ = std::make_shared<CentralSubMenuManager>();
     focus_manager_ = std::make_shared<FocusManager>();
-    message_dispatcher_ = std::make_shared<FocusBasedMessageDispatcher>(*focus_manager_);
+    focus_based_message_dispatcher_ = std::make_shared<FocusBasedMessageDispatcher>(*focus_manager_);
     simple_message_dispatcher_ = std::make_shared<SimpleMessageDispatcher>(topLevelWidget);
 
     addMessageSubscriber(simple_message_dispatcher_);
     addMessageSubscriber(focus_manager_);
-    addMessageSubscriber(message_dispatcher_);
+    addMessageSubscriber(focus_based_message_dispatcher_);
 
 }
 

@@ -44,6 +44,7 @@ class FocusBasedMessageDispatcher : public FrameMessageSubscriber {
 
 private:
     FocusManager &focus_manager_;
+    uint64_t msg_number_ = 0;
 };
 
 

@@ -42,7 +42,8 @@ struct UIMessage {
     MessageType type;
     MouseMoveMessage mouseMoveMessage;
     FocusMessage focusMessage;
-
+    uint64_t num = 0;
+    std::string sender;
 };
 
 // This struct provides additional hinting
