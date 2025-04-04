@@ -117,6 +117,7 @@ void EditorLauncher::onCreated() {
     previewWidget->setId("preview");
     rightVBox->addChild(hSplitter);
 
+    mainWidget->setId("main_widget");
     setTopLevelWidget(mainWidget);
 
     auto floatingWindow1 = std::make_shared<FloatingWindow>();

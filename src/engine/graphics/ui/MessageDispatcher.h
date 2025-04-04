@@ -13,10 +13,8 @@ class FocusManager;
 
 class SimpleMessageDispatcher : public FrameMessageSubscriber {
 public:
-    explicit SimpleMessageDispatcher(std::shared_ptr<Widget> topLevelWidget);
     void onFrameMessages(const std::vector<RawWin32Message> &msgs) override;
 
-    std::shared_ptr<Widget> top_level_widget_;
 };
 
 /**

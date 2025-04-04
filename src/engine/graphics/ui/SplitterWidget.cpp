@@ -65,13 +65,16 @@ void SplitterWidget::draw(float depth) {
         getApplication()->unsetSpecialCursor();
     }
 
+    // Get the parent-depth to be able to render ourselves on top:
+    auto parentDepth = parent_.expired() ? depth : parent_.lock()->getZValue();
+
     // Calculate the drawing coordinates for the splitter itself
     if (type_ == SplitterType::Vertical) {
-        mdd.location = {splitterPosition_.x + splitterSize/2, splitterPosition_.y, -0.5};
+        mdd.location = {splitterPosition_.x + splitterSize/2, splitterPosition_.y, parentDepth + 0.01};
         mdd.scale = {splitterSize, global_size_.y, 1};
     } else {
-        mdd.location = {splitterPosition_.x, splitterPosition_.y, -0.5};
-        mdd.scale = {global_size_.x, 5, 1};
+        mdd.location = {splitterPosition_.x, splitterPosition_.y, parentDepth + 0.01};
+        mdd.scale = {global_size_.x, splitterSize, 1};
     }
 
     // Draw the splitter:
@@ -97,7 +100,7 @@ void SplitterWidget::draw(float depth) {
     if (type_ == SplitterType::Vertical) {
         mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{ "gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
         mdd.color = {0.015, 0.015, 0.017, 1};
-        mdd.location = {global_origin_.x + 2, global_origin_.y + 2, -1.1};
+        mdd.location = {global_origin_.x + 2, global_origin_.y + 2, parentDepth + 0.01};
         mdd.scale = {splitterPosition_.x - splitterSize - 1, global_size_.y - 5, 1};
         Renderer::drawWidgetMeshDeferred(mdd, this);
 
@@ -107,52 +110,56 @@ void SplitterWidget::draw(float depth) {
     } else {
         mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", glm::vec2{global_size_.x, global_size_.y - splitterPosition_.y}}, ShaderParameter{"viewPortOrigin", glm::vec2(global_origin_.x, splitterPosition_.y)}, ShaderParameter{ "gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
         mdd.color = {0.015, 0.015, 0.017, 1};
-        mdd.location = {global_origin_.x + 2, global_origin_.y + 2 + splitterPosition_.y, -1.1};
+        mdd.location = {global_origin_.x + 2, global_origin_.y + 2 + splitterPosition_.y, parentDepth + 0.01};
         mdd.scale = {global_size_.x - 2, splitterPosition_.y - 2, 1};
         Renderer::drawWidgetMeshDeferred(mdd, this);
     }
 
     // Renader the childs themselves,
     // on top of the background panels
-    first_->draw();
-    second_->draw();
+    // We have drawn the background gradients at +0.01 above the parent,
+    // so for the actual children we put parentDepth + 0.02 as the depth override value.
+    first_->draw(parentDepth + 0.02);
+    second_->draw(parentDepth + 0.02);
 
 }
 
 MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
 
     if (message.type == MessageType::MouseMove) {
-        std::cout << "in onMessage [" << std::to_string(message.num) << "] for splitter widget: " << this->id_ << " from " << message.sender <<  std::endl;
+        //std::cout << "in onMessage [" << std::to_string(message.num) << "] for splitter widget: " << this->id_ << " from " << message.sender <<  std::endl;
         MessageHandleResult message_handle_result = {false, "", false};
         bool overSplit = false;
         // Transform the global mouse coordinates into widget local mouse coordinates:
         glm::vec2 localMouse = {message.mouseMoveMessage.x  - global_origin_.x, message.mouseMoveMessage.y - global_origin_.y};
         if (type_ == SplitterType::Vertical) {
             if (localMouse.x >= splitterPosition_.x - 5 && localMouse.x <= splitterPosition_.x + 5 &&
-                localMouse.y <= global_origin_.y + global_size_.y) {
+                localMouse.y <= global_size_.y) {
                 mouse_over_splitter_ = true;
                 overSplit = true;
                 message_handle_result.wasHandled = true;
-
+                std::cout << "over vertical splitter for widget: " << id_ << std::endl;
+                return message_handle_result;
             }
         } else {
-            if (localMouse.x >= global_origin_.x && localMouse.x <= global_size_.x &&
-                localMouse.y >= splitterPosition_.y - 10
-                && localMouse.y <= splitterPosition_.y + 10
+            if (localMouse.y >= splitterPosition_.y - 5
+                && localMouse.y <= splitterPosition_.y + 5
                 ) {
                 mouse_over_splitter_ = true;
                 overSplit = true;
                 message_handle_result.wasHandled = true;
                 std::cout << "over horizontal splitter for widget: " << id_ << std::endl;
+                return message_handle_result;
             }
         }
 
         if (!overSplit) {
             // Only relieve this if we are not dragging already.
-            if (!mouse_down_) {
+            if (!dragging_) {
                 mouse_over_splitter_ = false;
-                message_handle_result.wasHandled = true;
+                message_handle_result.wasHandled = false;
             } else {
+                std::cout << "dragging splitter in " << id_ << std::endl;
                 if (type_ == SplitterType::Vertical) {
                     splitterPosition_.x = localMouse.x;
                     if (splitterPosition_.x < first_->origin().x + first_->getMinSize().x + 10) {
@@ -163,36 +170,46 @@ MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
                     }
                 } else {
                     splitterPosition_.y = localMouse.y;
-                    if (splitterPosition_.y > global_size_.y - first_->getMinSize().y - 35) {
-                        splitterPosition_.y = global_size_.y - first_->getMinSize().y - 35;
+                    if (splitterPosition_.y > global_size_.y - first_->getMinSize().y - 5) {
+                        splitterPosition_.y = global_size_.y - first_->getMinSize().y - 5;
                     }
-                    if (splitterPosition_.y < (second_->origin().y + second_->getMinSize().y + 40)) {
-                        splitterPosition_.y = second_->origin().y + second_->getMinSize().y + 40;
+                    if (splitterPosition_.y < (second_->origin().y + second_->getMinSize().y + 4)) {
+                        splitterPosition_.y = second_->origin().y + second_->getMinSize().y + 4;
                     }
                 }
                 message_handle_result.wasHandled = true;
 
             }
         }
+
+        // We return our result if we handled the message.
         if (message_handle_result.wasHandled) {
             return message_handle_result;
         }
-
+        // Otherwise we delegate to the super implementation
         return Widget::onMessage(message);
+
     }
 
 
     if (message.type == MessageType::MouseDown) {
         if (mouse_over_splitter_) {
-            mouse_down_ = true;
+            dragging_ = true;
+            std::cout << "turned dragging on for widget: " << id_ << std::endl;
+            return {true, "", true};
         }
-        return {true, "", true};
+
+
+
     }
     if (message.type == MessageType::MouseUp) {
-        mouse_down_ = false;
-        return {true, "", true};
+        if (mouse_over_splitter_) {
+            dragging_ = false;
+            std::cout << "turned dragging off for widget: " << id_ << std::endl;
+            return {true, "", true};
+        }
+
     }
 
-    std::cout << "passing message [" << std::to_string(message.num) << "] to children for widget: " << id_ << " from " << message.sender << std::endl;
     return Widget::onMessage(message);
 }

@@ -108,6 +108,7 @@ MessageHandleResult Widget::onMessage(const UIMessage &message) {
 void Widget::draw(float depth) {
     assert(getApplication()->getRenderBackend() != nullptr);
 
+    float backgroundDepth = parent().expired() ? depth + 0.01 : parent().lock()->getZValue() + 0.01;
     // We can render our background in the given color
     {
         MeshDrawData mdd;
@@ -118,7 +119,9 @@ void Widget::draw(float depth) {
         mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
         mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", bg_color_}};
         mdd.color = bg_color_;
-        mdd.location = {origin().x, origin().y, parent().expired() ? -10 : parent().lock()->getZValue() + 0.1};
+        // Place ourselves above the parent depth if we have a parent.
+        // Otherwise use the passed in depth override value.
+        mdd.location = {origin().x, origin().y, backgroundDepth };
         mdd.scale = {size().x, size().y, 1.0f};
         Renderer::drawWidgetMeshDeferred(mdd, this);
 
@@ -136,22 +139,23 @@ void Widget::draw(float depth) {
         if (hasMenuBar()) {
             menu_bar_->setOrigin({global_origin_.x, global_size_.y - 32});
             menu_bar_->setSize({global_size_.x, 32});
-            menu_bar_->draw(depth);
+            // For menu bars we assume 0 depth and add a bit here.
+            menu_bar_->draw(0.01);
         }
         for (auto c : children_) {
             getApplication()->getRenderBackend()->setViewport(c->global_origin_.x, c->global_origin_.y,  c->global_size_.x, c->global_size_.y);
-            c->draw(depth);
+            c->draw(backgroundDepth + 0.01);
 
         }
     } else {
         if (hasMenuBar()) {
             menu_bar_->setOrigin({global_origin_.x, global_size_.y - 32});
             menu_bar_->setSize({global_size_.x, 32});
-            menu_bar_->draw(depth);
+            menu_bar_->draw(0.01);
         }
         for (auto c : children_) {
             getApplication()->getRenderBackend()->setViewport(c->global_origin_.x, c->global_origin_.y,  c->global_size_.x, c->global_size_.y);
-            c->draw(depth);
+            c->draw(backgroundDepth + 0.01);
 
         }
 
@@ -269,7 +273,7 @@ void Widget::setId(const std::string &id) {
 
 std::shared_ptr<Camera> Widget::getDefaultUICam() {
     auto cam = std::make_shared<Camera>(CameraType::Ortho);
-    cam->updateLocation({0, 0, 10});
+    cam->updateLocation({0, 0, 20});
     cam->updateLookupTarget({0, 0, -1});
     return cam;
 }

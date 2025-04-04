@@ -67,7 +67,7 @@ MessageHandleResult FloatingWindow::onMessage(const UIMessage &message) {
         last_mouse_pos_ = {0, 0};
     }
 
-    return MessageHandleResult{true, "", true};
+    return MessageHandleResult{true, "", false};
 }
 
 void FloatingWindow::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {

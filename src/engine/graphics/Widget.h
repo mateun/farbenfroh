@@ -179,7 +179,7 @@ public:
 
     void setId(const std::string& id);
 
-    void setZValue(int zValue);
+    void setZValue(float zValue);
     float getZValue() const;
 
     void setVisible(bool cond);
@@ -242,7 +242,7 @@ inline float Widget::getZValue() const {
     return z_value_;
 }
 
-inline void Widget::setZValue(int zValue) {
+inline void Widget::setZValue(float zValue) {
     z_value_ = zValue;
 }
 

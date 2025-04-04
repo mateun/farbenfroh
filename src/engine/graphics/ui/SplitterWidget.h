@@ -31,7 +31,7 @@ class SplitterWidget : public Widget {
 
     SplitterType type_;
     bool mouse_over_splitter_ = false;
-    bool mouse_down_ = false;
+    bool dragging_ = false;
     bool splitter_initialized_ = false;
 
   private:

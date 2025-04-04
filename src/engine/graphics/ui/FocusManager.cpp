@@ -79,6 +79,8 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
                      }
                      highestHitWidget->setHoverFocus(previous_focus_widget_);
 
+                     std::cout << "focused widget: " << highestHitWidget->getId() << std::endl;
+
                      // Send out dedicated focus messages
                      // First, a GainedFocus message:
                      UIMessage msg;

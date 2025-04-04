@@ -165,7 +165,7 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
     central_submenu_manager_ = std::make_shared<CentralSubMenuManager>();
     focus_manager_ = std::make_shared<FocusManager>();
     focus_based_message_dispatcher_ = std::make_shared<FocusBasedMessageDispatcher>(*focus_manager_);
-    simple_message_dispatcher_ = std::make_shared<SimpleMessageDispatcher>(topLevelWidget);
+    simple_message_dispatcher_ = std::make_shared<SimpleMessageDispatcher>();
 
     addMessageSubscriber(simple_message_dispatcher_);
     addMessageSubscriber(focus_manager_);
@@ -315,7 +315,7 @@ void Application::mainLoop() {
 	        // We provide an ortho camera which represents the application window dimensions.
 	        render_backend_->setViewport(0,0, scaled_width(), scaled_height());
 	        //auto camera = render_backend_->getOrthoCameraForViewport(0, 0, scaled_width(), scaled_height());
-	        topLevelWidget->draw();
+	        topLevelWidget->draw(-20);
             Renderer::submitDeferredWidgetCalls();
 
             // Render all floating windows:

@@ -20,7 +20,6 @@ void ToolBarWidget::draw(float depth) {
 
     h_box_layout_->apply(this);
 
-
     MeshDrawData mdd;
     mdd.mesh = quadMesh_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
@@ -30,7 +29,7 @@ void ToolBarWidget::draw(float depth) {
     mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
     mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
     mdd.color = {0.02, 0.02,0.02, 1};
-    mdd.location = {0, 0, -1.8};
+    mdd.location = {0, 0, depth + 0.01};
     mdd.scale = {global_size_.x, global_size_.y, 1};
     mdd.debugInfo = "toolbar_background";
     Renderer::drawWidgetMeshDeferred(mdd, this);

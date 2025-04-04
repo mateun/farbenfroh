@@ -59,7 +59,7 @@ glm::vec2 LabelWidget::getMaxSize() {
 }
 
 MessageHandleResult LabelWidget::onMessage(const UIMessage &message) {
-    return Widget::onMessage(message);
+    return {true, "", false};
 }
 
 

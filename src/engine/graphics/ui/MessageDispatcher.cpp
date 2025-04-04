@@ -14,9 +14,6 @@
 #include "FocusManager.h"
 #include "MessageHandleResult.h"
 
-SimpleMessageDispatcher::SimpleMessageDispatcher(std::shared_ptr<Widget> topLevelWidget): top_level_widget_(
-    std::move(topLevelWidget)) {
-}
 
 void SimpleMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
     auto floatingWindows = getApplication()->getFloatingWindows();
@@ -38,7 +35,9 @@ void SimpleMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message>
         // Only forward to static top level widget if it was not handled already.
         if (handleResult.wasHandled) continue;
 
-        top_level_widget_->onMessage(transformedMessage);
+        if (getApplication()->getTopLevelWidget()) {
+            getApplication()->getTopLevelWidget()->onMessage(transformedMessage);
+        }
 
     }
 }

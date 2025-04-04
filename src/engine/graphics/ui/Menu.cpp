@@ -34,6 +34,7 @@ void Menu::addMenuItem(std::shared_ptr<MenuItem> menuItem) {
 }
 
 void Menu::draw(float depth) {
+    z_value_ = depth;
     label_->setOrigin(global_origin_ + glm::vec2{2, 2});
     label_->setSize(global_size_);
     if (app_hover_focus_) {
