@@ -22,6 +22,8 @@ public:
   void addSubMenu(std::shared_ptr<Menu> subMenu);
   void addMenuItem(std::shared_ptr<MenuItem> menuItem);
 
+
+
   void draw(float depth = -0.5) override;
   MessageHandleResult onMessage(const UIMessage &message) override;
   glm::vec2 getPreferredSize() override;

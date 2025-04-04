@@ -40,7 +40,10 @@ void VBoxLayout::apply(Widget *target) {
                 c->setSize({target->size().x, target->size().y - runningVerticalSum});
 
             } else {
-                c->setSize(c->getPreferredSize());
+                // We always expand horizontal here...
+                // TODO: this is good for menus, but we should implement an actual check
+                // in case someone does not want this for a given widget.
+                c->setSize({target->size().x , c->getPreferredSize().y});
                 runningVerticalSum += preferredSize.y;
             }
 

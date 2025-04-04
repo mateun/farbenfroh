@@ -36,7 +36,7 @@ void ToolBarWidget::draw(float depth) {
 
     // Now render all ButtonWidgets
     for (auto b : children()) {
-        b->draw();
+        b->draw(depth + 0.02);
     }
 
 }
