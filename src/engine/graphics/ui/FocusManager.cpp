@@ -79,7 +79,7 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
                      }
                      highestHitWidget->setHoverFocus(previous_focus_widget_);
 
-                     std::cout << "focused widget: " << highestHitWidget->getId() << std::endl;
+                     std::cout << "focused widget: " << highestHitWidget->getId() << " z-value: " << highestHitWidget->getZValue() << std::endl;
 
                      // Send out dedicated focus messages
                      // First, a GainedFocus message:
@@ -117,12 +117,12 @@ void HitVisitor::visit(std::shared_ptr<Widget> widget, int mouse_x, int mouse_y)
         }
     }
 
-    // First, check any menubar:
-
+    // First, visit all menubars of this widget:
     if (widget->hasMenuBar()) {
         visit((widget->getMenuBar()), mouse_x, mouse_y);
     }
 
+    // Then the children of this widget:
     for (auto& c : widget->children()) {
         visit(c, mouse_x, mouse_y);
     }

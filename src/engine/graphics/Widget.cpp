@@ -121,7 +121,7 @@ void Widget::draw(float depth) {
         mdd.color = bg_color_;
         // Place ourselves above the parent depth if we have a parent.
         // Otherwise use the passed in depth override value.
-        mdd.location = {origin().x, origin().y, backgroundDepth };
+        mdd.location = {0, 0, backgroundDepth };
         mdd.scale = {size().x, size().y, 1.0f};
         Renderer::drawWidgetMeshDeferred(mdd, this);
 

@@ -42,14 +42,13 @@ void Menu::draw(float depth) {
         MeshDrawData mdd;
         mdd.mesh = quadMesh_;
         mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
-
         mdd.viewPortDimensions =  global_size_;
         mdd.setViewport = true;
-        mdd.viewport = {global_origin_.x-1,  global_origin_.y, global_size_.x + 7, global_size_.y + 4};
-        mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.2, 0.2, 0.2, 0.3}}};
-        mdd.color = glm::vec4{.2, 0.2, 0.2, 0.3};
-        mdd.scale = {global_size_.x + 7, global_size_.y +4 , 1};
-        mdd.location = {0, 0, depth };
+        mdd.viewport = {global_origin_.x-1,  global_origin_.y, global_size_.x+ 20 , global_size_.y};
+        mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.2, 0.2, 1, 0.3}}};
+        mdd.color = glm::vec4{.2, 0.2, 1.2, 0.3};
+        mdd.scale = {global_size_.x +20, global_size_.y , 1};
+        mdd.location = {0, 5, depth };
         mdd.debugInfo = id_;
         Renderer::drawWidgetMeshDeferred(mdd, this);
 
@@ -91,8 +90,8 @@ void Menu::draw(float depth) {
             mdd.viewport = {global_origin_.x-1, global_origin_.y - panelSizeY, global_size_.x * 4, panelSizeY };
         } else {
             // How much do we move the subpanel to the right?
-            int xOffset = 35;
-            sub_menu_panel_->setOrigin(global_origin_ + glm::vec2{global_size_.x + xOffset, 0});
+            int xOffset = parent_menu_.expired() ? 5 : parent_menu_.lock()->size().x + 5;
+            sub_menu_panel_->setOrigin(global_origin_ + glm::vec2{global_size_.x + xOffset, 2});
             mdd.viewport = {global_origin_.x + global_size_.x + xOffset, global_origin_.y, global_size_.x * 4, panelSizeY };
         }
 
@@ -101,11 +100,11 @@ void Menu::draw(float depth) {
 
         // Draw the background for the panel, darker than the highlight of the menu itself:
         mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.1, 0.1, 0.1, 0.3}}};
-        mdd.color = glm::vec4{.1, 0.1, 0.1, 0.3};
+        mdd.color = glm::vec4{.0, 0.1, 0.8, 0.3};
 
         mdd.scale = {global_size_.x * 4, panelSizeY, 1};
         mdd.location = {0, 0, depth + 0.2};
-        Renderer::drawWidgetMeshDeferred(mdd, this);
+        //Renderer::drawWidgetMeshDeferred(mdd, this);
 
         for (auto c : children_) {
             c->setVisible(true);
@@ -157,6 +156,7 @@ std::weak_ptr<Menu> Menu::parentMenu() {
 void Menu::lazyCreateSubMenuPanel() {
     if (!sub_menu_panel_) {
         sub_menu_panel_ = std::make_shared<Widget>();
+        sub_menu_panel_->setBgColor({0.03, 0.02, 0.02, 0.5});
         auto vbox = std::make_shared<VBoxLayout>();
         sub_menu_panel_->setLayout(vbox);
     }

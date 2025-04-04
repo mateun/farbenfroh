@@ -122,6 +122,7 @@ void SplitterWidget::draw(float depth) {
     first_->draw(parentDepth + 0.02);
     second_->draw(parentDepth + 0.02);
 
+
 }
 
 MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {

@@ -115,6 +115,7 @@ void EditorLauncher::onCreated() {
     hSplitter->setId("h_splitter");
     consoleWidget->setId("console");
     previewWidget->setId("preview");
+    previewWidget->setBgColor({0.8, 0.2, 0.4, 0.8});
     rightVBox->addChild(hSplitter);
 
     mainWidget->setId("main_widget");
