@@ -142,7 +142,7 @@ void Widget::draw(float depth) {
             // For menu bars we assume 0 depth and add a bit here.
             menu_bar_->draw(0.01);
         }
-        for (auto c : children_) {
+            for (auto c : children_) {
             getApplication()->getRenderBackend()->setViewport(c->global_origin_.x, c->global_origin_.y,  c->global_size_.x, c->global_size_.y);
             c->draw(backgroundDepth + 0.01);
 

@@ -36,8 +36,12 @@ void AreaLayout::apply(Widget *target) {
     if (center_) {
         if (top_) {
             center_->setSize({target->size().x, topMostY - top_->size().y});
+        } else {
+            // TODO remove this debug margin, but for now we want to peek a bit
+            // at the layer/color behind
+            center_->setSize({target->size().x-2, target->size().y-2});
         }
-        center_->setOrigin({target->origin().x, target->origin().y});
+        center_->setOrigin({target->origin().x+1, target->origin().y+1});
 
     }
 

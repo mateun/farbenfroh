@@ -66,7 +66,10 @@ void SplitterWidget::draw(float depth) {
     }
 
     // Get the parent-depth to be able to render ourselves on top:
+    // FIXME: somehow the background panels of the splitter children are not showing up, as if they are below the current
+    // background layer. Only see the black bg layer here.
     auto parentDepth = parent_.expired() ? depth : parent_.lock()->getZValue();
+
 
     // Calculate the drawing coordinates for the splitter itself
     if (type_ == SplitterType::Vertical) {
@@ -89,18 +92,18 @@ void SplitterWidget::draw(float depth) {
         first_->setSize({splitterPosition_.x, global_size_.y});
         second_->setSize({global_size_.x - splitterPosition_.x, global_size_.y});
     } else {
-        first_->setOrigin({global_origin_.x, global_origin_.y + splitterPosition_.y});
-        second_->setOrigin({global_origin_.x, global_origin_.y});
+        first_->setOrigin({global_origin_.x, global_origin_.y + splitterPosition_.y + 5});
+        second_->setOrigin({global_origin_.x, global_origin_.y + 2});
 
-        first_->setSize({global_size_.x, global_size_.y - splitterPosition_.y});
-        second_->setSize({global_size_.x,  splitterPosition_.y});
+        first_->setSize({global_size_.x, global_size_.y - splitterPosition_.y - 5});
+        second_->setSize({global_size_.x,  splitterPosition_.y - 5});
     }
 
     // Render background panels for each child
     if (type_ == SplitterType::Vertical) {
         mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{ "gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
         mdd.color = {0.015, 0.015, 0.017, 1};
-        mdd.location = {global_origin_.x + 2, global_origin_.y + 2, parentDepth + 0.01};
+        mdd.location = {global_origin_.x + 4, global_origin_.y + 4, parentDepth + 0.02};
         mdd.scale = {splitterPosition_.x - splitterSize - 1, global_size_.y - 5, 1};
         Renderer::drawWidgetMeshDeferred(mdd, this);
 
@@ -110,8 +113,8 @@ void SplitterWidget::draw(float depth) {
     } else {
         mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", glm::vec2{global_size_.x, global_size_.y - splitterPosition_.y}}, ShaderParameter{"viewPortOrigin", glm::vec2(global_origin_.x, splitterPosition_.y)}, ShaderParameter{ "gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
         mdd.color = {0.015, 0.015, 0.017, 1};
-        mdd.location = {global_origin_.x + 2, global_origin_.y + 2 + splitterPosition_.y, parentDepth + 0.01};
-        mdd.scale = {global_size_.x - 2, splitterPosition_.y - 2, 1};
+        mdd.location = {global_origin_.x + 2, global_origin_.y + 10 + splitterPosition_.y, parentDepth + 0.01};
+        mdd.scale = {global_size_.x - 4, splitterPosition_.y - splitterSize - 10, 1};
         Renderer::drawWidgetMeshDeferred(mdd, this);
     }
 
