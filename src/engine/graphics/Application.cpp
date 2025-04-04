@@ -234,6 +234,10 @@ void Application::addFloatingWindow(std::shared_ptr<FloatingWindow> window) {
     floating_windows_.push_back(window);
 }
 
+void Application::doFrame() {
+    // noop
+}
+
 void Application::setAllowCursorOverride(bool allow) {
     allow_cursor_override_ = allow;
 }
@@ -297,6 +301,9 @@ void Application::mainLoop() {
             DispatchMessage(&msg);
         }
 
+	    // Call our frame-based logic function.
+	    doFrame();
+
 	    // Send raw frame messages to all subscribers:
 	    for (auto& msgSub : messageSubscribers) {
 	        msgSub->onFrameMessages(frame_messages_);
@@ -342,7 +349,8 @@ LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
 #define ID_LEFT_CHILD  101
 #define ID_RIGHT_CHILD 102
     if (appPtr) {
-        appPtr->frame_messages_.push_back(RawWin32Message{message, wParam, lParam});
+        appPtr->message_count++;
+        appPtr->frame_messages_.push_back(RawWin32Message{message, wParam, lParam, appPtr->message_count});
     }
 
     switch (message) {

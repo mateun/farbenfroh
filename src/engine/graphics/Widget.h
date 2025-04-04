@@ -63,7 +63,7 @@ struct LayoutHint {
 * Without a layout, the creator/owner of the widget must set origin and size.
 * Otherwise the layout takes care of this.
 */
-class Widget {
+class Widget : public std::enable_shared_from_this<Widget> {
 
 public:
     Widget();
@@ -185,9 +185,18 @@ public:
     void setVisible(bool cond);
     bool isVisible() const;
 
+    // Allows to set a background color of a widget, e.g. for debugging
+    // or just for aesthetics.
+    void setBgColor(glm::vec4 color);
+    glm::vec4 getBgColor() const;
+
+    std::weak_ptr<Widget> parent();
+
 
 
 protected:
+
+    std::weak_ptr<Widget> parent_;
 
     // This is an optional identifier, mainly usable for debugging so we know
     // which widget we are seeing currently.
@@ -196,21 +205,18 @@ protected:
     // This is the depth ( or z...) value of the widget.
     float z_value_ = 0.f;
 
-    // This is the location in parent-space.
-    // For the widget itself this is normally not "interesting",
-    // as for its own drawing purposes it always assumes a (0,0) origin
-    // in its own space.
-    // We store the origin here nonetheless so the widget can be asked by its parent
-    // or layout manager where it actually is located.
-    glm::vec2 origin_ = {};
+    // This is the location in global space.
+    // For the widget drawing itself, it is advised to set its viewport to
+    // (0, 0, size.x, size.y)
+    glm::vec2 global_origin_ = {};
 
     // The width and height of this widget.
-    // This should never be set by the widget itself, but by some parent or
+    // This is mostly not set by the widget itself, but by some parent or
     // layout in the hierarchy above it.
-    // The reason is the layouting only makes sense when knowing all the participating
-    // widgets for a certain area, the widget itself could never position and size itself correctly.
-    // The dimension is though important for self drawing, as it gives the widget the information how big it actually is.
-    glm::vec2 size_ = {};
+    // The reason is the sizing normally only makes sense when knowing all the participating
+    // widgets for a certain area. The widget itself might not be able to position and size itself correctly
+    // in relation to the other widgets.
+    glm::vec2 global_size_ = {};
 
     std::vector<std::shared_ptr<Widget>> children_;
 
@@ -227,6 +233,7 @@ protected:
     bool visible_ = true;
 
     LayoutHint layout_hint_;
+    glm::vec4 bg_color_= {0, 0, 0, 1};
 };
 
 

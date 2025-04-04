@@ -6,15 +6,21 @@
 #define EDITORLAUNCHER_H
 
 #include <engine/graphics/Application.h>
+#include <engine/graphics/ui/LabelWidget.h>
 
 
-class EditorLauncher : public Application    {
+class EditorLauncher : public Application, public FrameMessageSubscriber, public std::enable_shared_from_this<FrameMessageSubscriber>   {
 
   public:
     EditorLauncher(int width, int height, bool fullscreen);
 
     void onCreated() override;
 
+    void doFrame() override;
+
+    std::shared_ptr<LabelWidget> lblMouseCoords;
+
+    void onFrameMessages(const std::vector<RawWin32Message> &msgs) override;
 };
 
 

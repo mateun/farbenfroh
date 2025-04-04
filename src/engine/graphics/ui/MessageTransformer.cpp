@@ -12,6 +12,7 @@
 
 UIMessage MessageTransformer::transform(RawWin32Message message) {
     UIMessage result;
+    result.num = message.num;
     switch (message.message) {
         case WM_MOUSEMOVE: {
             result.type = MessageType::MouseMove;

@@ -15,6 +15,7 @@
 #include <engine/graphics/ui/MenuItem.h>
 #include <engine/graphics/ui/Spacer.h>
 #include <engine/graphics/ui/FloatingWindow.h>
+#include <engine/graphics/ui/MessageTransformer.h>
 
 std::shared_ptr<Application> app;
 std::shared_ptr<Application> getApplication() {
@@ -33,17 +34,21 @@ void EditorLauncher::onCreated() {
     auto leftVBox = std::make_shared<Widget>();
     auto rightVBox = std::make_shared<Widget>();
     rightVBox->setId("right_vbox");
+    rightVBox->setBgColor({0.5, 0, 0.5, 1});
     leftVBox->setId("left_vbox");
+    leftVBox->setBgColor({0.5, 0.5, 0.0, 1});
     leftVBox->setLayout(vboxLayout);
     rightVBox->setLayout(vboxLayout);
 
     std::shared_ptr<TrueTypeFont> fontConsola = std::make_shared<TrueTypeFont>("../assets/consola.ttf", 16);
     auto lblProjects = std::make_shared<LabelWidget>("Projects", fontConsola);
     auto lblSettings = std::make_shared<LabelWidget>("Settings", fontConsola);
+    lblMouseCoords = std::make_shared<LabelWidget>("FrameCount", fontConsola);
     auto lblProjects2 = std::make_shared<LabelWidget>("Actions", fontConsola);
     auto lblNewMesh = std::make_shared<LabelWidget>("NewMesh", fontConsola);
     leftVBox->addChild(lblProjects);
     leftVBox->addChild(lblSettings);
+    leftVBox->addChild(lblMouseCoords);
     rightVBox->addChild(lblProjects2);
     rightVBox->addChild(lblNewMesh);
 
@@ -108,6 +113,8 @@ void EditorLauncher::onCreated() {
     auto hSplitter = std::make_shared<SplitterWidget>(SplitterType::Horizontal, previewWidget, consoleWidget);
     hSplitter->setLayoutHint(LayoutHint{true, true});
     hSplitter->setId("h_splitter");
+    consoleWidget->setId("console");
+    previewWidget->setId("preview");
     rightVBox->addChild(hSplitter);
 
     setTopLevelWidget(mainWidget);
@@ -117,5 +124,22 @@ void EditorLauncher::onCreated() {
     floatingWindow1->setOrigin({200, 200});
     floatingWindow1->setSize({200, 150});
     addFloatingWindow(floatingWindow1);
+
+    addMessageSubscriber(shared_from_this());
+}
+
+void EditorLauncher::doFrame() {
+    // noop
+}
+
+void EditorLauncher::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
+    for (auto rm : msgs) {
+        auto transformedMessage = MessageTransformer::transform(rm);
+        if (transformedMessage.type == MessageType::MouseMove) {
+            lblMouseCoords->setText("mouse: " + std::to_string(transformedMessage.mouseMoveMessage.x) +  "/" + std::to_string(transformedMessage.mouseMoveMessage.y));
+        }
+    }
+
+
 }
 

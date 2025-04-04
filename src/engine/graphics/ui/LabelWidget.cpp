@@ -30,9 +30,9 @@ void LabelWidget::draw(float depth) {
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultTextShader();
 
 
-    mdd.viewPortDimensions =  size_;
+    mdd.viewPortDimensions =  global_size_;
     mdd.setViewport = true;
-    mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
+    mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
     mdd.texture = font_->getAtlas();
     mdd.location = {0, abs(dim1.y), depth};
     mdd.scale = {1, 1, 1};

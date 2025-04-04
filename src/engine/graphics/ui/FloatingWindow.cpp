@@ -23,13 +23,13 @@ void FloatingWindow::draw(float depth) {
     mdd.mesh = quadMesh_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
 
-    mdd.viewPortDimensions =  size_;
+    mdd.viewPortDimensions =  global_size_;
     mdd.setViewport = true;
-    mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
-    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{1.0, 0.0, 0.0, 1}}};
+    mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
+    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{1.0, 0.0, 0.0, 1}}};
     mdd.location = {0, 0, 1};
     mdd.color = glm::vec4{1.0f, 0.0f, 0.0f, 1};
-    mdd.scale = {size_.x, size_.y, 1.0f};
+    mdd.scale = {global_size_.x, global_size_.y, 1.0f};
     //mdd.scale = {splitterPosition_.x - splitterSize - 1, size_.y - 5, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
@@ -47,7 +47,7 @@ MessageHandleResult FloatingWindow::onMessage(const UIMessage &message) {
             }
 
             std::cout << "netMovement: " << std::to_string(netMovement.x) << " " << std::to_string(netMovement.y) << std::endl;
-            setOrigin(origin_ + netMovement);
+            setOrigin(global_origin_ + netMovement);
             last_mouse_pos_ = glm::vec2(message.mouseMoveMessage.x, message.mouseMoveMessage.y) ;
         }
     }
@@ -57,7 +57,7 @@ MessageHandleResult FloatingWindow::onMessage(const UIMessage &message) {
 
 
         glm::vec2 pt = getApplication()->getCurrentMousePos();
-        offset_from_pivot_ = glm::vec2(pt.x, pt.y) - origin_;
+        offset_from_pivot_ = glm::vec2(pt.x, pt.y) - global_origin_;
         std::cout << "offset_from_pivot_: " << std::to_string(offset_from_pivot_.x) << "/" << std::to_string(offset_from_pivot_.y) << std::endl;
 
     }

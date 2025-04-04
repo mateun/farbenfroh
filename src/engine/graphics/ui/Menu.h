@@ -14,7 +14,7 @@ class MenuItem;
 /**
 * A menu has a title.
 */
-class Menu : public Widget, public std::enable_shared_from_this<Menu> {
+class Menu : public Widget{
 public:
   Menu(const std::string &text);
 

@@ -11,9 +11,10 @@
 * This captures the important parts of a raw win32 message as received by wndproc.
 */
 struct RawWin32Message {
-  UINT message;
-  WPARAM wParam;
-  LPARAM lParam;
+  UINT message = 0;
+  WPARAM wParam = 0;
+  LPARAM lParam = 0;
+  uint64_t num = 0;
 };
 
 #endif //RAWWIN32MESSAGE_H

@@ -25,13 +25,13 @@ void MenuBar::draw(float depth) {
     mdd.mesh = quadMesh_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
 
-    mdd.viewPortDimensions =  size_;
+    mdd.viewPortDimensions =  global_size_;
     mdd.setViewport = true;
-    mdd.viewport = {origin_.x,  origin_.y, size_.x, 32};
-    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", glm::vec2{size_.x, 32}}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.04, 0.04, 0.04, 1}}};
+    mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, 32};
+    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", glm::vec2{global_size_.x, 32}}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.04, 0.04, 0.04, 1}}};
     mdd.color = {0.04, 0.04,0.04, 1};
     mdd.location = {2, 2, -1.8};
-    mdd.scale = {size_.x - 4 , 30, 1};
+    mdd.scale = {global_size_.x - 4 , 30, 1};
     mdd.debugInfo = "menu_bar";
     Renderer::drawWidgetMeshDeferred(mdd, this);
 

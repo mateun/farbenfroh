@@ -25,13 +25,13 @@ void ToolBarWidget::draw(float depth) {
     mdd.mesh = quadMesh_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
 
-    mdd.viewPortDimensions =  size_;
+    mdd.viewPortDimensions =  global_size_;
     mdd.setViewport = true;
-    mdd.viewport = {origin_.x,  origin_.y, size_.x, size_.y};
-    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
+    mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
+    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.01, 0.01, 0.01, 1}}};
     mdd.color = {0.02, 0.02,0.02, 1};
     mdd.location = {0, 0, -1.8};
-    mdd.scale = {size_.x, size_.y, 1};
+    mdd.scale = {global_size_.x, global_size_.y, 1};
     mdd.debugInfo = "toolbar_background";
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
@@ -47,5 +47,5 @@ MessageHandleResult ToolBarWidget::onMessage(const UIMessage &message) {
 }
 
 glm::vec2 ToolBarWidget::getPreferredSize() {
-    return {size_.x, 40};
+    return {global_size_.x, 40};
 }

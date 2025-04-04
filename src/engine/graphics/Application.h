@@ -70,6 +70,8 @@ protected:
 
     void addFloatingWindow(std::shared_ptr<FloatingWindow> window);
 
+protected:
+    virtual void doFrame();
 
 private:
     void mainLoop();
@@ -96,6 +98,7 @@ private:
     bool allow_cursor_override_ = false;
     HCURSOR resize_cursor_horizontal_;
     HCURSOR resize_cursor_vertical_;
+    uint64_t message_count = 0;
 };
 
 std::shared_ptr<Application> getApplication();

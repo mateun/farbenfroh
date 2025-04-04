@@ -13,6 +13,8 @@
 #include <engine/graphics/ui/MessageHandleResult.h>
 
 #include "Geometry.h"
+#include "Renderer.h"
+#include "ozz/samples/framework/renderer.h"
 #include "ui/MenuBar.h"
 
 
@@ -22,15 +24,15 @@ extern std::shared_ptr<Application> getApplication();
 
 
 void Widget::setOrigin(glm::vec2 orig) {
-    origin_ = orig;
+    global_origin_ = orig;
 }
 
 glm::vec2 Widget::origin() const {
-    return origin_;
+    return global_origin_;
 }
 
 void Widget::setSize(glm::vec2 size) {
-    size_ = size;
+    global_size_ = size;
 
 }
 
@@ -46,10 +48,21 @@ bool Widget::isVisible() const {
     return visible_;
 }
 
+void Widget::setBgColor(glm::vec4 color) {
+    bg_color_ = color;
+}
+
+glm::vec4 Widget::getBgColor() const {
+    return bg_color_;
+}
+
+std::weak_ptr<Widget> Widget::parent() {
+    return parent_;
+}
 
 
 glm::vec2 Widget::size() const {
-    return size_;
+    return global_size_;
 }
 
 
@@ -95,6 +108,22 @@ MessageHandleResult Widget::onMessage(const UIMessage &message) {
 void Widget::draw(float depth) {
     assert(getApplication()->getRenderBackend() != nullptr);
 
+    // We can render our background in the given color
+    {
+        MeshDrawData mdd;
+        mdd.mesh = quadMesh_;
+        mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
+        mdd.viewPortDimensions =  global_size_;
+        mdd.setViewport = true;
+        mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
+        mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", bg_color_}};
+        mdd.color = bg_color_;
+        mdd.location = {origin().x, origin().y, parent().expired() ? -10 : parent().lock()->getZValue() + 0.1};
+        mdd.scale = {size().x, size().y, 1.0f};
+        Renderer::drawWidgetMeshDeferred(mdd, this);
+
+    }
+
 
     // We differentiate two main cases:
     // A. we have a layout
@@ -105,23 +134,23 @@ void Widget::draw(float depth) {
     if (layout_) {
         layout_->apply(this);
         if (hasMenuBar()) {
-            menu_bar_->setOrigin({origin_.x, size_.y - 32});
-            menu_bar_->setSize({size_.x, 32});
+            menu_bar_->setOrigin({global_origin_.x, global_size_.y - 32});
+            menu_bar_->setSize({global_size_.x, 32});
             menu_bar_->draw(depth);
         }
         for (auto c : children_) {
-            getApplication()->getRenderBackend()->setViewport(c->origin_.x, c->origin_.y,  c->size_.x, c->size_.y);
+            getApplication()->getRenderBackend()->setViewport(c->global_origin_.x, c->global_origin_.y,  c->global_size_.x, c->global_size_.y);
             c->draw(depth);
 
         }
     } else {
         if (hasMenuBar()) {
-            menu_bar_->setOrigin({origin_.x, size_.y - 32});
-            menu_bar_->setSize({size_.x, 32});
+            menu_bar_->setOrigin({global_origin_.x, global_size_.y - 32});
+            menu_bar_->setSize({global_size_.x, 32});
             menu_bar_->draw(depth);
         }
         for (auto c : children_) {
-            getApplication()->getRenderBackend()->setViewport(c->origin_.x, c->origin_.y,  c->size_.x, c->size_.y);
+            getApplication()->getRenderBackend()->setViewport(c->global_origin_.x, c->global_origin_.y,  c->global_size_.x, c->global_size_.y);
             c->draw(depth);
 
         }
@@ -133,6 +162,7 @@ void Widget::draw(float depth) {
 
 void Widget::addChild(std::shared_ptr<Widget> child) {
     children_.push_back(child);
+    child->parent_ = shared_from_this();
 }
 
 void Widget::setMenuBar(std::shared_ptr<MenuBar> menu_bar) {
@@ -197,8 +227,8 @@ std::shared_ptr<Widget> Widget::getMenuBar() const {
 }
 
 bool Widget::checkMouseOver(int mouse_x, int mouse_y) const {
-    if (mouse_x >= origin_.x && mouse_x <= (origin_.x + size_.x) &&
-        mouse_y <= (origin_.y + size_.y) && mouse_y >= origin_.y) {
+    if (mouse_x >= global_origin_.x && mouse_x <= (global_origin_.x + global_size_.x) &&
+        mouse_y <= (global_origin_.y + global_size_.y) && mouse_y >= global_origin_.y) {
         return true;
     }
     return false;
