@@ -92,14 +92,14 @@ void SplitterWidget::draw(float depth) {
         first_->setOrigin({global_origin_.x, global_origin_.y});
         second_->setOrigin({splitterPosition_.x + 5, 0});
 
-        first_->setSize({splitterPosition_.x, global_size_.y});
-        second_->setSize({global_size_.x - splitterPosition_.x, global_size_.y});
+        first_->setSize({splitterPosition_.x-1, global_size_.y});
+        second_->setSize({global_size_.x - splitterPosition_.x-4, global_size_.y});
     } else {
-        first_->setOrigin({global_origin_.x, global_origin_.y + splitterPosition_.y + 5});
-        second_->setOrigin({global_origin_.x, global_origin_.y + 2});
+        first_->setOrigin({global_origin_.x+1, global_origin_.y + splitterPosition_.y + 5});
+        second_->setOrigin({global_origin_.x+1, global_origin_.y + 2});
 
-        first_->setSize({global_size_.x, global_size_.y - splitterPosition_.y - 5});
-        second_->setSize({global_size_.x,  splitterPosition_.y - 5});
+        first_->setSize({global_size_.x-4, global_size_.y - splitterPosition_.y - 5});
+        second_->setSize({global_size_.x-4,  splitterPosition_.y - 5});
     }
 
     // Render background panels for each child
@@ -148,6 +148,7 @@ void SplitterWidget::draw(float depth) {
 }
 
 MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
+
 
     if (message.type == MessageType::MouseMove) {
         //std::cout << "in onMessage [" << std::to_string(message.num) << "] for splitter widget: " << this->id_ << " from " << message.sender <<  std::endl;

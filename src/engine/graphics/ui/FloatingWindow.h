@@ -7,6 +7,7 @@
 
 #include <engine/graphics/Widget.h>
 
+class Texture;
 class MessageHandleResult;
 struct UIMessage;
 
@@ -25,6 +26,7 @@ private:
     bool mouse_down_ = false;
     glm::vec2 last_mouse_pos_ = glm::vec2(0.0f);
     glm::vec2 offset_from_pivot_ = glm::vec2(0.0f);
+    std::shared_ptr<Texture> closing_icon_texture_;
 };
 
 

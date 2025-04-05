@@ -36,7 +36,7 @@ void EditorLauncher::onCreated() {
     rightVBox->setId("right_vbox");
     rightVBox->setBgColor({0.02, .02, 0.02, 1});
     leftVBox->setId("left_vbox");
-    leftVBox->setBgColor({0.02, .02, 0.02, 1});
+    leftVBox->setBgColor({0.01, .01, 0.011, 1});
     leftVBox->setLayout(vboxLayout);
     rightVBox->setLayout(vboxLayout);
 
@@ -52,12 +52,30 @@ void EditorLauncher::onCreated() {
     rightVBox->addChild(lblProjects2);
     rightVBox->addChild(lblNewMesh);
 
-    auto mainSplitter = std::make_shared<SplitterWidget>(SplitterType::Vertical, leftVBox, rightVBox);
+    auto consoleWidget = std::make_shared<Widget>();
+    auto previewWidget = std::make_shared<Widget>();
+    auto hSplitter = std::make_shared<SplitterWidget>(SplitterType::Horizontal, previewWidget, consoleWidget);
+    hSplitter->setLayoutHint(LayoutHint{true, true});
+    hSplitter->setId("h_splitter");
+    consoleWidget->setId("console");
+    consoleWidget->setBgColor({0.012, 0.012, 0.012, 1});
+    previewWidget->setId("preview");
+    previewWidget->setBgColor({0.012, 0.012, 0.012, 1});
+    rightVBox->addChild(hSplitter);
+
+    auto consoleMain = std::make_shared<Widget>();
+    consoleMain->setId("console_main");
+    consoleMain->setBgColor({.011, 0.011, 0.011, 1});
+    consoleWidget->setLayout(std::make_shared<AreaLayout>(nullptr, nullptr, nullptr,nullptr, consoleMain));
+    consoleWidget->addChild(consoleMain);
+
+    auto mainSplitter = std::make_shared<SplitterWidget>(SplitterType::Vertical, leftVBox, hSplitter);
     mainSplitter->setId("main_splitter");
 
     auto mainWidget = std::make_shared<Widget>();
     auto topToolbar = std::make_shared<ToolBarWidget>();
     topToolbar->setId("toolbar");
+    topToolbar->setBgColor({0.02, .02, .02, 1});
     auto areaLayout = std::make_shared<AreaLayout>(topToolbar, nullptr, nullptr, nullptr, mainSplitter);
     mainWidget->setLayout(areaLayout);
     mainWidget->addChild(topToolbar);
@@ -107,23 +125,7 @@ void EditorLauncher::onCreated() {
     menuAbout->setId("menu_about");
     mainMenuBar->addMenu(menuAbout);
     mainWidget->setMenuBar(mainMenuBar);
-
-    auto consoleWidget = std::make_shared<Widget>();
-    auto previewWidget = std::make_shared<Widget>();
-    auto hSplitter = std::make_shared<SplitterWidget>(SplitterType::Horizontal, previewWidget, consoleWidget);
-    hSplitter->setLayoutHint(LayoutHint{true, true});
-    hSplitter->setId("h_splitter");
-    consoleWidget->setId("console");
-    consoleWidget->setBgColor({0.02, 0.02, 0.02, 1});
-    previewWidget->setId("preview");
-    previewWidget->setBgColor({0.02, 0.02, 0.02, 1});
-    rightVBox->addChild(hSplitter);
-
-    auto consoleMain = std::make_shared<Widget>();
-    consoleMain->setId("console_main");
-    consoleMain->setBgColor({.015, 0.015, 0.015, 1});
-    consoleWidget->setLayout(std::make_shared<AreaLayout>(nullptr, nullptr, nullptr,nullptr, consoleMain));
-    consoleWidget->addChild(consoleMain);
+    mainWidget->setBgColor({0.01, 0.014, 0.0, 1}, {0.001, 0.0014, 0.0, 1});
 
 
     mainWidget->setId("main_widget");
@@ -131,6 +133,7 @@ void EditorLauncher::onCreated() {
 
     auto floatingWindow1 = std::make_shared<FloatingWindow>();
     floatingWindow1->setId("floating_window1");
+    floatingWindow1->setBgColor({0.02, .02, .02, 0.98});
     floatingWindow1->setOrigin({200, 200});
     floatingWindow1->setSize({200, 150});
     addFloatingWindow(floatingWindow1);

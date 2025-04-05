@@ -12,12 +12,15 @@
 #include "MessageHandleResult.h"
 
 FloatingWindow::FloatingWindow() {
+    closing_icon_texture_ = std::make_shared<Texture>("../assets/green_x_16.png");
+
 }
 
 FloatingWindow::~FloatingWindow() {
 }
 
 void FloatingWindow::draw(float depth) {
+    float window_bg_depth = 1.0f;
 
     MeshDrawData mdd;
     mdd.mesh = quadMesh_;
@@ -26,11 +29,23 @@ void FloatingWindow::draw(float depth) {
     mdd.viewPortDimensions =  global_size_;
     mdd.setViewport = true;
     mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
-    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{1.0, 0.0, 0.0, 1}}};
-    mdd.location = {0, 0, 1};
-    mdd.color = glm::vec4{1.0f, 0.0f, 0.0f, 1};
-    mdd.scale = {global_size_.x, global_size_.y, 1.0f};
+    mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", bg_gradient_start_}};
+    mdd.location = {0, 0, window_bg_depth};
+    mdd.color = bg_gradient_start_;
+    mdd.scale = {global_size_.x, global_size_.y, 1};
     //mdd.scale = {splitterPosition_.x - splitterSize - 1, size_.y - 5, 1};
+    Renderer::drawWidgetMeshDeferred(mdd, this);
+
+    // We always render a window header to enable closing of the window:
+    mdd.location = {0,  global_size_.y - 20, window_bg_depth + 0.01};
+    mdd.scale = {global_size_.x, 20, 1};
+    mdd.color = {0.6, 0.6, 0.61, 1};
+    Renderer::drawWidgetMeshDeferred(mdd, this);
+
+    mdd.location = {global_size_.x - 20, global_size_.y - 20 + 2, window_bg_depth + 0.02};
+    mdd.scale = {16, 16, 1};
+    mdd.texture= closing_icon_texture_;
+    mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(true);
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
 
@@ -67,7 +82,12 @@ MessageHandleResult FloatingWindow::onMessage(const UIMessage &message) {
         last_mouse_pos_ = {0, 0};
     }
 
-    return MessageHandleResult{true, "", false};
+    if (hover_focus_) {
+        return MessageHandleResult{true, "", true};
+    } else {
+        return MessageHandleResult{true, "", false};
+    }
+
 }
 
 void FloatingWindow::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {

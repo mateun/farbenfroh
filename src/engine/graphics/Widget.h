@@ -186,7 +186,7 @@ public:
     bool isVisible() const;
 
     // Allows to set a background gradient.
-    void setBgColor(glm::vec4 gradientStartColor = {0, 0, 0, 1}, glm::vec4 gradientEndColor = {0, 0,0, 1});
+    void setBgColor(glm::vec4 gradientStartColor = {0.01, 0.01, 0.011, 1}, glm::vec4 gradientEndColor = {0.0025, 0.002,0.002, 1});
     std::pair<glm::vec4, glm::vec4> getBgColor() const;
 
     std::weak_ptr<Widget> parent();
@@ -233,8 +233,8 @@ protected:
 
     LayoutHint layout_hint_;
 
-    glm::vec4 bg_gradient_start_= {0, 0, 0, 1};
-    glm::vec4 bg_gradient_end_ = {0, 0, 0, 1};
+    glm::vec4 bg_gradient_start_= {0.01, 0.01, 0.011, 1};
+    glm::vec4 bg_gradient_end_ = {0.0025, 0.002, 0.002, 1};
 };
 
 

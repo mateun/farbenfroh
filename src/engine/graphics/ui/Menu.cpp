@@ -98,7 +98,7 @@ void Menu::draw(float depth) {
         } else {
             // How much do we move the subpanel to the right?
             int xOffset = parent_menu_.expired() ? 5 : parent_menu_.lock()->size().x + 5;
-            xOffset = 180;
+            xOffset = 177;
             sub_menu_panel_->setOrigin(global_origin_ + glm::vec2{xOffset, 2});
             mdd.viewport = {global_origin_.x + global_size_.x + xOffset, global_origin_.y, global_size_.x * 4, panelSizeY };
         }
@@ -165,7 +165,7 @@ std::weak_ptr<Menu> Menu::parentMenu() {
 void Menu::lazyCreateSubMenuPanel() {
     if (!sub_menu_panel_) {
         sub_menu_panel_ = std::make_shared<Widget>();
-        sub_menu_panel_->setBgColor({0.03, 0.02, 0.02, 0.5});
+        sub_menu_panel_->setBgColor({0.04, 0.04,0.04, 1}, {0.04, 0.04,0.04, 1});
         auto vbox = std::make_shared<VBoxLayout>();
         vbox->setMarginVertical(5);
         sub_menu_panel_->setLayout(vbox);

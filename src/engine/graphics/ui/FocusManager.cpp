@@ -43,28 +43,29 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
              bool foundFocusAmongFloatingWindows = false;
              // First we visit all floating windows. These are the highest in z-order
              // and if we can find our one focus element among them, we are good:
-             {
-                 float floatingWindowHightestZ = std::numeric_limits<float>::lowest();
-                 std::shared_ptr<FloatingWindow> highestFloatingWindow;
-                 for (auto floatingWindow : getApplication()->getFloatingWindows()) {
-                     if (!floatingWindow->isVisible()) continue;
 
-                     if (floatingWindow->checkMouseOver(mouse_x, mouse_y)) {
-                         if (floatingWindow->getZValue() > floatingWindowHightestZ) {
-                             floatingWindowHightestZ = floatingWindow->getZValue();
-                             highestFloatingWindow = floatingWindow;
-                         }
+             float floatingWindowHightestZ = std::numeric_limits<float>::lowest();
+             std::shared_ptr<FloatingWindow> highestFloatingWindow;
+             for (auto floatingWindow : getApplication()->getFloatingWindows()) {
+                 if (!floatingWindow->isVisible()) continue;
 
+                 if (floatingWindow->checkMouseOver(mouse_x, mouse_y)) {
+                     if (floatingWindow->getZValue() > floatingWindowHightestZ) {
+                         floatingWindowHightestZ = floatingWindow->getZValue();
+                         highestFloatingWindow = floatingWindow;
                      }
 
                  }
 
-                 if (highestFloatingWindow) {
-                     highestFloatingWindow->setHoverFocus(nullptr);
-                     foundFocusAmongFloatingWindows = true;
-                     previous_focus_widget_ = highestFloatingWindow;
-                 }
              }
+
+             if (highestFloatingWindow) {
+                 std::cout << "focused widget: " << highestFloatingWindow->getId() << " z-value: " << highestFloatingWindow->getZValue() << std::endl;
+                 highestFloatingWindow->setHoverFocus(nullptr);
+                 foundFocusAmongFloatingWindows = true;
+                 previous_focus_widget_ = highestFloatingWindow;
+             }
+
 
              // If any floating window already has focus, we handle the next message and do not
              // pass the current message on to the static top-level widget.
