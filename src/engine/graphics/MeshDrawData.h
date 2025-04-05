@@ -77,8 +77,8 @@ struct MeshDrawData {
 
     int sequenceNumber = 0;
     std::string debugInfo = "";
-
-
+    GLuint debug_id = 0;
+    std::string debug_label = "generic_gl_draw_call";
 };
 
 

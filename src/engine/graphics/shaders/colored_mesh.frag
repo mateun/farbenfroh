@@ -11,11 +11,10 @@ out vec4 color;
 
 void main() {
 
-
     float t = (gl_FragCoord.y - viewPortOrigin.y) / viewPortDimensions.y;
 
-    vec3 gradient = mix(gradientTargetColor.rgb, singleColor.rgb, t);
+    vec4 gradient = mix(gradientTargetColor.rgba, singleColor.rgba, t);
 
-    color = vec4(gradient, 1);
+    color = vec4(gradient);
 
 }

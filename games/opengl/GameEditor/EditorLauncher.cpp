@@ -34,9 +34,9 @@ void EditorLauncher::onCreated() {
     auto leftVBox = std::make_shared<Widget>();
     auto rightVBox = std::make_shared<Widget>();
     rightVBox->setId("right_vbox");
-    //rightVBox->setBgColor({0.5, 0, 0.5, 1});
+    rightVBox->setBgColor({0.02, .02, 0.02, 1});
     leftVBox->setId("left_vbox");
-    //leftVBox->setBgColor({0.5, 0.5, 0.0, 1});
+    leftVBox->setBgColor({0.02, .02, 0.02, 1});
     leftVBox->setLayout(vboxLayout);
     rightVBox->setLayout(vboxLayout);
 
@@ -114,14 +114,14 @@ void EditorLauncher::onCreated() {
     hSplitter->setLayoutHint(LayoutHint{true, true});
     hSplitter->setId("h_splitter");
     consoleWidget->setId("console");
-    consoleWidget->setBgColor({0.8, 0.82, 0.1, 0.5});
+    consoleWidget->setBgColor({0.02, 0.02, 0.02, 1});
     previewWidget->setId("preview");
-    previewWidget->setBgColor({0.8, 0.2, 0.4, 0.8});
+    previewWidget->setBgColor({0.02, 0.02, 0.02, 1});
     rightVBox->addChild(hSplitter);
 
     auto consoleMain = std::make_shared<Widget>();
     consoleMain->setId("console_main");
-    consoleMain->setBgColor({.05, 0.05, 0.06, 1});
+    consoleMain->setBgColor({.015, 0.015, 0.015, 1});
     consoleWidget->setLayout(std::make_shared<AreaLayout>(nullptr, nullptr, nullptr,nullptr, consoleMain));
     consoleWidget->addChild(consoleMain);
 

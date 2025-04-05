@@ -14,7 +14,6 @@
 
 #include "Geometry.h"
 #include "Renderer.h"
-#include "ozz/samples/framework/renderer.h"
 #include "ui/MenuBar.h"
 
 
@@ -48,12 +47,13 @@ bool Widget::isVisible() const {
     return visible_;
 }
 
-void Widget::setBgColor(glm::vec4 color) {
-    bg_color_ = color;
+void Widget::setBgColor(glm::vec4 gradientStart, glm::vec4 gradientEnd) {
+    bg_gradient_start_ = gradientStart;
+    bg_gradient_end_ = gradientEnd;
 }
 
-glm::vec4 Widget::getBgColor() const {
-    return bg_color_;
+std::pair<glm::vec4, glm::vec4> Widget::getBgColor() const {
+    return { bg_gradient_start_, bg_gradient_end_ };
 }
 
 std::weak_ptr<Widget> Widget::parent() {
@@ -117,12 +117,14 @@ void Widget::draw(float depth) {
         mdd.viewPortDimensions =  global_size_;
         mdd.setViewport = true;
         mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
-        mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", bg_color_}};
-        mdd.color = bg_color_;
+        mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", bg_gradient_end_}};
+        //mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{1, 0, 1, 1}}};
+        mdd.color = bg_gradient_start_;
         // Place ourselves above the parent depth if we have a parent.
         // Otherwise use the passed in depth override value.
         mdd.location = {0, 0, backgroundDepth };
         mdd.scale = {size().x, size().y, 1.0f};
+        mdd.debug_label = "background_" + id_;
         Renderer::drawWidgetMeshDeferred(mdd, this);
 
     }
@@ -273,7 +275,7 @@ void Widget::setId(const std::string &id) {
 
 std::shared_ptr<Camera> Widget::getDefaultUICam() {
     auto cam = std::make_shared<Camera>(CameraType::Ortho);
-    cam->updateLocation({0, 0, 20});
+    cam->updateLocation({0, 0, 10});
     cam->updateLookupTarget({0, 0, -1});
     return cam;
 }

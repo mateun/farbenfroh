@@ -226,7 +226,9 @@ void Renderer::submitDeferredWidgetCalls() {
 
     for (auto& mdd: batch_draw_list_) {
         // TODO actually batch - for now just draw immediately
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, mdd.debug_id, -1, mdd.debug_label.c_str());
         drawMesh(mdd);
+        glPopDebugGroup();
 
     }
     batchedDrawData_.clear();

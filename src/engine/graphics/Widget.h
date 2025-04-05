@@ -185,10 +185,9 @@ public:
     void setVisible(bool cond);
     bool isVisible() const;
 
-    // Allows to set a background color of a widget, e.g. for debugging
-    // or just for aesthetics.
-    void setBgColor(glm::vec4 color);
-    glm::vec4 getBgColor() const;
+    // Allows to set a background gradient.
+    void setBgColor(glm::vec4 gradientStartColor = {0, 0, 0, 1}, glm::vec4 gradientEndColor = {0, 0,0, 1});
+    std::pair<glm::vec4, glm::vec4> getBgColor() const;
 
     std::weak_ptr<Widget> parent();
 
@@ -233,7 +232,9 @@ protected:
     bool visible_ = true;
 
     LayoutHint layout_hint_;
-    glm::vec4 bg_color_= {0, 0, 0, 1};
+
+    glm::vec4 bg_gradient_start_= {0, 0, 0, 1};
+    glm::vec4 bg_gradient_end_ = {0, 0, 0, 1};
 };
 
 
