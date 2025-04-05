@@ -29,6 +29,14 @@ UIMessage MessageTransformer::transform(RawWin32Message message) {
             result.type = MessageType::MouseUp;
             break;
         }
+        case WM_CHAR:
+        {
+            char ch = (char) message.wParam;
+            result.type = MessageType::Character;
+            result.character = ch;
+            break;
+        }
+
     }
 
     return result;

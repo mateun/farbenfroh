@@ -67,7 +67,13 @@ MessageHandleResult ButtonWidget::onMessage(const UIMessage &message) {
             }
         }
         case MessageType::MouseDown: {
-            break;
+            if (hover_focus_) {
+                for (auto ab : action_callbacks_) {
+                    ab(shared_from_this());
+                }
+            }
+
+            //return MessageHandleResult {false, "", true};
         }
     }
 
@@ -81,3 +87,15 @@ glm::vec2 ButtonWidget::getPreferredSize() {
 void ButtonWidget::setTexture(std::shared_ptr<Texture> tex) {
     texture_ = tex;
 }
+
+void ButtonWidget::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {
+    hover_focus_ = true;
+}
+
+void ButtonWidget::removeHoverFocus() {
+    hover_focus_ = false;
+}
+
+
+
+

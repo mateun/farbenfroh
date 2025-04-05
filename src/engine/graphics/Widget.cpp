@@ -11,6 +11,7 @@
 #include "Application.h"
 #include <engine/graphics/MeshDrawData.h>
 #include <engine/graphics/ui/MessageHandleResult.h>
+#include <engine/graphics/ui/Action.h>
 
 #include "Geometry.h"
 #include "Renderer.h"
@@ -58,6 +59,14 @@ std::pair<glm::vec4, glm::vec4> Widget::getBgColor() const {
 
 std::weak_ptr<Widget> Widget::parent() {
     return parent_;
+}
+
+void Widget::addAction(const std::shared_ptr<Action>& action) {
+    actions_.push_back(action);
+}
+
+void Widget::addActionCallback(std::function<void(std::shared_ptr<Widget>)> actionCallback) {
+    action_callbacks_.push_back(actionCallback);
 }
 
 

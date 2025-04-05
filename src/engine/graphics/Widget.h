@@ -5,6 +5,7 @@
 #ifndef WIDGET_H
 #define WIDGET_H
 
+#include <functional>
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
@@ -13,6 +14,7 @@
 #include "Mesh.h"
 
 
+class Action;
 class MenuBar;
 struct MeshDrawData;
 class Layout;
@@ -26,6 +28,7 @@ enum class MessageType {
     MouseDown,
     WidgetGainedFocus,
     WidgetLostFocus,
+    Character,
 };
 
 struct MouseMoveMessage {
@@ -44,6 +47,7 @@ struct UIMessage {
     FocusMessage focusMessage;
     uint64_t num = 0;
     std::string sender;
+    char character = '\0';
 };
 
 // This struct provides additional hinting
@@ -171,6 +175,9 @@ public:
     void setLayoutHint(LayoutHint hint);
     LayoutHint getLayoutHint();
 
+    // Checks if the mouse is over the given widget.
+    // Can take offsets for x and y into consideration to e.g. make it easer for the user to
+    // hit a small widget, you can give an offset which makes the hit area bigger (or smaller, if needed).
     static bool checkMouseOver(int mouseX, int mouseY, const Widget* widget, bool useOffsets = false,
                                glm::vec2 originOffset = {0, 0}, glm::vec2 sizeOffset = {0, 0});
 
@@ -191,6 +198,11 @@ public:
 
     std::weak_ptr<Widget> parent();
 
+    // For a full fledged Action object
+    void addAction(const std::shared_ptr<Action>& action);
+
+    // For just adding a lambda callback
+    void addActionCallback(std::function<void(std::shared_ptr<Widget>)> actionCallback);
 
 
 protected:
@@ -235,6 +247,8 @@ protected:
 
     glm::vec4 bg_gradient_start_= {0.01, 0.01, 0.011, 1};
     glm::vec4 bg_gradient_end_ = {0.0025, 0.002, 0.002, 1};
+    std::vector<std::shared_ptr<Action>> actions_;
+    std::vector<std::function<void(std::shared_ptr<Widget>)>> action_callbacks_;
 };
 
 

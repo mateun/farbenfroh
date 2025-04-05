@@ -4,6 +4,7 @@
 
 #include "EditorLauncher.h"
 
+#include <iostream>
 #include <engine/graphics/ui/ButtonWidget.h>
 #include <engine/graphics/ui/LabelWidget.h>
 #include <engine/graphics/ui/SplitterWidget.h>
@@ -87,6 +88,9 @@ void EditorLauncher::onCreated() {
     auto btnPause = std::make_shared<ButtonWidget>();
     auto startButtonTexture = std::make_shared<Texture>("../assets/button_start_path.png");
     btnStart->setTexture(startButtonTexture);
+    btnStart->addActionCallback([](std::shared_ptr<Widget> action) {
+        std::cout << "Start launching" << std::endl;
+    });
     btnStop->setTexture(startButtonTexture);
     btnPause->setTexture(startButtonTexture);
     btnStart->setId("button_start");

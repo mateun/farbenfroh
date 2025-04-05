@@ -19,9 +19,13 @@ public:
     glm::vec2 getPreferredSize() override;
     void setTexture(std::shared_ptr<Texture> tex);
 
+    void setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) override;
+    void removeHoverFocus() override;
+
 private:
     bool hover_ = false;
     std::shared_ptr<Texture> texture_;
+    bool hover_focus_ = false;
 };
 
 
