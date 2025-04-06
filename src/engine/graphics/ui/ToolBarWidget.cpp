@@ -32,8 +32,8 @@ void ToolBarWidget::draw(float depth) {
     mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
     mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", bg_gradient_end_}};
     mdd.color = bg_gradient_start_;
-    mdd.location = {2, 2, depth + 0.01};
-    mdd.scale = {global_size_.x - 4 , global_size_.y-2, 1};
+    mdd.location = {1, 2, depth + 0.01};
+    mdd.scale = {global_size_.x - 2 , global_size_.y-2, 1};
     mdd.debugInfo = "toolbar_background";
     Renderer::drawWidgetMeshDeferred(mdd, this);
 

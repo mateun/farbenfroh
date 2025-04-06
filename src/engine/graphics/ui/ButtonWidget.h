@@ -23,9 +23,12 @@ public:
     void removeHoverFocus() override;
 
 private:
+
+    void setLastProcessedMessage(uint64_t lastProcessedMessage);
     bool hover_ = false;
     std::shared_ptr<Texture> texture_;
     bool hover_focus_ = false;
+    uint64_t last_processed_message_num_ = 0;
 };
 
 

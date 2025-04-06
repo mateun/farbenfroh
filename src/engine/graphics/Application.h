@@ -60,6 +60,9 @@ class Application {
 
     glm::vec2 getCurrentMousePos();
 
+    void addFloatingWindow(std::shared_ptr<FloatingWindow> window);
+    void removeFloatingWindow(std::shared_ptr<FloatingWindow> floating_window);
+
 protected:
 
     // Gets called right after the successful construction, must be implemented by concrete
@@ -68,12 +71,14 @@ protected:
 
     void setTopLevelWidget(const std::shared_ptr<Widget>& widget);
 
-    void addFloatingWindow(std::shared_ptr<FloatingWindow> window);
+
 
 protected:
     virtual void doFrame();
 
 private:
+    void clearClosedFloatingWindows();
+
     void mainLoop();
 
 
@@ -86,6 +91,7 @@ private:
     HDC hdc;
     std::shared_ptr<Widget> topLevelWidget;
     std::vector<std::shared_ptr<FloatingWindow>> floating_windows_;
+    std::vector<std::shared_ptr<FloatingWindow>> floating_windows_closed_;
     std::unique_ptr<RenderBackend> render_backend_;
     int scaled_width_ = -1;
     int scaled_height_ = -1;
@@ -99,6 +105,7 @@ private:
     HCURSOR resize_cursor_horizontal_;
     HCURSOR resize_cursor_vertical_;
     uint64_t message_count = 0;
+
 };
 
 std::shared_ptr<Application> getApplication();

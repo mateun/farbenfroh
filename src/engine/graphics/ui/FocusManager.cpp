@@ -85,18 +85,17 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
                      // Send out dedicated focus messages
                      // First, a GainedFocus message:
                      UIMessage msg;
-                     msg.num = msg_count++;
+                     msg.num = m.num;
                      msg.type = MessageType::WidgetGainedFocus;
                      msg.focusMessage.widget = highestHitWidget;
                      msg.sender = "FocusManager";
-                     getApplication()->getTopLevelWidget()->onMessage(msg);
+
                      getApplication()->getCentralSubMenuManager()->onMessage(msg);
 
                      // Then a LostFocus message for the prev. holding widget:
-                     msg.num = msg_count++;
-                     msg.type = MessageType::WidgetLostFocus;
-                     msg.focusMessage.widget = previous_focus_widget_;
-                     getApplication()->getTopLevelWidget()->onMessage(msg);
+                     // msg.num = m.num;
+                     // msg.type = MessageType::WidgetLostFocus;
+                     // msg.focusMessage.widget = previous_focus_widget_;
 
                      previous_focus_widget_ = highestHitWidget;
 

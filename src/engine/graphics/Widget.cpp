@@ -48,12 +48,23 @@ bool Widget::isVisible() const {
     return visible_;
 }
 
-void Widget::setBgColor(glm::vec4 gradientStart, glm::vec4 gradientEnd) {
+void Widget::setBgColor(glm::vec4 color) {
+    use_default_bg_ = false;
+    bg_gradient_start_ = color;
+    bg_gradient_end_ = color;
+}
+
+glm::vec4 Widget::bgColor() const {
+    return bg_gradient_start_;
+}
+
+void Widget::setBgGradient(glm::vec4 gradientStart, glm::vec4 gradientEnd) {
+    use_default_bg_ = false;
     bg_gradient_start_ = gradientStart;
     bg_gradient_end_ = gradientEnd;
 }
 
-std::pair<glm::vec4, glm::vec4> Widget::getBgColor() const {
+std::pair<glm::vec4, glm::vec4> Widget::bgGradient() const {
     return { bg_gradient_start_, bg_gradient_end_ };
 }
 
@@ -114,7 +125,7 @@ MessageHandleResult Widget::onMessage(const UIMessage &message) {
 
 }
 
-void Widget::draw(float depth) {
+void Widget::draw(const float depth) {
     assert(getApplication()->getRenderBackend() != nullptr);
 
     float backgroundDepth = parent().expired() ? depth + 0.01 : parent().lock()->getZValue() + 0.01;
@@ -126,9 +137,11 @@ void Widget::draw(float depth) {
         mdd.viewPortDimensions =  global_size_;
         mdd.setViewport = true;
         mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
-        mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", bg_gradient_end_}};
+        glm::vec4 start_color = use_default_bg_ ? glm::vec4{0.01, 0.01, 0.01, 1} : bg_gradient_start_;
+        glm::vec4 end_color = use_default_bg_ ? glm::vec4{0.01, 0.01, 0.01, 1} : bg_gradient_end_;
+        mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", end_color}};
         //mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{1, 0, 1, 1}}};
-        mdd.color = bg_gradient_start_;
+        mdd.color = start_color;
         // Place ourselves above the parent depth if we have a parent.
         // Otherwise use the passed in depth override value.
         mdd.location = {0, 0, backgroundDepth };

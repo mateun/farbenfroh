@@ -147,7 +147,7 @@ MessageHandleResult Menu::onMessage(const UIMessage &message) {
         }
     }
 
-    return MessageHandleResult {false, "", false};
+    return MessageHandleResult {true, "", false};
 }
 
 glm::vec2 Menu::getPreferredSize() {
@@ -165,7 +165,7 @@ std::weak_ptr<Menu> Menu::parentMenu() {
 void Menu::lazyCreateSubMenuPanel() {
     if (!sub_menu_panel_) {
         sub_menu_panel_ = std::make_shared<Widget>();
-        sub_menu_panel_->setBgColor({0.04, 0.04,0.04, 1}, {0.04, 0.04,0.04, 1});
+        sub_menu_panel_->setBgGradient({0.04, 0.04,0.04, 1}, {0.04, 0.04,0.04, 1});
         auto vbox = std::make_shared<VBoxLayout>();
         vbox->setMarginVertical(5);
         sub_menu_panel_->setLayout(vbox);

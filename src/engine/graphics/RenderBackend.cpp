@@ -224,6 +224,10 @@ void RenderBackend::initOpenGL() {
     default_text_shader_->initFromFiles("../src/engine/graphics/shaders/text_mesh.vert",
         "../src/engine/graphics/shaders/text_mesh.frag");
 
+    default_rounded_rect_shader_ = std::make_shared<Shader>();
+    default_rounded_rect_shader_->initFromFiles("../src/engine/graphics/shaders/colored_mesh.vert",
+        "../src/engine/graphics/shaders/colored_rect_round.frag");
+
 
 }
 
@@ -252,6 +256,12 @@ std::shared_ptr<Shader> RenderBackend::getWidgetDefaultShader(bool textured) con
     }
 
     return default_widget_colored_shader_;
+}
+
+std::shared_ptr<Shader> RenderBackend::getWidgetRoundedRectShader(bool textured) const {
+    // TODO respect textured flag
+
+    return default_rounded_rect_shader_;
 }
 
 

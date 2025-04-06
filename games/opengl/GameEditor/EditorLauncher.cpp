@@ -35,9 +35,9 @@ void EditorLauncher::onCreated() {
     auto leftVBox = std::make_shared<Widget>();
     auto rightVBox = std::make_shared<Widget>();
     rightVBox->setId("right_vbox");
-    rightVBox->setBgColor({0.02, .02, 0.02, 1});
+    //rightVBox->setBgGradient({0.02, .02, 0.02, 1});
     leftVBox->setId("left_vbox");
-    leftVBox->setBgColor({0.01, .01, 0.011, 1});
+    //leftVBox->setBgColor({0.01, .01, 0.011, 1});
     leftVBox->setLayout(vboxLayout);
     rightVBox->setLayout(vboxLayout);
 
@@ -59,14 +59,14 @@ void EditorLauncher::onCreated() {
     hSplitter->setLayoutHint(LayoutHint{true, true});
     hSplitter->setId("h_splitter");
     consoleWidget->setId("console");
-    consoleWidget->setBgColor({0.012, 0.012, 0.012, 1});
+    //consoleWidget->setBgColor({0.012, 0.012, 0.012, 1});
     previewWidget->setId("preview");
-    previewWidget->setBgColor({0.012, 0.012, 0.012, 1});
+    //previewWidget->setBgColor({0.012, 0.012, 0.012, 1});
     rightVBox->addChild(hSplitter);
 
     auto consoleMain = std::make_shared<Widget>();
     consoleMain->setId("console_main");
-    consoleMain->setBgColor({.011, 0.011, 0.011, 1});
+    //consoleMain->setBgGradient({.11, 0.011, 0.011, 1});
     consoleWidget->setLayout(std::make_shared<AreaLayout>(nullptr, nullptr, nullptr,nullptr, consoleMain));
     consoleWidget->addChild(consoleMain);
 
@@ -74,6 +74,8 @@ void EditorLauncher::onCreated() {
     mainSplitter->setId("main_splitter");
 
     auto mainWidget = std::make_shared<Widget>();
+    mainWidget->setBgGradient({0.01, 0.013, 0.0, 1}, {0.001, 0.0014, 0.0, 1});
+
     auto topToolbar = std::make_shared<ToolBarWidget>();
     topToolbar->setId("toolbar");
     topToolbar->setBgColor({0.02, .02, .02, 1});
@@ -88,8 +90,14 @@ void EditorLauncher::onCreated() {
     auto btnPause = std::make_shared<ButtonWidget>();
     auto startButtonTexture = std::make_shared<Texture>("../assets/button_start_path.png");
     btnStart->setTexture(startButtonTexture);
-    btnStart->addActionCallback([](std::shared_ptr<Widget> action) {
+    btnStart->addActionCallback([this](std::shared_ptr<Widget> action) {
         std::cout << "Start launching" << std::endl;
+        auto floatingWindow = std::make_shared<FloatingWindow>();
+        floatingWindow->setId("floating_window1");
+        floatingWindow->setBgColor({0.02, .02, .02, 0.98});
+        floatingWindow->setOrigin({200, 200});
+        floatingWindow->setSize({200, 150});
+        addFloatingWindow(floatingWindow);
     });
     btnStop->setTexture(startButtonTexture);
     btnPause->setTexture(startButtonTexture);
@@ -129,18 +137,13 @@ void EditorLauncher::onCreated() {
     menuAbout->setId("menu_about");
     mainMenuBar->addMenu(menuAbout);
     mainWidget->setMenuBar(mainMenuBar);
-    mainWidget->setBgColor({0.01, 0.014, 0.0, 1}, {0.001, 0.0014, 0.0, 1});
+
 
 
     mainWidget->setId("main_widget");
     setTopLevelWidget(mainWidget);
 
-    auto floatingWindow1 = std::make_shared<FloatingWindow>();
-    floatingWindow1->setId("floating_window1");
-    floatingWindow1->setBgColor({0.02, .02, .02, 0.98});
-    floatingWindow1->setOrigin({200, 200});
-    floatingWindow1->setSize({200, 150});
-    addFloatingWindow(floatingWindow1);
+
 
     addMessageSubscriber(shared_from_this());
 }

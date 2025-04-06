@@ -234,8 +234,18 @@ void Application::addFloatingWindow(std::shared_ptr<FloatingWindow> window) {
     floating_windows_.push_back(window);
 }
 
+void Application::removeFloatingWindow(std::shared_ptr<FloatingWindow> floating_window) {
+    floating_windows_closed_.push_back(floating_window);
+}
+
 void Application::doFrame() {
     // noop
+}
+
+void Application::clearClosedFloatingWindows() {
+    for (auto cfw : floating_windows_closed_) {
+        std::erase(floating_windows_, cfw);
+    }
 }
 
 void Application::setAllowCursorOverride(bool allow) {
@@ -303,6 +313,8 @@ void Application::mainLoop() {
 
 	    // Call our frame-based logic function.
 	    doFrame();
+
+	    clearClosedFloatingWindows();
 
 	    // Send raw frame messages to all subscribers:
 	    for (auto& msgSub : messageSubscribers) {

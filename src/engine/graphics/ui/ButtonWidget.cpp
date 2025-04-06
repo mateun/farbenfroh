@@ -4,6 +4,7 @@
 
 #include "ButtonWidget.h"
 
+#include <iostream>
 #include <engine/graphics/Application.h>
 #include <engine/graphics/Geometry.h>
 #include <engine/graphics/MeshDrawData.h>
@@ -59,21 +60,30 @@ void ButtonWidget::draw(float depth) {
 
 MessageHandleResult ButtonWidget::onMessage(const UIMessage &message) {
 
+
+
+
     switch (message.type) {
         case MessageType::MouseMove: {
             hover_ = checkMouseOver(message.mouseMoveMessage.x, message.mouseMoveMessage.y);
             if (hover_) {
                 return MessageHandleResult {true, "", true};
             }
+            break;
         }
         case MessageType::MouseDown: {
+            if (message.num == last_processed_message_num_) {
+                return MessageHandleResult {false, "", true};
+            }
+            setLastProcessedMessage(message.num);
+
             if (hover_focus_) {
+                std::cout << "button widget clicked for message: " << message.num << std::endl;
                 for (auto ab : action_callbacks_) {
                     ab(shared_from_this());
                 }
+                return MessageHandleResult {false, "", true};
             }
-
-            //return MessageHandleResult {false, "", true};
         }
     }
 
@@ -94,6 +104,10 @@ void ButtonWidget::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {
 
 void ButtonWidget::removeHoverFocus() {
     hover_focus_ = false;
+}
+
+void ButtonWidget::setLastProcessedMessage(uint64_t lastProcessedMessage) {
+    last_processed_message_num_ = lastProcessedMessage;
 }
 
 

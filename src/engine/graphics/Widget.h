@@ -88,7 +88,7 @@ public:
     * This is mainly for performance reasons as it allows the framework to batch the resulting
     * draw commands more efficiently.
     */
-    virtual void draw(float depth = -0.5);
+    virtual void draw(float depth);
 
 
     /**
@@ -192,9 +192,13 @@ public:
     void setVisible(bool cond);
     bool isVisible() const;
 
+    // Set a flat background color.
+    void setBgColor(glm::vec4 color);
+    glm::vec4 bgColor() const;
+
     // Allows to set a background gradient.
-    void setBgColor(glm::vec4 gradientStartColor = {0.01, 0.01, 0.011, 1}, glm::vec4 gradientEndColor = {0.0025, 0.002,0.002, 1});
-    std::pair<glm::vec4, glm::vec4> getBgColor() const;
+    void setBgGradient(glm::vec4 gradientStartColor = {0.01, 0.01, 0.011, 1}, glm::vec4 gradientEndColor = {0.0025, 0.002,0.002, 1});
+    std::pair<glm::vec4, glm::vec4> bgGradient() const;
 
     std::weak_ptr<Widget> parent();
 
@@ -249,6 +253,7 @@ protected:
     glm::vec4 bg_gradient_end_ = {0.0025, 0.002, 0.002, 1};
     std::vector<std::shared_ptr<Action>> actions_;
     std::vector<std::function<void(std::shared_ptr<Widget>)>> action_callbacks_;
+    bool use_default_bg_ = true;
 };
 
 
