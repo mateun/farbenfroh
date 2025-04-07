@@ -34,7 +34,7 @@ TrueTypeTextRenderer::TrueTypeTextRenderer(const std::shared_ptr<TrueTypeFont>& 
 
 }
 
-glm::vec2 TrueTypeTextRenderer::calculateTextDimension(const std::string& text) {
+TextDimensions TrueTypeTextRenderer::calculateTextDimension(const std::string& text) {
     float minX = std::numeric_limits<float>::max();
     float maxX = std::numeric_limits<float>::lowest();
     float minY = std::numeric_limits<float>::max();
@@ -47,24 +47,26 @@ glm::vec2 TrueTypeTextRenderer::calculateTextDimension(const std::string& text) 
         auto q = font_->getBakedQuad(c, &x, &y);
 
         // Track min/max for bounding box
-        if (q.x0 < minX) minX = q.x0;
-        if (q.x1 > maxX) maxX = q.x1;
+        minX = std::min(minX, q.x0);
+        maxX = std::max(maxX, q.x1);
 
         if (c == 32) continue; // ignore space for Y, as this is always zero and messes things up.
-        if (q.y1 < minY) minY = q.y1;
-        if (q.y0 > maxY) maxY = q.y0;
+        minY = std::min(minY, q.y0); // lowest part (descenders)
+        minY = std::min(minY, q.y1);
 
-        // Make sure we do not get confused by negative y:
-        if (minY > maxY) {
-            std::swap(minY, maxY);
-        }
+        maxY = std::max(maxY, q.y0); // highest part (ascenders)
+        maxY = std::max(maxY, q.y1);
 
     }
-    return {abs(maxX - minX),abs(maxY - minY)};
+    TextDimensions dim;
+    dim.dimensions = {maxX - minX, maxY - minY};
+    dim.baselineOffset = -minY;
+
+    return dim;
 
 }
 
-std::shared_ptr<Mesh> TrueTypeTextRenderer::renderText(const std::string &text, glm::vec2* textDimensions) {
+std::shared_ptr<Mesh> TrueTypeTextRenderer::renderText(const std::string &text, TextDimensions* textDimensions) {
     glBindVertexArray(vao);
     std::vector<glm::vec3> positions;
     std::vector<glm::vec2> uvs;
@@ -102,17 +104,20 @@ std::shared_ptr<Mesh> TrueTypeTextRenderer::renderText(const std::string &text, 
         charCounter++;
 
         // Track min/max for bounding box
-        if (q.x0 < minX) minX = q.x0;
-        if (q.x1 > maxX) maxX = q.x1;
+        minX = std::min(minX, q.x0);
+        maxX = std::max(maxX, q.x1);
 
         if (c == 32) continue; // ignore space for Y, as this is always zero and messes things up.
-        if (q.y0 < minY) minY = q.y0;
-        if (q.y1 > maxY) maxY = q.y1;
+        minY = std::min(minY, q.y0); // lowest part (descenders)
+        minY = std::min(minY, q.y1);
+
+        maxY = std::max(maxY, q.y0); // highest part (ascenders)
+        maxY = std::max(maxY, q.y1);
 
     }
     if (textDimensions) {
-        textDimensions->x = maxX - minX;
-        textDimensions->y = maxY - minY;
+        textDimensions->dimensions = {maxX - minX, maxY - minY};
+        textDimensions->baselineOffset = -minY;
     }
 
     GL_ERROR_EXIT(77721);

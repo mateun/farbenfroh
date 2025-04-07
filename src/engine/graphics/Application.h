@@ -4,7 +4,7 @@
 
 #ifndef APPLICATION_H
 #define APPLICATION_H
-#include <complex.h>
+#include <complex>
 #include <Windows.h>
 #include <memory>
 #include <string>
@@ -16,6 +16,7 @@
 #include "ui/CentralSubMenuManager.h"
 #include "ui/CursorType.h"
 
+class TrueTypeFont;
 class FloatingWindow;
 class FocusManager;
 class Widget;
@@ -63,6 +64,8 @@ class Application {
     void addFloatingWindow(std::shared_ptr<FloatingWindow> window);
     void removeFloatingWindow(std::shared_ptr<FloatingWindow> floating_window);
 
+    std::shared_ptr<TrueTypeFont> getDefaultMenuFont();
+
 protected:
 
     // Gets called right after the successful construction, must be implemented by concrete
@@ -105,7 +108,7 @@ private:
     HCURSOR resize_cursor_horizontal_;
     HCURSOR resize_cursor_vertical_;
     uint64_t message_count = 0;
-
+    std::shared_ptr<TrueTypeFont> font_;
 };
 
 std::shared_ptr<Application> getApplication();

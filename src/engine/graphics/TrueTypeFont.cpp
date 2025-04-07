@@ -3,6 +3,8 @@
 //
 
 #include <engine/graphics/TrueTypeFont.h>
+#define STB_TRUETYPE_IMPLEMENTATION
+#include <engine/graphics/stb_truetype.h>
 #include <cmath>
 #include <memory>
 #include <stdexcept>
@@ -10,7 +12,7 @@
 #include "Bitmap.h"
 
 TrueTypeFont::TrueTypeFont(const std::string &pathToTTF, float fontSize) {
-    // 1. read font file
+    // Read font file
     FILE *fp = fopen(pathToTTF.c_str(), "rb");
     if (!fp) {
         fprintf(stderr, "Failed to open TTF file.\n");
@@ -23,16 +25,32 @@ TrueTypeFont::TrueTypeFont(const std::string &pathToTTF, float fontSize) {
     fread(ttf_buffer, 1, size, fp);
     fclose(fp);
 
-    // 2. Define the bitmap dimensions and create a buffer
+    // Define the bitmap dimensions and create a buffer
     atlas_bitmap_ = std::make_unique<Bitmap>(atlas_bitmap_width_, atlas_bitmap_height_, 1);
 
+    // Retrieve font measurements
+    stbtt_fontinfo info;
+    stbtt_InitFont(&info, ttf_buffer, 0);
 
-    // 3. Allocate an array to hold glyph data for the ASCII range 32..127
+    int ascent, descent, lineGap;
+    stbtt_GetFontVMetrics(&info, &ascent, &descent, &lineGap);
+
+    // Then scale them to your desired font size:
+    float scale = stbtt_ScaleForPixelHeight(&info, fontSize);
+    scaled_ascent_  = ascent  * scale;  // typically a positive number
+    scaled_descent_ = descent * scale;  // typically negative
+    scaled_line_gap_ = lineGap * scale;
+
+    line_height_ = (scaled_ascent_ - scaled_descent_) + scaled_line_gap_;
+
+    // Allocate an array to hold glyph data for the ASCII range 32..127
     bakedChars.resize(96); // 96 glyphs starting at ASCII 32
 
     //uint8_t* bitmap = new uint8_t[atlas_bitmap_width_ * atlas_bitmap_height_];
 
-    // 4. Bake the font bitmap for a given font size (e.g., 32 pixels)
+
+
+    // Bake the font bitmap for a given font size (e.g., 32 pixels)
     int result = stbtt_BakeFontBitmap(ttf_buffer, 0, fontSize,
                                       atlas_bitmap_->pixels, atlas_bitmap_width_, atlas_bitmap_height_,
                                       32, 96, bakedChars.data());
@@ -79,4 +97,12 @@ BakedQuadData TrueTypeFont::getBakedQuad(char c, float* penX, float* penY) {
 
 std::shared_ptr<Texture> TrueTypeFont::getAtlas() {
     return atlas_texture_;
+}
+
+float TrueTypeFont::getMaxDescent() {
+    return scaled_descent_;
+}
+
+float TrueTypeFont::getLineHeight() {
+    return line_height_;
 }

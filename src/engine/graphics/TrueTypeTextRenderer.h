@@ -16,6 +16,11 @@
 #include "Mesh.h"
 #include "TrueTypeFont.h"
 
+struct TextDimensions {
+    glm::vec2 dimensions;
+    float baselineOffset;
+};
+
 
 class TrueTypeTextRenderer {
   public:
@@ -26,13 +31,13 @@ class TrueTypeTextRenderer {
     // and the correct uvs into the atlas texture.
     // To render the actual text you need to render this mesh
     // and provide the atlasTexture (see getFontAtlas()).
-    std::shared_ptr<Mesh> renderText(const std::string& text, glm::vec2* textDimensions);
+    std::shared_ptr<Mesh> renderText(const std::string& text, TextDimensions* textDimensions);
 
     /**
     * Returns a vec2 containing width and height of the given text with the current font of this
     * TrueTypeTextRenderer
     */
-    glm::vec2 calculateTextDimension(const std::string& text);
+    TextDimensions calculateTextDimension(const std::string& text);
 
     /**
     * Returns the atlas texture which holds 96 glyphs for the given font in the desired size.

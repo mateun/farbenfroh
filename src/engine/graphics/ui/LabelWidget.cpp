@@ -21,9 +21,9 @@ LabelWidget::LabelWidget(const std::string &text, const std::shared_ptr<TrueType
 }
 
 void LabelWidget::draw(float depth) {
-    glm::vec2 dim1;
+    TextDimensions text_dimensions;
 
-    auto textMesh = textRenderer_->renderText(text_, &dim1);
+    auto textMesh = textRenderer_->renderText(text_, &text_dimensions);
 
     MeshDrawData mdd;
     mdd.mesh = textMesh;
@@ -34,7 +34,8 @@ void LabelWidget::draw(float depth) {
     mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
     mdd.shaderParameters = {ShaderParameter{"textColor", text_color_}};
     mdd.texture = font_->getAtlas();
-    mdd.location = {0, abs(dim1.y), depth};
+    //mdd.location = {0, abs(dim1.y), depth};
+    mdd.location = {0, -font_->getMaxDescent(), depth};
     mdd.scale = {1, 1, 1};
     Renderer::drawWidgetMeshDeferred(mdd, this);
 
@@ -50,7 +51,7 @@ void LabelWidget::setTextColor(glm::vec4 text_color) {
 
 glm::vec2 LabelWidget::getPreferredSize() {
     auto textSize = textRenderer_->calculateTextDimension(text_);
-    return {textSize.x, textSize.y * 2};
+    return {textSize.dimensions.x, textSize.dimensions.y * 2};
 }
 
 glm::vec2 LabelWidget::getMinSize() {
@@ -58,8 +59,8 @@ glm::vec2 LabelWidget::getMinSize() {
 }
 
 glm::vec2 LabelWidget::getMaxSize() {
-    auto dim = textRenderer_->calculateTextDimension(text_);
-    return {dim.x + 20, dim.y + 20};
+    auto text_dim = textRenderer_->calculateTextDimension(text_);
+    return {text_dim.dimensions.x + 20, text_dim.dimensions.y + 20};
 }
 
 MessageHandleResult LabelWidget::onMessage(const UIMessage &message) {

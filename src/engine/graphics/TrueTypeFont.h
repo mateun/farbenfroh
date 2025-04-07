@@ -30,12 +30,19 @@ class TrueTypeFont {
     BakedQuadData getBakedQuad(char c, float* penX, float* penY);
     std::shared_ptr<Texture> getAtlas();
 
+    float getMaxDescent();
+    float getLineHeight();
+
   private:
     std::vector<stbtt_bakedchar> bakedChars;
     int atlas_bitmap_width_ = 512;
     int atlas_bitmap_height_ = 512;
     std::unique_ptr<Bitmap> atlas_bitmap_;
     std::shared_ptr<Texture> atlas_texture_;
+    float line_height_ = -1;
+    float scaled_ascent_ = 0;
+    float scaled_descent_ = 0;
+    float scaled_line_gap_ = 0;
 };
 
 

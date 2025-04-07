@@ -14,8 +14,7 @@
 #include "LabelWidget.h"
 
 Menu::Menu(const std::string& text): text_(text) {
-    auto font = std::make_shared<TrueTypeFont>("../assets/calibri.ttf", 13);
-    label_ = std::make_shared<LabelWidget>(text, font);
+    label_ = std::make_shared<LabelWidget>(text, getApplication()->getDefaultMenuFont());
     label_->setId("label_for_menu_" + text);
 }
 
@@ -40,9 +39,12 @@ void Menu::draw(float depth) {
     // this looks better than a smaller underlay.
     float underLayWidth = parent_.expired() ? global_size_.x + 20 : parent_.lock()->size().x - 5;
 
+    float margin_left = 8;
+
     z_value_ = depth;
-    label_->setOrigin(global_origin_ + glm::vec2{4, 2});
+    label_->setOrigin(global_origin_ + glm::vec2{margin_left, 2});
     label_->setSize({underLayWidth, global_size_.y});
+
     if (app_hover_focus_) {
         // Draw a background quad on hovering.
         MeshDrawData mdd;
@@ -51,25 +53,23 @@ void Menu::draw(float depth) {
         mdd.viewPortDimensions =  global_size_;
         mdd.setViewport = true;
 
-        mdd.viewport = {global_origin_.x,  global_origin_.y, underLayWidth , global_size_.y};
+        if (parent_.expired()) {
+            mdd.viewport = {global_origin_.x,  global_origin_.y-4, underLayWidth , global_size_.y};
+        } else {
+            mdd.viewport = {global_origin_.x-4,  global_origin_.y-4, underLayWidth , global_size_.y};
+        }
+
+
         mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.035, 0.143, 0.298, 0.45}}};
         mdd.color = glm::vec4{0.035, 0.143, 0.298, 0.45};
         mdd.scale = {underLayWidth, global_size_.y , 1};
-        mdd.location = {0, 5, depth };
+        mdd.location = {0, 0, depth };
         mdd.debugInfo = id_;
         Renderer::drawWidgetMeshDeferred(mdd, this);
 
-        // Make sure we raise the depth above the hover highlight marker
-        label_->draw(depth + 0.1);
-
-
     }
-    else {
-        // Just draw the label without underlying hover marking:
-        label_->draw(depth + 0.1);
 
-
-    }
+    label_->draw(depth + 0.1);
 
     // Now for rendering the submenu panel.
     // This is drawn if this menu has children, otherwise we are done.
@@ -83,36 +83,24 @@ void Menu::draw(float depth) {
         mdd.setViewport = true;
 
         // Calculate size of all children:
-        int panelSizeX = 0;
-        int panelSizeY = 5;
-        for (auto child : children_) {
-            panelSizeY += getPreferredSize().y;
-        }
 
+        float panelHeight = (getApplication()->getDefaultMenuFont()->getLineHeight() + 8) * children_.size();
+        int divisor = 8;
+        int panelSizeY = static_cast<int>(std::ceil(panelHeight / divisor)) * divisor;
 
         // As for the origin, we differentiate between belonging to a top level menu
         // or to a submenu.
         if (parent_menu_.expired()) {
-            sub_menu_panel_->setOrigin(global_origin_ - glm::vec2{0, panelSizeY});
-            mdd.viewport = {global_origin_.x-1, global_origin_.y - panelSizeY, global_size_.x * 4, panelSizeY };
+            sub_menu_panel_->setOrigin(global_origin_ - glm::vec2{-1, panelSizeY});
         } else {
             // How much do we move the subpanel to the right?
             int xOffset = parent_menu_.expired() ? 5 : parent_menu_.lock()->size().x + 5;
-            xOffset = 177;
+            xOffset = 172;
             sub_menu_panel_->setOrigin(global_origin_ + glm::vec2{xOffset, 2});
-            mdd.viewport = {global_origin_.x + global_size_.x + xOffset, global_origin_.y, global_size_.x * 4, panelSizeY };
         }
 
         // Prepare the size of the panel based on the current subMenus/Items:
-        sub_menu_panel_->setSize({180, panelSizeY});
-
-        // Draw the background for the panel, darker than the highlight of the menu itself:
-        mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", glm::vec4{0.1, 0.1, 0.1, 0.3}}};
-        mdd.color = glm::vec4{.0, 0.01, 0.8, 0.3};
-
-        mdd.scale = {global_size_.x * 4, panelSizeY, 1};
-        mdd.location = {0, 0, depth + 0.2};
-        //Renderer::drawWidgetMeshDeferred(mdd, this);
+        sub_menu_panel_->setSize({172, panelSizeY});
 
         for (auto c : children_) {
             c->setVisible(true);
@@ -167,7 +155,8 @@ void Menu::lazyCreateSubMenuPanel() {
         sub_menu_panel_ = std::make_shared<Widget>();
         sub_menu_panel_->setBgGradient({0.04, 0.04,0.04, 1}, {0.04, 0.04,0.04, 1});
         auto vbox = std::make_shared<VBoxLayout>();
-        vbox->setMarginVertical(5);
+        vbox->setMarginVertical(0);
+        vbox->setMarginHorizontal(4);
         sub_menu_panel_->setLayout(vbox);
     }
 }

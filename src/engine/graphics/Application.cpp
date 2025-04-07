@@ -21,11 +21,12 @@
 #include <engine/graphics/ui/FocusManager.h>
 #include <engine/graphics/ui/MessageDispatcher.h>
 
-#define STB_TRUETYPE_IMPLEMENTATION
+
 #include <engine/graphics/stb_truetype.h>
-#include <crtdbg.h>
+
 #include <filesystem>
 
+#include "TrueTypeFont.h"
 #include "ui/CentralSubMenuManager.h"
 #include "ui/FloatingWindow.h"
 
@@ -236,6 +237,15 @@ void Application::addFloatingWindow(std::shared_ptr<FloatingWindow> window) {
 
 void Application::removeFloatingWindow(std::shared_ptr<FloatingWindow> floating_window) {
     floating_windows_closed_.push_back(floating_window);
+}
+
+std::shared_ptr<TrueTypeFont> Application::getDefaultMenuFont() {
+    if (!font_) {
+        font_ = std::make_shared<TrueTypeFont>("../assets/calibri.ttf", 13);
+    }
+
+    return font_;
+
 }
 
 void Application::doFrame() {

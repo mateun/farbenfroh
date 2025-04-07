@@ -5,8 +5,10 @@
 #ifndef MENU_H
 #define MENU_H
 
+#include <complex.h>
 #include <engine/graphics/Widget.h>
 #include <vector>
+#include <engine/graphics/TrueTypeFont.h>
 
 class LabelWidget;
 class MenuItem;
@@ -55,6 +57,7 @@ private:
   bool hover_sub_panel_ = false;
 
   bool app_hover_focus_ = false;
+  std::shared_ptr<TrueTypeFont> font_;
 
   void lazyCreateSubMenuPanel();
 };
