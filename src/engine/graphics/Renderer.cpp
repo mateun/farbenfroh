@@ -224,13 +224,22 @@ void Renderer::submitDeferredWidgetCalls() {
     }
 
 
+    glEnable(GL_SCISSOR_TEST);
     for (auto& mdd: batch_draw_list_) {
         // TODO actually batch - for now just draw immediately
         glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, mdd.debug_id, -1, mdd.debug_label.c_str());
+
+        if (mdd.useExplicitScissor) {
+            glScissor(mdd.scissor_origin.x, mdd.scissor_origin.y, mdd.scissor_size.x, mdd.scissor_size.y);
+        } else {
+            glScissor(mdd.viewport.x, mdd.viewport.y, mdd.viewport.z, mdd.viewport.w);
+        }
         drawMesh(mdd);
+
         glPopDebugGroup();
 
     }
+    glDisable(GL_SCISSOR_TEST);
     batchedDrawData_.clear();
     batch_draw_list_.clear();
 }

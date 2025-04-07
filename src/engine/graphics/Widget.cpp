@@ -36,6 +36,10 @@ void Widget::setSize(glm::vec2 size) {
 
 }
 
+void Widget::setPreferredSize(glm::vec<2, float> val) {
+    preferred_size_ = val;
+}
+
 std::string Widget::getId() const {
     return id_;
 }
@@ -203,26 +207,31 @@ std::vector<std::shared_ptr<Widget>> Widget::children() const{
 }
 
 glm::vec2 Widget::getPreferredSize() {
-    float minX = std::numeric_limits<float>::max();
-    auto maxX = std::numeric_limits<float>::min();
-    auto minY = std::numeric_limits<float>::max();
-    auto maxY = std::numeric_limits<float>::min();
 
-    for (auto c : children_) {
-        auto ps = c->getPreferredSize();
-        if (ps.x < minX) minX = ps.x;
-        if (ps.x > maxX) maxX = ps.x;
-        if (ps.y < minY) minY = ps.y;
-        if (ps.y > maxY) maxY = ps.y;
+    if (children_.empty()) {
+        float minX = std::numeric_limits<float>::max();
+        auto maxX = std::numeric_limits<float>::min();
+        auto minY = std::numeric_limits<float>::max();
+        auto maxY = std::numeric_limits<float>::min();
+
+        for (auto c : children_) {
+            auto ps = c->getPreferredSize();
+            if (ps.x < minX) minX = ps.x;
+            if (ps.x > maxX) maxX = ps.x;
+            if (ps.y < minY) minY = ps.y;
+            if (ps.y > maxY) maxY = ps.y;
+        }
+
+        // TODO for now return some default size if we are zero sized currently.
+        // As this would make us totally invisible for any kind of layout applied.
+        if (maxX <= 0.01 && maxY <= 0.01) {
+            return preferred_size_;
+        }
+
+        return {maxX, maxY};
     }
+    return preferred_size_;
 
-    // TODO for now return some default size if we are zero sized currently.
-    // As this would make us totally invisible for any kind of layout applied.
-    if (maxX <= 0.01 && maxY <= 0.01) {
-        return glm::vec2(100, 100);
-    }
-
-    return {maxX, maxY};
 }
 
 void Widget::setLayoutHint(LayoutHint layout_hint) {
@@ -231,6 +240,10 @@ void Widget::setLayoutHint(LayoutHint layout_hint) {
 
 LayoutHint Widget::getLayoutHint() {
     return layout_hint_;
+}
+
+void Widget::clearChildren() {
+    children_.clear();
 }
 
 

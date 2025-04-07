@@ -17,6 +17,8 @@
 #include <engine/graphics/ui/Spacer.h>
 #include <engine/graphics/ui/FloatingWindow.h>
 #include <engine/graphics/ui/MessageTransformer.h>
+#include <engine/graphics/ui/RoundedRect.h>
+#include <engine/graphics/ui/TextInput.h>
 
 std::shared_ptr<Application> app;
 std::shared_ptr<Application> getApplication() {
@@ -32,6 +34,8 @@ EditorLauncher::EditorLauncher(int width, int height, bool fullscreen) : Applica
 void EditorLauncher::onCreated() {
 
     auto vboxLayout = std::make_shared<VBoxLayout>();
+    vboxLayout->setMarginVertical(16);
+    vboxLayout->setMarginHorizontal(16);
     auto leftVBox = std::make_shared<Widget>();
     auto rightVBox = std::make_shared<Widget>();
     rightVBox->setId("right_vbox");
@@ -43,6 +47,7 @@ void EditorLauncher::onCreated() {
 
     std::shared_ptr<TrueTypeFont> fontConsola = std::make_shared<TrueTypeFont>("../assets/consola.ttf", 16);
     auto lblProjects = std::make_shared<LabelWidget>("Projects", fontConsola);
+    lblProjects->setId("lbl_projects");
     auto lblSettings = std::make_shared<LabelWidget>("Settings", fontConsola);
     lblMouseCoords = std::make_shared<LabelWidget>("FrameCount", fontConsola);
     auto lblProjects2 = std::make_shared<LabelWidget>("Actions", fontConsola);
@@ -84,19 +89,33 @@ void EditorLauncher::onCreated() {
     mainWidget->addChild(topToolbar);
     mainWidget->addChild(mainSplitter);
 
+    std::shared_ptr<TrueTypeFont> textInputFont = std::make_shared<TrueTypeFont>("../assets/calibri.ttf", 13);
+
     // Add buttons to the toolbar:
     auto btnStart = std::make_shared<ButtonWidget>();
     auto btnStop = std::make_shared<ButtonWidget>();
     auto btnPause = std::make_shared<ButtonWidget>();
     auto startButtonTexture = std::make_shared<Texture>("../assets/button_start_path.png");
     btnStart->setTexture(startButtonTexture);
-    btnStart->addActionCallback([this](std::shared_ptr<Widget> action) {
+    btnStart->addActionCallback([this, textInputFont](std::shared_ptr<Widget> action) {
         std::cout << "Start launching" << std::endl;
         auto floatingWindow = std::make_shared<FloatingWindow>();
         floatingWindow->setId("floating_window1");
         floatingWindow->setBgColor({0.02, .02, .02, 0.98});
-        floatingWindow->setOrigin({200, 200});
-        floatingWindow->setSize({200, 150});
+        floatingWindow->setOrigin({200, 100});
+        floatingWindow->setSize({8 * 40, 8 * 30});
+        auto vbl = std::make_shared<VBoxLayout>();
+        vbl->setMarginVertical(0);
+        vbl->setMarginHorizontal(24);
+        floatingWindow->setLayout(vbl);
+        auto labelGameName = std::make_shared<LabelWidget>("Game Name", textInputFont);
+        auto txtGameName = std::make_shared<TextInput>("Game Name", textInputFont);
+        txtGameName->setTextColor({0., 0., 0., 1});
+        auto spacer = std::make_shared<Spacer>(glm::vec2{0.0f, 20.0f});
+        spacer->setBgColor({0.1, .1, .1, 1});
+        floatingWindow->addChild(spacer);
+        floatingWindow->addChild(labelGameName);
+        floatingWindow->addChild(txtGameName);
         addFloatingWindow(floatingWindow);
     });
     btnStop->setTexture(startButtonTexture);

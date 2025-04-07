@@ -35,10 +35,10 @@ TrueTypeTextRenderer::TrueTypeTextRenderer(const std::shared_ptr<TrueTypeFont>& 
 }
 
 glm::vec2 TrueTypeTextRenderer::calculateTextDimension(const std::string& text) {
-    float minX =  std::numeric_limits<float>::max();
-    float maxX = -std::numeric_limits<float>::max();
-    float minY =  std::numeric_limits<float>::max();
-    float maxY = -std::numeric_limits<float>::max();
+    float minX = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest();
+    float minY = std::numeric_limits<float>::max();
+    float maxY = std::numeric_limits<float>::lowest();
 
     float x = 0, y = 0;
     for (auto c : text) {
@@ -51,8 +51,13 @@ glm::vec2 TrueTypeTextRenderer::calculateTextDimension(const std::string& text) 
         if (q.x1 > maxX) maxX = q.x1;
 
         if (c == 32) continue; // ignore space for Y, as this is always zero and messes things up.
-        if (q.y0 < minY) minY = q.y0;
-        if (q.y1 > maxY) maxY = q.y1;
+        if (q.y1 < minY) minY = q.y1;
+        if (q.y0 > maxY) maxY = q.y0;
+
+        // Make sure we do not get confused by negative y:
+        if (minY > maxY) {
+            std::swap(minY, maxY);
+        }
 
     }
     return {abs(maxX - minX),abs(maxY - minY)};

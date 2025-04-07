@@ -122,6 +122,10 @@ public:
     */
     void setSize(glm::vec2 size);
 
+    // This allows the setting of the preferred size for this widget from outside.
+    // It is just a hint, the layout will normally decide on the final widget size.
+    void setPreferredSize(glm::vec<2, float> vec);
+
     std::string getId() const;
 
 
@@ -174,6 +178,9 @@ public:
 
     void setLayoutHint(LayoutHint hint);
     LayoutHint getLayoutHint();
+
+    // Remove all children of this widget.
+    void clearChildren();
 
     // Checks if the mouse is over the given widget.
     // Can take offsets for x and y into consideration to e.g. make it easer for the user to
@@ -254,6 +261,7 @@ protected:
     std::vector<std::shared_ptr<Action>> actions_;
     std::vector<std::function<void(std::shared_ptr<Widget>)>> action_callbacks_;
     bool use_default_bg_ = true;
+    glm::vec2 preferred_size_ = {100, 100};
 };
 
 
@@ -290,6 +298,7 @@ public:
 private:
     int margin_horizontal_ = 4;
     int margin_vertical_ = 4;
+
 };
 
 class HBoxLayout : public Layout {
@@ -309,6 +318,9 @@ private:
 
 class AreaLayout : public Layout {
 public:
+    AreaLayout()  = default;
+    ~AreaLayout() = default;
+
     AreaLayout(std::shared_ptr<Widget> top, std::shared_ptr<Widget> bottom, std::shared_ptr<Widget> left, std::shared_ptr<Widget> right, std::shared_ptr<Widget> center);
     void apply(Widget* target) override;
 

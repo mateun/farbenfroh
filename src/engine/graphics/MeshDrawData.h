@@ -79,6 +79,10 @@ struct MeshDrawData {
     std::string debugInfo = "";
     GLuint debug_id = 0;
     std::string debug_label = "generic_gl_draw_call";
+    bool useExplicitScissor = false;
+    glm::vec2 scissor_origin = {0, 0};
+    glm::vec2 scissor_size = {0, 0};
+
 };
 
 

@@ -6,8 +6,8 @@
 #include <engine/graphics/Widget.h>
 
 AreaLayout::AreaLayout(std::shared_ptr<Widget> top, std::shared_ptr<Widget> bottom, std::shared_ptr<Widget> left,
-    std::shared_ptr<Widget> right, std::shared_ptr<Widget> center): top_(std::move(top)), bottom_(std::move(bottom)), left_(std::move(left)),
-                                    right_(std::move(right)), center_(std::move(center)) {
+                       std::shared_ptr<Widget> right, std::shared_ptr<Widget> center): top_(std::move(top)), bottom_(std::move(bottom)), left_(std::move(left)),
+                                                                                       right_(std::move(right)), center_(std::move(center)) {
 }
 
 void AreaLayout::apply(Widget *target) {

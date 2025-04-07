@@ -43,7 +43,7 @@ void VBoxLayout::apply(Widget *target) {
                 // We always expand horizontal here...
                 // TODO: this is good for menus, but we should implement an actual check
                 // in case someone does not want this for a given widget.
-                c->setSize({target->size().x , c->getPreferredSize().y});
+                c->setSize({target->size().x - margin_horizontal_*2 , c->getPreferredSize().y});
                 runningVerticalSum += preferredSize.y;
             }
 
@@ -55,7 +55,7 @@ void VBoxLayout::apply(Widget *target) {
         float verticalCursor = topY - margin_vertical_;
         for (auto c : target->children()) {
             // Widgets are drawn bottom-up so we need to deduct the size of the widget for the next origin.y position:
-            verticalCursor -= c->size().y;
+            verticalCursor -= (c->size().y + margin_vertical_);
             c->setOrigin({target->origin().x + margin_horizontal_, verticalCursor});
             counter++;
         }

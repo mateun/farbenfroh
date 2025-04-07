@@ -10,46 +10,90 @@
 #include <engine/graphics/Renderer.h>
 
 #include "MessageHandleResult.h"
+#include "RoundedRect.h"
 
 FloatingWindow::FloatingWindow() {
     closing_icon_texture_ = std::make_shared<Texture>("../assets/green_x_16.png");
+    body_widget_ = std::make_shared<Widget>();
+    body_widget_->setId("floating_window_" + id_ + "_body");
+    main_window_rect_ = std::make_shared<RoundedRect>(8);
+    main_window_rect_->setId("floating_window_" + id_ + "_outer_rect");
+
 
 }
 
 FloatingWindow::~FloatingWindow() {
 }
 
+float FloatingWindow::getCloseAreaLeft() {
+    return global_origin_.x + global_size_.x - getCloseAreaUnderLayDimensions().x - 12;
+}
+
+float FloatingWindow::getCloseAreaBottom() {
+    return global_origin_.y + global_size_.y - getCloseAreaUnderLayDimensions().y - 8;
+}
+
 void FloatingWindow::draw(float depth) {
     float window_bg_depth = 1.0f;
 
+
+
+
+
+    main_window_rect_->setSize(global_size_);
+    main_window_rect_->setBgColor({0.1, 0.1, 0.1, 1});
+    main_window_rect_->setOrigin(global_origin_);
+    main_window_rect_->draw(window_bg_depth);
+
+
+    // We always render a window header to enable closing of the window:
+    float header_height = 20;
+    float header_width = global_size_.x - 16;
     MeshDrawData mdd;
     mdd.mesh = quadMesh_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetRoundedRectShader(false);
-
     mdd.viewPortDimensions =  global_size_;
     mdd.setViewport = true;
     mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
     mdd.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", bg_gradient_start_}};
-    mdd.location = {0, 0, window_bg_depth};
     mdd.color = bg_gradient_start_;
-    mdd.scale = {global_size_.x, global_size_.y, 1};
-    //mdd.scale = {splitterPosition_.x - splitterSize - 1, size_.y - 5, 1};
-    Renderer::drawWidgetMeshDeferred(mdd, this);
-
-    // We always render a window header to enable closing of the window:
-    mdd.location = {0,  global_size_.y - 20, window_bg_depth + 0.01};
-    mdd.scale = {global_size_.x, 20, 1};
+    mdd.location = {4,  global_size_.y - header_height - 8, window_bg_depth + 0.01};
+    mdd.scale = {header_width, header_height, 1};
     mdd.color = {0.6, 0.6, 0.61, 1};
-    Renderer::drawWidgetMeshDeferred(mdd, this);
+    //Renderer::drawWidgetMeshDeferred(mdd, this);
+
 
     renderCloseButtonHover(window_bg_depth + 0.02);
 
     // Render the close button
-    mdd.location = {global_size_.x - 20, global_size_.y - 20 + 2, window_bg_depth + 0.03};
-    mdd.scale = {16, 16, 1};
+    float icon_size = 16;
+    mdd.location = {global_size_.x - icon_size - 16, global_size_.y - icon_size - 2 -8 , window_bg_depth + 0.03};
+    mdd.scale = {icon_size, icon_size, 1};
     mdd.texture= closing_icon_texture_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(true);
     Renderer::drawWidgetMeshDeferred(mdd, this);
+
+    // Render the window body.
+    // First we apply the layout which was set to the window.
+    // Use an AreaLayout in case none was set.
+    body_widget_->setBgColor({0.1, 0.1, 0.1, 1});
+    body_widget_->setSize(global_size_ - glm::vec2(8, header_height + 8) );
+    body_widget_->setOrigin(origin() + glm::vec2(0, 0));
+
+    body_widget_->clearChildren();
+    for (auto c : children_) {
+        body_widget_->addChild(c);
+    }
+    if (layout_) {
+        body_widget_->setLayout(layout_);
+    } else {
+        layout_ = std::make_shared<AreaLayout>();
+        body_widget_->setLayout(layout_);
+    }
+    body_widget_->draw(depth);
+
+
+    glDisable(GL_SCISSOR_TEST);
 
 
 }
@@ -61,15 +105,15 @@ void FloatingWindow::close() {
 void FloatingWindow::renderCloseButtonHover(float depth) {
     if (!hovering_close_button_) return;
 
-    float underLayWidth = 24;
-    float underLayHeight = 20;
+    float underLayWidth = getCloseAreaUnderLayDimensions().x;
+    float underLayHeight = getCloseAreaUnderLayDimensions().y;
     MeshDrawData mddUnderlay;
     mddUnderlay.mesh = quadMesh_;
     mddUnderlay.shader = getApplication()->getRenderBackend()->getWidgetDefaultShader(false);
     mddUnderlay.viewPortDimensions =  {underLayWidth, underLayHeight};
     mddUnderlay.setViewport = true;
 
-    mddUnderlay.viewport = {global_origin_.x + global_size_.x - underLayWidth,  global_origin_.y + global_size_.y - underLayHeight, mddUnderlay.viewPortDimensions.value().x , mddUnderlay.viewPortDimensions.value().y};
+    mddUnderlay.viewport = {getCloseAreaLeft(),  getCloseAreaBottom(), mddUnderlay.viewPortDimensions.value().x , mddUnderlay.viewPortDimensions.value().y};
     glm::vec4 col = glm::vec4{0.6, 0.04, 0.04, 1};
     mddUnderlay.shaderParameters = {ShaderParameter{"viewPortDimensions", global_size_}, ShaderParameter{"viewPortOrigin", origin()}, ShaderParameter{"gradientTargetColor", col}};
     mddUnderlay.color = col;
@@ -79,10 +123,17 @@ void FloatingWindow::renderCloseButtonHover(float depth) {
     Renderer::drawWidgetMeshDeferred(mddUnderlay, this);
 }
 
+bool FloatingWindow::mouseOverCloseButton(int mouse_x, int mouse_y) {
+    return mouse_x >= getCloseAreaLeft() &&
+            mouse_x <= (getCloseAreaLeft() + getCloseAreaUnderLayDimensions().x) &&
+            mouse_y > getCloseAreaBottom() &&
+            mouse_y < (getCloseAreaBottom() + getCloseAreaUnderLayDimensions().y);
+}
+
 MessageHandleResult FloatingWindow::onMessage(const UIMessage &message) {
 
     if (message.type == MessageType::MouseMove) {
-        if (message.mouseMoveMessage.x >= global_origin_.x + global_size_.x - 20 && message.mouseMoveMessage.y > global_origin_.y + global_size_.y - 20) {
+        if (mouseOverCloseButton(message.mouseMoveMessage.x, message.mouseMoveMessage.y)) {
             hovering_close_button_ = true;
         } else {
             hovering_close_button_ = false;
@@ -107,7 +158,7 @@ MessageHandleResult FloatingWindow::onMessage(const UIMessage &message) {
         offset_from_pivot_ = glm::vec2(pt.x, pt.y) - global_origin_;
 
         if (hover_focus_) {
-            if (pt.x >= global_origin_.x + global_size_.x - 20 && pt.y > global_origin_.y + global_size_.y - 20) {
+            if (mouseOverCloseButton(pt.x, pt.y)) {
                 close();
                 return MessageHandleResult{true, "", true};
             }
@@ -138,4 +189,11 @@ void FloatingWindow::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {
 
 void FloatingWindow::removeHoverFocus() {
     hover_focus_ = false;
+}
+
+glm::vec2 FloatingWindow::getCloseAreaUnderLayDimensions() {
+    float underLayWidth = 24;
+    float underLayHeight = 20;
+    return glm::vec2(underLayWidth, underLayHeight);
+
 }

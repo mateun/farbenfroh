@@ -29,10 +29,10 @@ void LabelWidget::draw(float depth) {
     mdd.mesh = textMesh;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetDefaultTextShader();
 
-
     mdd.viewPortDimensions =  global_size_;
     mdd.setViewport = true;
     mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};
+    mdd.shaderParameters = {ShaderParameter{"textColor", text_color_}};
     mdd.texture = font_->getAtlas();
     mdd.location = {0, abs(dim1.y), depth};
     mdd.scale = {1, 1, 1};
@@ -44,9 +44,13 @@ void LabelWidget::setText(const std::string &text) {
     text_ = text;
 }
 
+void LabelWidget::setTextColor(glm::vec4 text_color) {
+    text_color_ = text_color;
+}
+
 glm::vec2 LabelWidget::getPreferredSize() {
     auto textSize = textRenderer_->calculateTextDimension(text_);
-    return {textSize.x, textSize.y * 3};
+    return {textSize.x, textSize.y * 2};
 }
 
 glm::vec2 LabelWidget::getMinSize() {

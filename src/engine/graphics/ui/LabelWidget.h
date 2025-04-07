@@ -25,13 +25,14 @@ public:
     // Label specific properties
     void setText(const std::string & text);
 
+    void setTextColor(glm::vec4 text_color);
 
 private:
     std::string text_;
     std::unique_ptr<Mesh> quadMesh;
     std::shared_ptr<TrueTypeTextRenderer> textRenderer_;
     std::shared_ptr<TrueTypeFont> font_;
-
+    glm::vec4 text_color_ = glm::vec4(0.8, 0.82, 0.8, 1.0f);
 };
 
 
