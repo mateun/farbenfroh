@@ -10,6 +10,7 @@
 #include <engine/graphics/Renderer.h>
 #include <engine/graphics/ui/MessageHandleResult.h>
 #include <engine/graphics/ui/MenuItem.h>
+#include <engine/graphics/ui/UIMessage.h>
 
 #include "LabelWidget.h"
 

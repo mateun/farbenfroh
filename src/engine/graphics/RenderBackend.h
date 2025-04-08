@@ -5,9 +5,9 @@
 #ifndef RENDERBACKEND_H
 #define RENDERBACKEND_H
 #include <Windows.h>
+#include <memory>
 
-#include "Widget.h"
-
+class Shader;
 class Camera;
 
 enum class RenderBackendType {

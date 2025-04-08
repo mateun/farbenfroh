@@ -18,6 +18,7 @@
 #include <engine/graphics/ui/FloatingWindow.h>
 #include <engine/graphics/ui/MessageTransformer.h>
 #include <engine/graphics/ui/RoundedRect.h>
+#include <engine/graphics/ui/UIMessage.h>
 #include <engine/graphics/ui/TextInput.h>
 
 std::shared_ptr<Application> app;
@@ -109,7 +110,9 @@ void EditorLauncher::onCreated() {
         vbl->setMarginHorizontal(24);
         floatingWindow->setLayout(vbl);
         auto labelGameName = std::make_shared<LabelWidget>("Game Name", textInputFont);
-        auto txtGameName = std::make_shared<TextInput>("Game Name", textInputFont);
+        labelGameName->setId("label_game_name");
+        auto txtGameName = std::make_shared<TextInput>("", textInputFont);
+        txtGameName->setId("txt_game_name");
         txtGameName->setTextColor({0., 0., 0., 1});
         auto spacer = std::make_shared<Spacer>(glm::vec2{0.0f, 20.0f});
         spacer->setBgColor({0.1, .1, .1, 1});

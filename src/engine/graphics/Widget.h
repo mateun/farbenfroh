@@ -11,44 +11,17 @@
 #include <glm/glm.hpp>
 #include <engine/graphics/Camera.h>
 
+#include "Application.h"
 #include "Mesh.h"
 
 
 class Action;
+struct UIMessage;
 class MenuBar;
 struct MeshDrawData;
+struct MessageHandleResult;
 class Layout;
-class MessageHandleResult;
 
-enum class MessageType {
-    KeyUp,
-    KeyDown,
-    MouseMove,
-    MouseUp,
-    MouseDown,
-    WidgetGainedFocus,
-    WidgetLostFocus,
-    Character,
-};
-
-struct MouseMoveMessage {
-    int x;
-    int y;
-};
-
-class Widget;
-struct FocusMessage {
-    std::shared_ptr<Widget> widget;
-};
-
-struct UIMessage {
-    MessageType type;
-    MouseMoveMessage mouseMoveMessage;
-    FocusMessage focusMessage;
-    uint64_t num = 0;
-    std::string sender;
-    char character = '\0';
-};
 
 // This struct provides additional hinting
 // for layouting e.g. whether to expand,
@@ -58,6 +31,10 @@ struct LayoutHint {
     bool expandHorizontally = false;
 
 };
+
+
+
+
 
 /**
 * This is the top level ui element.
@@ -277,7 +254,6 @@ inline void Widget::setZValue(float zValue) {
 
 
 
-
 /**
 * Manages the placement of the child widgets.
 */
@@ -330,7 +306,5 @@ public:
     std::shared_ptr<Widget> right_;
     std::shared_ptr<Widget> center_;
 };
-
-
 
 #endif //WIDGET_H

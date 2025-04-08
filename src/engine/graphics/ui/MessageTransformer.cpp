@@ -8,6 +8,7 @@
 #include <engine/graphics/Application.h>
 #include <engine/graphics/RawWin32Message.h>
 #include <engine/graphics/Widget.h>
+#include <engine/graphics/ui/UIMessage.h>
 
 
 UIMessage MessageTransformer::transform(RawWin32Message message) {
@@ -20,6 +21,11 @@ UIMessage MessageTransformer::transform(RawWin32Message message) {
             result.mouseMoveMessage.y = getApplication()->scaled_height()- GET_Y_LPARAM(message.lParam);
             break;
         }
+
+        case WM_KEYUP:
+            result.type = MessageType::KeyDown;
+            result.keyboardMessage.key = message.wParam;
+            break;
 
         case WM_LBUTTONDOWN: {
             result.type = MessageType::MouseDown;

@@ -8,8 +8,9 @@
 #include <Windows.h>
 #include <memory>
 #include <string>
+#include <glm/glm.hpp>
 
-#include "RenderBackend.h"
+#include <engine/graphics/RenderBackend.h>
 #include <engine/graphics/RawWin32Message.h>
 #include <engine/graphics/ui/MessageDispatcher.h>
 

@@ -27,6 +27,8 @@ public:
 
     void setTextColor(glm::vec4 text_color);
 
+    TextDimensions calculateSizeForText(const std::string& str);
+
 private:
     std::string text_;
     std::unique_ptr<Mesh> quadMesh;
@@ -34,6 +36,7 @@ private:
     std::shared_ptr<TrueTypeFont> font_;
     glm::vec4 text_color_ = glm::vec4(0.8, 0.82, 0.8, 1.0f);
 };
+
 
 
 

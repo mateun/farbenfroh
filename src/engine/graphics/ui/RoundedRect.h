@@ -7,7 +7,7 @@
 
 #include <engine/graphics/Widget.h>
 
-class MessageHandleResult;
+struct MessageHandleResult;
 
 class RoundedRect : public Widget {
 public:

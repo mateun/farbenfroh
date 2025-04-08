@@ -5,10 +5,11 @@
 #ifndef MESSAGEDISPATCHER_H
 #define MESSAGEDISPATCHER_H
 #include <memory>
-#include <engine/graphics/Widget.h>
+
 #include <engine/graphics/ui/FrameMessageSubscriber.h>
 
 class FocusManager;
+class Widget;
 
 
 class SimpleMessageDispatcher : public FrameMessageSubscriber {

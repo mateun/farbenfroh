@@ -11,6 +11,7 @@
 
 #include "MessageHandleResult.h"
 #include "RoundedRect.h"
+#include <engine/graphics/ui/UIMessage.h>
 
 FloatingWindow::FloatingWindow() {
     closing_icon_texture_ = std::make_shared<Texture>("../assets/green_x_16.png");
@@ -18,6 +19,7 @@ FloatingWindow::FloatingWindow() {
     body_widget_->setId("floating_window_" + id_ + "_body");
     main_window_rect_ = std::make_shared<RoundedRect>(8);
     main_window_rect_->setId("floating_window_" + id_ + "_outer_rect");
+
 
 
 }
@@ -35,10 +37,6 @@ float FloatingWindow::getCloseAreaBottom() {
 
 void FloatingWindow::draw(float depth) {
     float window_bg_depth = 1.0f;
-
-
-
-
 
     main_window_rect_->setSize(global_size_);
     main_window_rect_->setBgColor({0.1, 0.1, 0.1, 1});
@@ -61,7 +59,6 @@ void FloatingWindow::draw(float depth) {
     mdd.scale = {header_width, header_height, 1};
     mdd.color = {0.6, 0.6, 0.61, 1};
     //Renderer::drawWidgetMeshDeferred(mdd, this);
-
 
     renderCloseButtonHover(window_bg_depth + 0.02);
 
@@ -90,7 +87,7 @@ void FloatingWindow::draw(float depth) {
         layout_ = std::make_shared<AreaLayout>();
         body_widget_->setLayout(layout_);
     }
-    body_widget_->draw(depth);
+    body_widget_->draw(depth + 0.02);
 
 
     glDisable(GL_SCISSOR_TEST);
@@ -174,17 +171,16 @@ MessageHandleResult FloatingWindow::onMessage(const UIMessage &message) {
         last_mouse_pos_ = {0, 0};
     }
 
-    if (hover_focus_) {
-        return MessageHandleResult{true, "", true};
-    } else {
-        return MessageHandleResult{true, "", false};
-    }
+
+    // Pass the message to our children in any case.
+    return body_widget_->onMessage(message);
+
 
 }
 
 void FloatingWindow::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {
-    //std::cout << "FloatingWindow::setHoverFocus" << std::endl;
     hover_focus_ = true;
+
 }
 
 void FloatingWindow::removeHoverFocus() {

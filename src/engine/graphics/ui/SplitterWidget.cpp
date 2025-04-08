@@ -12,6 +12,7 @@
 #include <engine/graphics/Renderer.h>
 #include <engine/graphics/Widget.h>
 #include <engine/graphics/ui/CursorType.h>
+#include <engine/graphics/ui/UIMessage.h>
 
 #include "MessageHandleResult.h"
 
@@ -168,6 +169,8 @@ MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
         } else {
             if (localMouse.y >= splitterPosition_.y - 5
                 && localMouse.y <= splitterPosition_.y + 5
+                && localMouse.x > 0
+                && localMouse.x < size().x
                 ) {
                 mouse_over_splitter_ = true;
                 overSplit = true;

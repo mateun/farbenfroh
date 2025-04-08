@@ -14,6 +14,7 @@
 #include <engine/graphics/Shader.h>
 
 #include "StatefulRenderer.h"
+#include "Widget.h"
 
 
 void Renderer::drawMesh(const MeshDrawData &drawData) {
@@ -205,25 +206,6 @@ void Renderer::drawWidgetMeshDeferred(MeshDrawData mdd, Widget * widget) {
 }
 
 void Renderer::submitDeferredWidgetCalls() {
-    // TODO sort the drawData items
-    // by useful criteria, e.g. the texture.
-    // Then we can collect all mesh positions and uvs and
-    // put them into one big vbo.
-    // Attention: the drawData items (in terms of location) are
-    // all in relation to the respective widgets child space.
-    // So to actually calculate the correct world space location we would need
-    // to walk the complete widget graph.
-
-    for (auto& widgetMdds : batchedDrawData_ ) {
-        // for (auto& mdd : widgetMdds.second) {
-        //         auto debugInfo = mdd.debugInfo;
-        //     // if (!debugInfo.empty()) {
-        //     //     std::cout << debugInfo << std::endl;
-        //     // }
-        // }
-    }
-
-
     glEnable(GL_SCISSOR_TEST);
     for (auto& mdd: batch_draw_list_) {
         // TODO actually batch - for now just draw immediately

@@ -9,6 +9,7 @@
 #include <engine/graphics/RawWin32Message.h>
 
 #include <engine/graphics/ui/MessageTransformer.h>
+#include <engine/graphics/ui/UIMessage.h>
 
 #include "FloatingWindow.h"
 #include "FocusManager.h"

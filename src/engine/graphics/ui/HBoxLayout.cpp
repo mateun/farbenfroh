@@ -2,6 +2,7 @@
 // Created by mgrus on 27.03.2025.
 //
 
+#define NOMINMAX
 #include <engine/graphics/Widget.h>
 
 void HBoxLayout::apply(Widget *target) {

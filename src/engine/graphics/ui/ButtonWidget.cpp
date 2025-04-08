@@ -9,6 +9,7 @@
 #include <engine/graphics/Geometry.h>
 #include <engine/graphics/MeshDrawData.h>
 #include <engine/graphics/Renderer.h>
+#include <engine/graphics/ui/UIMessage.h>
 
 #include "MessageHandleResult.h"
 

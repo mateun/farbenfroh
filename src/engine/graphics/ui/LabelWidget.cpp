@@ -21,6 +21,8 @@ LabelWidget::LabelWidget(const std::string &text, const std::shared_ptr<TrueType
 }
 
 void LabelWidget::draw(float depth) {
+    if (text_.empty()) return;
+
     TextDimensions text_dimensions;
 
     auto textMesh = textRenderer_->renderText(text_, &text_dimensions);
@@ -47,6 +49,10 @@ void LabelWidget::setText(const std::string &text) {
 
 void LabelWidget::setTextColor(glm::vec4 text_color) {
     text_color_ = text_color;
+}
+
+TextDimensions LabelWidget::calculateSizeForText(const std::string &str) {
+    return textRenderer_->calculateTextDimension(str);
 }
 
 glm::vec2 LabelWidget::getPreferredSize() {

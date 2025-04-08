@@ -3,6 +3,7 @@
 //
 
 #define NOMINMAX
+#include <engine/graphics/ui/MenuBar.h>
 #include "Widget.h"
 
 #include <limits>
@@ -15,7 +16,7 @@
 
 #include "Geometry.h"
 #include "Renderer.h"
-#include "ui/MenuBar.h"
+
 
 
 class Application;

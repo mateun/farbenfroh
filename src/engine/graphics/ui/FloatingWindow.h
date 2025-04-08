@@ -5,13 +5,13 @@
 #ifndef FLOATINGWINDOW_H
 #define FLOATINGWINDOW_H
 
-#include <complex.h>
+#include <complex>
 #include <engine/graphics/Widget.h>
 
 #include "RoundedRect.h"
 
 class Texture;
-class MessageHandleResult;
+struct MessageHandleResult;
 struct UIMessage;
 
 class FloatingWindow : public Widget {
@@ -47,7 +47,7 @@ private:
     bool hovering_close_button_ = false;
     std::shared_ptr<Widget> body_widget_;
     std::shared_ptr<RoundedRect> main_window_rect_;
-
+    bool initialized_ = false;
 };
 
 

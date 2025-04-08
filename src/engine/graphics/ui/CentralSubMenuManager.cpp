@@ -8,6 +8,7 @@
 #include <ostream>
 
 #include "Menu.h"
+#include <engine/graphics/ui/UIMessage.h>
 
 void CentralSubMenuManager::registerMenuBar(std::shared_ptr<MenuBar> menuBar) {
     menu_bars_.push_back(menuBar);

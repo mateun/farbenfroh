@@ -5,7 +5,10 @@
 #ifndef TEXTINPUT_H
 #define TEXTINPUT_H
 
+#include <complex.h>
 #include <engine/graphics/Widget.h>
+
+#include "RoundedRect.h"
 
 class TrueTypeFont;
 class LabelWidget;
@@ -15,24 +18,36 @@ class TextInput : public Widget {
 
 public:
     TextInput(const std::string& initialText, const std::shared_ptr<TrueTypeFont>& font);
-    ~TextInput();
+
+    float charCursorToPixelPos();
+
+    ~TextInput() override = default;
+
+
 
     void draw(float depth) override;
+    void drawCursor(float depth);
+
     MessageHandleResult onMessage(const UIMessage &message) override;
 
     glm::vec2 getPreferredSize() override;
 
     void setTextColor(glm::vec4 color);
 
-
+    void setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) override;
+    void removeHoverFocus() override;
 
 private:
     std::string text_;
-    int cursor_pos_ = 0;
     std::shared_ptr<LabelWidget> widget_;
     std::shared_ptr<TrueTypeFont> font_;
     std::shared_ptr<LabelWidget> label_widget_;
+    std::shared_ptr<RoundedRect> input_field_;
     glm::vec4 text_color_ = {0, 0,0, 1};
+    bool hover_focus_ = false;
+    bool render_cursor_ = false;
+    int char_cursor_pos_ = 0;
+    uint64_t prev_message_num_ = 0;
 };
 
 

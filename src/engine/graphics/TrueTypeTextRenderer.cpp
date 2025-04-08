@@ -35,6 +35,12 @@ TrueTypeTextRenderer::TrueTypeTextRenderer(const std::shared_ptr<TrueTypeFont>& 
 }
 
 TextDimensions TrueTypeTextRenderer::calculateTextDimension(const std::string& text) {
+    if (text.empty()) {
+        TextDimensions dim;
+        dim.dimensions = {0, 0};
+        dim.baselineOffset = 0;
+        return dim;
+    }
     float minX = std::numeric_limits<float>::max();
     float maxX = std::numeric_limits<float>::lowest();
     float minY = std::numeric_limits<float>::max();
@@ -59,7 +65,7 @@ TextDimensions TrueTypeTextRenderer::calculateTextDimension(const std::string& t
 
     }
     TextDimensions dim;
-    dim.dimensions = {maxX - minX, maxY - minY};
+    dim.dimensions = {x, maxY - minY};
     dim.baselineOffset = -minY;
 
     return dim;

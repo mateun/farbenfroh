@@ -6,10 +6,14 @@
 #define RENDERER_H
 #include <memory>
 #include <map>
-#include <engine/graphics/Widget.h>
-#include <engine/graphics/MeshDrawData.h>
+#include <vector>
+
+#include "MeshDrawData.h"
 
 class Texture;
+class Widget;
+
+
 
 
 /**

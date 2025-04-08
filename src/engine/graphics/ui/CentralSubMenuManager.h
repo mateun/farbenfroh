@@ -6,8 +6,11 @@
 #define CENTRALSUBMENUMANAGER_H
 
 #include <memory>
-#include <engine/graphics/ui/MenuBar.h>
+#include <unordered_set>
 
+class MenuBar;
+class Menu;
+struct UIMessage;
 /**
 * This class ensures that only one submenu is every opened at the same time,
 * over all menus/bars.
