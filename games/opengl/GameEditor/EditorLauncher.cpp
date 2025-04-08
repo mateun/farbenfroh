@@ -90,7 +90,7 @@ void EditorLauncher::onCreated() {
     mainWidget->addChild(topToolbar);
     mainWidget->addChild(mainSplitter);
 
-    std::shared_ptr<TrueTypeFont> textInputFont = std::make_shared<TrueTypeFont>("../assets/calibri.ttf", 13);
+
 
     // Add buttons to the toolbar:
     auto startButtonTexture = std::make_shared<Texture>("../assets/button_start_path.png");
@@ -98,7 +98,7 @@ void EditorLauncher::onCreated() {
     auto btnStop = std::make_shared<ButtonWidget>(startButtonTexture);
     auto btnPause = std::make_shared<ButtonWidget>(startButtonTexture);
     btnStart->setTexture(startButtonTexture);
-    btnStart->addActionCallback([this, textInputFont](std::shared_ptr<Widget> action) {
+    btnStart->addActionCallback([this](std::shared_ptr<Widget> action) {
         std::cout << "Start launching" << std::endl;
         auto floatingWindow = std::make_shared<FloatingWindow>();
         floatingWindow->setId("floating_window1");
@@ -109,7 +109,7 @@ void EditorLauncher::onCreated() {
         vbl->setMarginVertical(0);
         vbl->setMarginHorizontal(24);
         floatingWindow->setLayout(vbl);
-        auto labelGameName = std::make_shared<LabelWidget>("Game Name", textInputFont);
+        auto labelGameName = std::make_shared<LabelWidget>("Project Name", getDefaultMenuFont());
         labelGameName->setId("label_game_name");
 
         auto btnSaveGameProject = std::make_shared<ButtonWidget>("Save", getDefaultMenuFont());
@@ -120,22 +120,40 @@ void EditorLauncher::onCreated() {
             floatingWindow->close();
         });
 
-        auto txtGameName = std::make_shared<TextInput>("", textInputFont);
-        txtGameName->addTextChangeListener([btnSaveGameProject] (std::shared_ptr<TextInput> textInput) {
-             if (textInput->getText().empty()) {
-                 btnSaveGameProject->disable();
-             } else {
+        auto txtProjectFolder = std::make_shared<TextInput>("Select directory", getDefaultMenuFont());
+        txtProjectFolder->setId("txt_project_folder");
+        txtProjectFolder->setBgColor({0.02, .02, .02, 1});
+
+
+        auto txtGameName = std::make_shared<TextInput>("Enter project name", getDefaultMenuFont());
+        txtGameName->addTextChangeListener([btnSaveGameProject, txtProjectFolder] (std::shared_ptr<TextInput> textInput) {
+             if (!textInput->getText().empty() && !txtProjectFolder->getText().empty()) {
                  btnSaveGameProject->enable();
+             }
+             else {
+                 btnSaveGameProject->disable();
              }
         });
         txtGameName->setId("txt_game_name");
-        txtGameName->setTextColor({0., 0., 0., 1});
+        txtGameName->setTextColor({0.02, 0.02, 0.02, 1});
+
+        txtProjectFolder->addTextChangeListener([btnSaveGameProject, txtGameName] (std::shared_ptr<TextInput> textInput) {
+            if (!textInput->getText().empty() && !txtGameName->getText().empty()) {
+               btnSaveGameProject->enable();
+           }
+           else {
+               btnSaveGameProject->disable();
+           }
+        });
+
         auto spacer = std::make_shared<Spacer>(glm::vec2{0.0f, 20.0f});
         spacer->setBgColor({0.1, .1, .1, 1});
 
         floatingWindow->addChild(spacer);
         floatingWindow->addChild(labelGameName);
         floatingWindow->addChild(txtGameName);
+        floatingWindow->addChild(std::make_shared<LabelWidget>("Project Folder", getDefaultMenuFont()));
+        floatingWindow->addChild(txtProjectFolder);
         floatingWindow->addChild(spacer);
         floatingWindow->addChild(btnSaveGameProject);
         addFloatingWindow(floatingWindow);

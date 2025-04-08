@@ -162,6 +162,7 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
     // Load the resize cursor (horizontal resize cursor)
     resize_cursor_horizontal_ = LoadCursor(NULL, IDC_SIZEWE);
     resize_cursor_vertical_ = LoadCursor(NULL, IDC_SIZENS);
+    text_edit_cursor = LoadCursor(NULL, IDC_IBEAM);
 
     central_submenu_manager_ = std::make_shared<CentralSubMenuManager>();
     focus_manager_ = std::make_shared<FocusManager>();
@@ -272,6 +273,7 @@ void Application::setSpecialCursor(CursorType cursorType) {
     switch (cursorType) {
         case CursorType::ResizeHorizontal: SetCursor(resize_cursor_horizontal_); break;
         case CursorType::ResizeVertical: SetCursor(resize_cursor_vertical_); break;
+        case CursorType::TextEdit: SetCursor(text_edit_cursor);break;
     }
     allow_cursor_override_ = true;
 

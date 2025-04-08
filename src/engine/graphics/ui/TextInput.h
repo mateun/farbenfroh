@@ -55,6 +55,7 @@ private:
     std::vector<std::function<void(std::shared_ptr<TextInput>)>> text_change_listeners_;
     bool blink_timer_ready_ = true;
     float blink_timer_ = 0;
+    std::string initial_text_;
 };
 
 

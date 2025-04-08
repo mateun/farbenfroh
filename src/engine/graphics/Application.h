@@ -108,6 +108,7 @@ private:
     bool allow_cursor_override_ = false;
     HCURSOR resize_cursor_horizontal_;
     HCURSOR resize_cursor_vertical_;
+    HCURSOR text_edit_cursor;
     uint64_t message_count = 0;
     std::shared_ptr<TrueTypeFont> font_;
 };

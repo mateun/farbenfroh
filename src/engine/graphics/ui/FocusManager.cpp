@@ -69,7 +69,7 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
                          }
                          std::cout << "focused widget in window: " << highestFloatingWindow->getId() << "->" << hitWindowWidget->getId() << std::endl;
                          hitWindowWidget->setHoverFocus(previous_focus_widget_);
-                         previous_focus_widget_ = highestFloatingWindow;
+                         previous_focus_widget_ = hitWindowWidget;
                      }
                  }
 

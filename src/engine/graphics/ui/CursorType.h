@@ -11,7 +11,7 @@ enum class CursorType {
       Crosshair,
       Arrow,
       Hand,
-
+      TextEdit,
 };
 
 #endif //CURSORTYPE_H

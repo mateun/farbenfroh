@@ -15,7 +15,7 @@
 #include "MessageHandleResult.h"
 #include "RoundedRect.h"
 
-TextInput::TextInput(const std::string &initialText, const std::shared_ptr<TrueTypeFont> &font) : text_(initialText) , font_(font) {
+TextInput::TextInput(const std::string &initialText, const std::shared_ptr<TrueTypeFont> &font) : initial_text_(initialText) , font_(font) {
     label_widget_ = std::make_shared<LabelWidget>(initialText, font_);
     label_widget_->setId("text_input_" + id_ + "_inner_label");
     input_field_ = std::make_shared<RoundedRect>(10);
@@ -62,6 +62,12 @@ std::string TextInput::getText() {
 
 
 void TextInput::draw(float depth) {
+
+    if (hover_focus_) {
+        getApplication()->setSpecialCursor(CursorType::TextEdit);
+    } else {
+        getApplication()->unsetSpecialCursor();
+    }
 
     // We must set a valid "virtual" z-value for the textInput widget itself.
     // Normally this gets set during the Renderer::drawDeferred(mdd) call,
@@ -172,6 +178,9 @@ MessageHandleResult TextInput::onMessage(const UIMessage &message) {
         if (hover_focus_) {
             render_cursor_ = true;
             std::cout << "Textinput "<< id_ << " got click focus!" << std::endl;
+        } else {
+            // We assume clicked somewhere outside
+            render_cursor_ = false;
         }
 
     }
