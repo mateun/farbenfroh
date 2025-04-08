@@ -89,9 +89,7 @@ void FloatingWindow::draw(float depth) {
     }
     body_widget_->draw(depth + 0.02);
 
-
     glDisable(GL_SCISSOR_TEST);
-
 
 }
 
@@ -172,8 +170,12 @@ MessageHandleResult FloatingWindow::onMessage(const UIMessage &message) {
     }
 
 
-    // Pass the message to our children in any case.
-    return body_widget_->onMessage(message);
+
+    body_widget_->onMessage(message);
+
+    return MessageHandleResult{true, "", true};
+
+
 
 
 }

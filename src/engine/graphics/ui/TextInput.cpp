@@ -5,6 +5,7 @@
 #include "TextInput.h"
 
 #include <iostream>
+#include <engine/game/Timing.h>
 #include <engine/graphics/Application.h>
 #include <engine/graphics/MeshDrawData.h>
 #include <engine/graphics/Renderer.h>
@@ -33,19 +34,18 @@ float TextInput::charCursorToPixelPos() {
 
 glm::vec2 TextInput::getPreferredSize() {
     auto labelPref = label_widget_->getPreferredSize();
-    if (labelPref.x == 0 && labelPref.y == 0) {
-        // Calculate based on a dummy text:
-        auto dim = label_widget_->calculateSizeForText("Abcdefghijklmnopqrstuvzyz123123_0?123456789!");
-        dim.dimensions.y *= 2;
-        return dim.dimensions + glm::vec2(10, 16);
-    }
+    return glm::vec2(labelPref.x, font_ ->getLineHeight() * 2);
 
-    return labelPref + glm::vec2(10, 16);
 }
 
 void TextInput::setTextColor(glm::vec4 color) {
     text_color_ = color;
 }
+
+void TextInput::addTextChangeListener(std::function<void(std::shared_ptr<TextInput>)> listener) {
+    text_change_listeners_.emplace_back(listener);
+}
+
 
 void TextInput::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {
     hover_focus_ = true;
@@ -54,6 +54,10 @@ void TextInput::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {
 
 void TextInput::removeHoverFocus() {
     hover_focus_ = false;
+}
+
+std::string TextInput::getText() {
+    return text_;
 }
 
 
@@ -86,7 +90,13 @@ void TextInput::draw(float depth) {
 }
 
 void TextInput::drawCursor(float depth) {
-    if (!render_cursor_) {
+    blink_timer_ += Timing::lastFrameTimeInSeconds();
+    if (blink_timer_ > 0.530) {
+        blink_timer_ready_ = !blink_timer_ready_;
+        blink_timer_ = 0;
+    }
+
+    if (!render_cursor_ || !blink_timer_ready_) {
         return;
     }
 
@@ -109,7 +119,14 @@ void TextInput::drawCursor(float depth) {
     Renderer::drawWidgetMeshDeferred(mdd, this);
 }
 
+void TextInput::invokeTextListenerCallbacks() {
+    for (auto& tl: text_change_listeners_) {
+        tl(std::dynamic_pointer_cast<TextInput>(shared_from_this()));
+    }
+}
+
 MessageHandleResult TextInput::onMessage(const UIMessage &message) {
+
 
     if (message.type == MessageType::KeyDown && render_cursor_) {
         if (message.num != prev_message_num_) {
@@ -133,6 +150,7 @@ MessageHandleResult TextInput::onMessage(const UIMessage &message) {
                     char_cursor_pos_--;
                     text_.erase(char_cursor_pos_, 1);
                     label_widget_->setText(text_);
+                    invokeTextListenerCallbacks();
                 }
             }
             prev_message_num_ = message.num;
@@ -145,9 +163,9 @@ MessageHandleResult TextInput::onMessage(const UIMessage &message) {
             char_cursor_pos_++;
             label_widget_->setText(text_);
             prev_message_num_ = message.num;
+            invokeTextListenerCallbacks();
             return MessageHandleResult {false, "", true};
         }
-
     }
 
     if (message.type == MessageType::MouseDown) {

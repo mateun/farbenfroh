@@ -17,7 +17,7 @@
 #include <engine/graphics/ui/Spacer.h>
 #include <engine/graphics/ui/FloatingWindow.h>
 #include <engine/graphics/ui/MessageTransformer.h>
-#include <engine/graphics/ui/RoundedRect.h>
+
 #include <engine/graphics/ui/UIMessage.h>
 #include <engine/graphics/ui/TextInput.h>
 
@@ -93,10 +93,10 @@ void EditorLauncher::onCreated() {
     std::shared_ptr<TrueTypeFont> textInputFont = std::make_shared<TrueTypeFont>("../assets/calibri.ttf", 13);
 
     // Add buttons to the toolbar:
-    auto btnStart = std::make_shared<ButtonWidget>();
-    auto btnStop = std::make_shared<ButtonWidget>();
-    auto btnPause = std::make_shared<ButtonWidget>();
     auto startButtonTexture = std::make_shared<Texture>("../assets/button_start_path.png");
+    auto btnStart = std::make_shared<ButtonWidget>(startButtonTexture);
+    auto btnStop = std::make_shared<ButtonWidget>(startButtonTexture);
+    auto btnPause = std::make_shared<ButtonWidget>(startButtonTexture);
     btnStart->setTexture(startButtonTexture);
     btnStart->addActionCallback([this, textInputFont](std::shared_ptr<Widget> action) {
         std::cout << "Start launching" << std::endl;
@@ -111,14 +111,33 @@ void EditorLauncher::onCreated() {
         floatingWindow->setLayout(vbl);
         auto labelGameName = std::make_shared<LabelWidget>("Game Name", textInputFont);
         labelGameName->setId("label_game_name");
+
+        auto btnSaveGameProject = std::make_shared<ButtonWidget>("Save", getDefaultMenuFont());
+        btnSaveGameProject->setId("btn_save_project");
+        btnSaveGameProject->disable();  // Shall only enable when text is set
+        btnSaveGameProject->addActionCallback([floatingWindow](std::shared_ptr<Widget> action) {
+            // TODO add code for actually saving the game project
+            floatingWindow->close();
+        });
+
         auto txtGameName = std::make_shared<TextInput>("", textInputFont);
+        txtGameName->addTextChangeListener([btnSaveGameProject] (std::shared_ptr<TextInput> textInput) {
+             if (textInput->getText().empty()) {
+                 btnSaveGameProject->disable();
+             } else {
+                 btnSaveGameProject->enable();
+             }
+        });
         txtGameName->setId("txt_game_name");
         txtGameName->setTextColor({0., 0., 0., 1});
         auto spacer = std::make_shared<Spacer>(glm::vec2{0.0f, 20.0f});
         spacer->setBgColor({0.1, .1, .1, 1});
+
         floatingWindow->addChild(spacer);
         floatingWindow->addChild(labelGameName);
         floatingWindow->addChild(txtGameName);
+        floatingWindow->addChild(spacer);
+        floatingWindow->addChild(btnSaveGameProject);
         addFloatingWindow(floatingWindow);
     });
     btnStop->setTexture(startButtonTexture);

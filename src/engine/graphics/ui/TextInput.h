@@ -23,10 +23,12 @@ public:
 
     ~TextInput() override = default;
 
-
+    void addTextChangeListener(std::function<void(std::shared_ptr<TextInput>)> listener);
 
     void draw(float depth) override;
     void drawCursor(float depth);
+
+    void invokeTextListenerCallbacks();
 
     MessageHandleResult onMessage(const UIMessage &message) override;
 
@@ -36,6 +38,8 @@ public:
 
     void setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) override;
     void removeHoverFocus() override;
+
+    std::string getText();
 
 private:
     std::string text_;
@@ -48,6 +52,9 @@ private:
     bool render_cursor_ = false;
     int char_cursor_pos_ = 0;
     uint64_t prev_message_num_ = 0;
+    std::vector<std::function<void(std::shared_ptr<TextInput>)>> text_change_listeners_;
+    bool blink_timer_ready_ = true;
+    float blink_timer_ = 0;
 };
 
 

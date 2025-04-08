@@ -241,6 +241,7 @@ void Application::removeFloatingWindow(std::shared_ptr<FloatingWindow> floating_
 
 std::shared_ptr<TrueTypeFont> Application::getDefaultMenuFont() {
     if (!font_) {
+        // FIXME fontsize other than 13 currently breaks the menu
         font_ = std::make_shared<TrueTypeFont>("../assets/calibri.ttf", 13);
     }
 
@@ -305,8 +306,6 @@ void Application::mainLoop() {
 	bool running = true;
 
     PerformanceTimer performance_timer;
-
-
 
     MSG msg;
 	while (running) {
