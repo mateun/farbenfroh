@@ -14,11 +14,14 @@ class EditorLauncher : public Application, public FrameMessageSubscriber, public
   public:
     EditorLauncher(int width, int height, bool fullscreen);
 
+    void makeLegacyUI();
+
     void onCreated() override;
 
     void doFrame() override;
 
     std::shared_ptr<LabelWidget> lblMouseCoords;
+    std::shared_ptr<LabelWidget> lblFrameTime;
 
     void onFrameMessages(const std::vector<RawWin32Message> &msgs) override;
 };

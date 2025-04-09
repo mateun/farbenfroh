@@ -32,6 +32,15 @@ struct LayoutHint {
 
 };
 
+// Can be used by several layouts, e.g. AreaLayout
+enum class LayoutPosition {
+    Left,
+    Right,
+    Top,
+    Bottom,
+    Center
+};
+
 
 
 
@@ -192,6 +201,8 @@ public:
     // For just adding a lambda callback
     void addActionCallback(std::function<void(std::shared_ptr<Widget>)> actionCallback);
 
+    void setLayoutPosition(LayoutPosition position);
+
 
 protected:
 
@@ -239,6 +250,7 @@ protected:
     std::vector<std::function<void(std::shared_ptr<Widget>)>> action_callbacks_;
     bool use_default_bg_ = true;
     glm::vec2 preferred_size_ = {100, 100};
+    LayoutPosition layout_position_ = LayoutPosition::Center;
 };
 
 
@@ -292,10 +304,13 @@ private:
 };
 
 
+
 class AreaLayout : public Layout {
 public:
-    AreaLayout()  = default;
+    AreaLayout() ;
     ~AreaLayout() = default;
+
+    void createDummyParts();
 
     AreaLayout(std::shared_ptr<Widget> top, std::shared_ptr<Widget> bottom, std::shared_ptr<Widget> left, std::shared_ptr<Widget> right, std::shared_ptr<Widget> center);
     void apply(Widget* target) override;

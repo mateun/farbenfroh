@@ -55,8 +55,9 @@ void VBoxLayout::apply(Widget *target) {
         int counter = 1;
         float verticalCursor = topY - margin_vertical_;
         for (auto c : target->children()) {
-            // Widgets are drawn bottom-up so we need to deduct the size of the widget for the next origin.y position:
+            // Widgets are drawn bottom-up so we need to deduct the size of the widget for the next origin.y position.
             verticalCursor -= (c->size().y + margin_vertical_);
+            verticalCursor = std::clamp(verticalCursor, 0.0f, target->origin().y + target->size().y);
             c->setOrigin({target->origin().x + margin_horizontal_, verticalCursor});
             counter++;
         }

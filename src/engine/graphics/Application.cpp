@@ -289,6 +289,10 @@ std::shared_ptr<CentralSubMenuManager> Application::getCentralSubMenuManager() {
     return central_submenu_manager_;
 }
 
+std::shared_ptr<FocusManager> Application::getFocusManager() {
+    return focus_manager_;
+}
+
 std::vector<std::shared_ptr<FloatingWindow>> Application::getFloatingWindows() {
     return floating_windows_;
 }

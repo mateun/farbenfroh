@@ -181,7 +181,7 @@ MessageHandleResult SplitterWidget::onMessage(const UIMessage &message) {
         }
 
         if (!overSplit) {
-            // Only relieve this if we are not dragging already.
+            // Only relief this if we are not dragging already.
             if (!dragging_) {
                 mouse_over_splitter_ = false;
                 message_handle_result.wasHandled = false;

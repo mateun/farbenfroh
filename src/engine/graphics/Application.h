@@ -58,6 +58,8 @@ class Application {
 
     std::shared_ptr<CentralSubMenuManager> getCentralSubMenuManager();
 
+    std::shared_ptr<FocusManager> getFocusManager();
+
     std::vector<std::shared_ptr<FloatingWindow>> getFloatingWindows();
 
     glm::vec2 getCurrentMousePos();
