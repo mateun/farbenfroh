@@ -5,6 +5,7 @@
 #ifndef WIDGET_H
 #define WIDGET_H
 
+#include <complex.h>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -13,8 +14,11 @@
 
 #include "Application.h"
 #include "Mesh.h"
+#include "ui/EdgePainter.h"
 
 
+struct Edge;
+class EdgeDragger;
 class Action;
 struct UIMessage;
 class MenuBar;
@@ -310,7 +314,9 @@ public:
     AreaLayout() ;
     ~AreaLayout() = default;
 
-    void createDummyParts();
+    void createPlaceholdersForNullParts();
+
+    std::shared_ptr<Edge> createEdge(LayoutPosition right);
 
     AreaLayout(std::shared_ptr<Widget> top, std::shared_ptr<Widget> bottom, std::shared_ptr<Widget> left, std::shared_ptr<Widget> right, std::shared_ptr<Widget> center);
     void apply(Widget* target) override;
@@ -320,6 +326,13 @@ public:
     std::shared_ptr<Widget> left_;
     std::shared_ptr<Widget> right_;
     std::shared_ptr<Widget> center_;
+
+    bool first_time_ = true;
+    std::shared_ptr<EdgeDragger> edge_dragger_top_;
+    std::shared_ptr<EdgeDragger> edge_dragger_bottom_;
+    std::shared_ptr<EdgeDragger> edge_dragger_left_;
+    std::shared_ptr<EdgeDragger> edge_dragger_right_;
+    std::shared_ptr<EdgePainter> edge_painter_;
 };
 
 #endif //WIDGET_H

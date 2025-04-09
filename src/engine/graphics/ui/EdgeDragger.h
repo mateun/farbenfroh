@@ -35,7 +35,7 @@ struct Edge {
 class EdgeDragger : public FrameMessageSubscriber, public std::enable_shared_from_this<EdgeDragger> {
 
 public:
-  EdgeDragger(Edge edge, float zValue);
+  EdgeDragger(std::shared_ptr<Edge> edge, float zValue);
 
   void onFrameMessages(const std::vector<RawWin32Message>& msgs) override;
 
@@ -43,8 +43,10 @@ public:
   // may change over time if edge is dragged.
   glm::vec2 getOrigin();
 
+  bool isHovering();
+
 private:
-  Edge edge_;
+  std::shared_ptr<Edge> edge_;
   float zValue_ = 0;
   bool hover_ = false;
 };
