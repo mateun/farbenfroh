@@ -62,10 +62,12 @@ void AreaLayout::apply(Widget *target) {
 
     // We give priority to the positions as given by dragged edges.
     if (edge_left_ && edge_left_->origin.x != (left_->origin().x + left_->size().x)) {
+        edge_left_->origin.x = std::clamp(edge_left_->origin.x, 150.0f, target->size().x - 200);
         left_->setPreferredSize({edge_left_->origin.x, left_->getPreferredSize().y});
     }
 
     if (edge_right_ && edge_right_->origin.x != right_->origin().x) {
+        edge_right_->origin.x = std::clamp(edge_right_->origin.x, 200.0f, target->size().x - 200);
         right_->setPreferredSize({target->size().x - edge_right_->origin.x, right_->getPreferredSize().y});
     }
 

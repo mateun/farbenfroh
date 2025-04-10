@@ -274,7 +274,21 @@ void EditorLauncher::onCreated() {
     mainMenuBar->addMenu(menuAbout);
 
 
-    auto mainWidget = std::make_shared<AreaWidget>(nullptr, nullptr, nullptr, nullptr, center);
+    auto rootGameObject = std::make_shared<TreeNode>(nullptr);
+    rootGameObject->setText("Root Game Object");
+    auto child1 = std::make_shared<TreeNode>(nullptr);
+    auto child2 = std::make_shared<TreeNode>(nullptr);
+    child1->setText("Child1");
+    child2->setText("Child2");
+    rootGameObject->addChild(child1);
+    rootGameObject->addChild(child2);
+    auto treeModel = std::make_shared<TreeModel>(rootGameObject);
+    auto gameObjectTree = std::make_shared<TreeViewer>(treeModel);
+
+
+
+
+    auto mainWidget = std::make_shared<AreaWidget>(nullptr, nullptr, gameObjectTree , nullptr, center);
     mainWidget->setId("main_widget");
 
 

@@ -54,7 +54,6 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
                          }
 
                      }
-
                  }
 
                  if (highestFloatingWindow) {
