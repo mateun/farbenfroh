@@ -13,6 +13,7 @@
 #include <engine/graphics/ui/SplitterWidget.h>
 #include <engine/graphics/ui/ToolBarWidget.h>
 #include <engine/graphics/Texture.h>
+#include <engine/graphics/ui/AreaWidget.h>
 
 #include <engine/graphics/ui/Menu.h>
 #include <engine/graphics/ui/MenuBar.h>
@@ -237,16 +238,47 @@ void EditorLauncher::makeLegacyUI() {
 
 }
 
+
+
 void EditorLauncher::onCreated() {
 
-    auto mainWidget = std::make_shared<Widget>();
-    mainWidget->setId("main_widget");
     auto center = std::make_shared<Widget>();
     center->setId("center");
     center->setBgColor({0.5, 0.0, 0.5, 1});
-    auto mainLayout = std::make_shared<AreaLayout>(nullptr, nullptr, nullptr, nullptr, center);
-    mainWidget->setLayout(mainLayout);
-    mainWidget->addChild(center);
+
+    auto menuFile = std::make_shared<Menu>("File");
+    menuFile->setId("menu_file");
+    auto menuNew = std::make_shared<Menu>("New");
+    auto menuOpen = std::make_shared<Menu>("Open");
+    menuOpen->setId("menu_open");
+    auto menuItemNewGame = std::make_shared<MenuItem>("Game");
+    menuItemNewGame->setId("menu_item_new_game");
+    menuNew->setId("file_new");
+    menuNew->addSubMenu(menuItemNewGame);
+    menuFile->addSubMenu(menuNew);
+    menuFile->addSubMenu(menuOpen);
+
+    auto menuGameObjects = std::make_shared<Menu>("GameObjects");
+    menuGameObjects->setId("menu_game_objects");
+    auto menuNewCube = std::make_shared<MenuItem>("New Cube");
+    menuNewCube->setId("menu_item_new_cube");
+    menuGameObjects->addSubMenu(menuNewCube);
+    auto menuNewSphere = std::make_shared<MenuItem>("NewSphere");
+    menuGameObjects->addSubMenu(menuNewSphere);
+
+    auto mainMenuBar = std::make_shared<MenuBar>();
+    mainMenuBar->addMenu(menuFile);
+    mainMenuBar->addMenu(menuGameObjects);
+    auto menuAbout = std::make_shared<Menu>("About");
+    menuAbout->setId("menu_about");
+    mainMenuBar->addMenu(menuAbout);
+
+
+    auto mainWidget = std::make_shared<AreaWidget>(nullptr, nullptr, nullptr, nullptr, center);
+    mainWidget->setId("main_widget");
+
+
+    setMainMenuBar(mainMenuBar);
     setTopLevelWidget(mainWidget);
 
 }

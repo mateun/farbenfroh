@@ -32,9 +32,12 @@ void SimpleMessageDispatcher::onFrameMessages(const std::vector<RawWin32Message>
             handleResult = fw->onMessage(transformedMessage);
             if (handleResult.wasHandled) break;
         }
-
         // Only forward to static top level widget if it was not handled already.
         if (handleResult.wasHandled) continue;
+
+        if (getApplication()->getMenuBar()) {
+            getApplication()->getMenuBar()->onMessage(transformedMessage);
+        }
 
         if (getApplication()->getTopLevelWidget()) {
             getApplication()->getTopLevelWidget()->onMessage(transformedMessage);

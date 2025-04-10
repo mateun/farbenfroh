@@ -77,6 +77,30 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
                  if (foundFocusAmongFloatingWindows) continue;
              }
 
+             // Next we visit the menubar
+             auto menuBar = getApplication()->getMenuBar();
+             if (menuBar) {
+                 auto visitor = HitVisitor();
+                 visitor.visit(menuBar, mouse_x, mouse_y);
+                 if (auto highestHitWidget = visitor.getHighestHitWidget()) {
+                     if (previous_focus_widget_) {
+                         previous_focus_widget_->removeHoverFocus();
+                     }
+                     std::cout << "focused widget in window: " << highestHitWidget->getId() << "->" << highestHitWidget->getId() << std::endl;
+                     highestHitWidget->setHoverFocus(previous_focus_widget_);
+                     previous_focus_widget_ = highestHitWidget;
+
+                     UIMessage msg;
+                     msg.num = m.num;
+                     msg.type = MessageType::WidgetGainedFocus;
+                     msg.focusMessage.widget = highestHitWidget;
+                     msg.sender = "FocusManager";
+
+                     getApplication()->getCentralSubMenuManager()->onMessage(msg);
+
+                     continue;
+                 }
+             }
 
              // Next pass the message on to the toplevel widget of the application:
              {

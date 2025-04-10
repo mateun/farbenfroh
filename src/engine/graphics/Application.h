@@ -36,6 +36,8 @@ class Application {
     bool changeResolution(int width, int height, int refreshRate, const std::string &deviceName, bool goFullscreen);
     std::vector<RawWin32Message> getLastMessages();
 
+    void setMainMenuBar(const std::shared_ptr<MenuBar> &mainMenuBar);
+
     RenderBackend* getRenderBackend() const;
 
     void addMessageSubscriber(std::shared_ptr<FrameMessageSubscriber> subscriber);
@@ -68,6 +70,11 @@ class Application {
     void removeFloatingWindow(std::shared_ptr<FloatingWindow> floating_window);
 
     std::shared_ptr<TrueTypeFont> getDefaultMenuFont();
+
+    int width();
+    int height();
+
+    std::shared_ptr<Widget> getMenuBar();
 
 protected:
 
@@ -111,8 +118,10 @@ private:
     HCURSOR resize_cursor_horizontal_;
     HCURSOR resize_cursor_vertical_;
     HCURSOR text_edit_cursor;
+    HCURSOR hand_cursor_;
     uint64_t message_count = 0;
     std::shared_ptr<TrueTypeFont> font_;
+    std::shared_ptr<MenuBar> main_menu_bar_;
 };
 
 std::shared_ptr<Application> getApplication();

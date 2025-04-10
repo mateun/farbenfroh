@@ -29,6 +29,7 @@
 #include "TrueTypeFont.h"
 #include "ui/CentralSubMenuManager.h"
 #include "ui/FloatingWindow.h"
+#include "ui/MenuBar.h"
 
 
 // This function must be provided by any Application implementor.
@@ -92,6 +93,11 @@ bool Application::changeResolution(int width, int height, int refreshRate, const
 
 std::vector<RawWin32Message> Application::getLastMessages() {
     return frame_messages_;
+}
+
+void Application::setMainMenuBar(const std::shared_ptr<MenuBar> &mainMenuBar) {
+    main_menu_bar_ = mainMenuBar;
+    getApplication()->getCentralSubMenuManager()->registerMenuBar(mainMenuBar);
 }
 
 
@@ -163,6 +169,7 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
     resize_cursor_horizontal_ = LoadCursor(NULL, IDC_SIZEWE);
     resize_cursor_vertical_ = LoadCursor(NULL, IDC_SIZENS);
     text_edit_cursor = LoadCursor(NULL, IDC_IBEAM);
+    hand_cursor_ = LoadCursor(NULL, IDC_HAND);
 
     central_submenu_manager_ = std::make_shared<CentralSubMenuManager>();
     focus_manager_ = std::make_shared<FocusManager>();
@@ -250,6 +257,18 @@ std::shared_ptr<TrueTypeFont> Application::getDefaultMenuFont() {
 
 }
 
+int Application::width() {
+    return width_;
+}
+
+int Application::height() {
+    return height_;
+}
+
+std::shared_ptr<Widget> Application::getMenuBar() {
+    return main_menu_bar_;
+}
+
 void Application::doFrame() {
     // noop
 }
@@ -274,6 +293,7 @@ void Application::setSpecialCursor(CursorType cursorType) {
         case CursorType::ResizeHorizontal: SetCursor(resize_cursor_horizontal_); break;
         case CursorType::ResizeVertical: SetCursor(resize_cursor_vertical_); break;
         case CursorType::TextEdit: SetCursor(text_edit_cursor);break;
+        case CursorType::Hand: SetCursor(hand_cursor_); break;
     }
     allow_cursor_override_ = true;
 
@@ -341,7 +361,14 @@ void Application::mainLoop() {
 
 	        // We provide an ortho camera which represents the application window dimensions.
 	        render_backend_->setViewport(0,0, scaled_width(), scaled_height());
-	        //auto camera = render_backend_->getOrthoCameraForViewport(0, 0, scaled_width(), scaled_height());
+
+	        if (main_menu_bar_) {
+	            main_menu_bar_->setOrigin({0, height_ - 32});
+	            main_menu_bar_->setSize({width_, 32});
+	            main_menu_bar_->draw(-20);
+	        }
+
+
 	        topLevelWidget->draw(-20);
             Renderer::submitDeferredWidgetCalls();
 

@@ -85,7 +85,7 @@ void Widget::addActionCallback(std::function<void(std::shared_ptr<Widget>)> acti
     action_callbacks_.push_back(actionCallback);
 }
 
-void Widget::setLayoutPosition(LayoutPosition position) {
+void Widget::setLayoutPosition(AreaLayoutPosition position) {
     layout_position_ = position;
 }
 

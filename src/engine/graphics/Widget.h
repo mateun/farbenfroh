@@ -37,7 +37,7 @@ struct LayoutHint {
 };
 
 // Can be used by several layouts, e.g. AreaLayout
-enum class LayoutPosition {
+enum class AreaLayoutPosition {
     Left,
     Right,
     Top,
@@ -205,7 +205,7 @@ public:
     // For just adding a lambda callback
     void addActionCallback(std::function<void(std::shared_ptr<Widget>)> actionCallback);
 
-    void setLayoutPosition(LayoutPosition position);
+    void setLayoutPosition(AreaLayoutPosition position);
 
 
 protected:
@@ -254,7 +254,7 @@ protected:
     std::vector<std::function<void(std::shared_ptr<Widget>)>> action_callbacks_;
     bool use_default_bg_ = true;
     glm::vec2 preferred_size_ = {100, 100};
-    LayoutPosition layout_position_ = LayoutPosition::Center;
+    AreaLayoutPosition layout_position_ = AreaLayoutPosition::Center;
 };
 
 
@@ -316,7 +316,7 @@ public:
 
     void createPlaceholdersForNullParts();
 
-    std::shared_ptr<Edge> createEdge(LayoutPosition right);
+    void setEdge(const std::shared_ptr<Edge> & edge, AreaLayoutPosition left);
 
     AreaLayout(std::shared_ptr<Widget> top, std::shared_ptr<Widget> bottom, std::shared_ptr<Widget> left, std::shared_ptr<Widget> right, std::shared_ptr<Widget> center);
     void apply(Widget* target) override;
@@ -326,13 +326,10 @@ public:
     std::shared_ptr<Widget> left_;
     std::shared_ptr<Widget> right_;
     std::shared_ptr<Widget> center_;
-
-    bool first_time_ = true;
-    std::shared_ptr<EdgeDragger> edge_dragger_top_;
-    std::shared_ptr<EdgeDragger> edge_dragger_bottom_;
-    std::shared_ptr<EdgeDragger> edge_dragger_left_;
-    std::shared_ptr<EdgeDragger> edge_dragger_right_;
-    std::shared_ptr<EdgePainter> edge_painter_;
+    std::shared_ptr<Edge> edge_left_;
+    std::shared_ptr<Edge> edge_right_;
+    std::shared_ptr<Edge> edge_top_;
+    std::shared_ptr<Edge> edge_bottom_;
 };
 
 #endif //WIDGET_H

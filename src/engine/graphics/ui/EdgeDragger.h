@@ -45,10 +45,13 @@ public:
 
   bool isHovering();
 
+  void setZValue(float val);
+
 private:
   std::shared_ptr<Edge> edge_;
-  float zValue_ = 0;
+  float z_value_ = 0;
   bool hover_ = false;
+  bool dragging_ = false;
 };
 
 

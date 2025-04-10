@@ -22,6 +22,7 @@ class EditorLauncher : public Application, public FrameMessageSubscriber, public
 
     std::shared_ptr<LabelWidget> lblMouseCoords;
     std::shared_ptr<LabelWidget> lblFrameTime;
+    std::shared_ptr<MenuBar> main_menu_bar_;
 
     void onFrameMessages(const std::vector<RawWin32Message> &msgs) override;
 };
