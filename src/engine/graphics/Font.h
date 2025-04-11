@@ -29,16 +29,16 @@ public:
 
     void drawText(const char *text, int posx, int posy);
 
-    void drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, Bitmap *bitmap, int offsetX = 0,
+    void drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, gru::Bitmap *bitmap, int offsetX = 0,
                         int offsetY = 0);
 
     void setPixel(int x, int y, int r, int g, int b, int a);
 
-    void drawBitmap(int posx, int posy, Bitmap *bitmap);
+    void drawBitmap(int posx, int posy, gru::Bitmap *bitmap);
 
 private:
     std::shared_ptr<Texture> texture = nullptr;
-    std::shared_ptr<Bitmap> bitmap = nullptr;
+    std::shared_ptr<gru::Bitmap> bitmap = nullptr;
     std::shared_ptr<Mesh> quadMesh = nullptr;
 };
 

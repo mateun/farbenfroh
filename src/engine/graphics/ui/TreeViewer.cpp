@@ -66,3 +66,7 @@ void TreeViewer::draw(float depth) {
     }
 
 }
+
+void TreeViewer::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {
+    Widget::setHoverFocus(prevFocusHolder);
+}

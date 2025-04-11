@@ -159,12 +159,12 @@ struct RenderState {
     Texture* normalMap = nullptr;
     int normalMapTextureUnit = 2;
     Texture* skyboxTexture = nullptr;
-    Bitmap *font = nullptr;
+    gru::Bitmap *font = nullptr;
     Mesh* mesh = nullptr;
     ParticleEffect *particleEffect = nullptr;
     Camera* camera = nullptr;
     Camera* shadowMapCamera = nullptr;
-    Bitmap* renderTargetBitmap = nullptr;
+    gru::Bitmap* renderTargetBitmap = nullptr;
     bool lightingOn = true;
     bool tilingOn;
     bool flipUvs;
@@ -239,10 +239,10 @@ public:
 
     static GridData* createGrid(int lines = 100);
     static GLuint createGridVAO(int lines = 100);
-    static void drawText(const char* text, int x, int y, Bitmap* font);
-    static void drawBitmap(int x, int y, Bitmap* bm);
-    static void drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, Bitmap* bitmap, int offsetX  = 0, int offsetY = 0);
-    static std::unique_ptr<Bitmap> loadBitmap(const char* fileName);
+    static void drawText(const char* text, int x, int y, gru::Bitmap* font);
+    static void drawBitmap(int x, int y, gru::Bitmap* bm);
+    static void drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, gru::Bitmap* bitmap, int offsetX  = 0, int offsetY = 0);
+    static std::unique_ptr<gru::Bitmap> loadBitmap(const char* fileName);
     static void setPixel(int x, int y, int r, int g, int b, int a);
 
     void prepareShadowMapTransformationMatrices();
@@ -269,7 +269,7 @@ public:
     static void drawBitmap(int x, int y, uint8_t* bitmapPixels);
     static glm::mat4 getWorldMatrixFromGlobalState();
     static std::unique_ptr<Texture> createTextureFromFile(const std::string& fileName);
-    static std::unique_ptr<Texture> createTextureFromBitmap(Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
+    static std::unique_ptr<Texture> createTextureFromBitmap(gru::Bitmap* bm, ColorFormat colorFormat = ColorFormat::RGBA);
     static std::unique_ptr<Texture> createCubeMapTextureFromDirectory(const std::string &dirName, ColorFormat colorFormat, const std::string& fileType = "png");
     static std::unique_ptr<FrameBuffer> createShadowMapFramebufferObject(glm::vec2 size);
     static void beginBatch();
@@ -294,10 +294,10 @@ public:
     static void tileData(int tileX, int tileY, int tileWidth, int tileHeight, int offsetX =0, int offsetY = 0);
     static void bindMesh(Mesh* mesh);
     static void bindParticleEffect(ParticleEffect* pe);
-    static void renderTargetBitmap(Bitmap* bm);
+    static void renderTargetBitmap(gru::Bitmap* bm);
     static void bindCamera(Camera* camera);
     static void bindShadowMapCamera(Camera* camera);
-    static void font(Bitmap* fontBitmap);
+    static void font(gru::Bitmap* fontBitmap);
     static std::vector<std::string> getAllActiveMonitors();
     static std::vector<MonitorResolution> getMonitorResolutions(const std::string& deviceName);
     static bool changeResolution(int width, int height, int refreshRate, const std::string& deviceName, bool goFullscreen = false);

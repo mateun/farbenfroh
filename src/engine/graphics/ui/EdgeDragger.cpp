@@ -65,13 +65,11 @@ void EdgeDragger::onFrameMessages(const std::vector<RawWin32Message> &msgs) {
             if (hover_) {
                 dragging_ = true;
                 getApplication()->setSpecialCursor(CursorType::ResizeHorizontal);
-                std::cout << "drag start" << std::endl;
             }
         }
 
         if (tm.type == MessageType::MouseUp) {
             dragging_ = false;
-            std::cout << "drag end" << std::endl;
         }
     }
 

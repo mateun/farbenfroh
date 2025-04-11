@@ -15,7 +15,11 @@ RoundedRect::RoundedRect(float cornerRadius): corner_radius_(cornerRadius) {
 void RoundedRect::draw(float depth) {
     MeshDrawData mdd;
     mdd.mesh = quadMesh_;
+    mdd.debugInfo = "RoundedRect with id: " + id_;
     mdd.shader = getApplication()->getRenderBackend()->getWidgetRoundedRectShader(false);
+    if (global_size_.x < 0) {
+        throw std::runtime_error("viewport x is negative!");
+    }
     mdd.viewPortDimensions =  global_size_;
     mdd.setViewport = true;
     mdd.viewport = {global_origin_.x,  global_origin_.y, global_size_.x, global_size_.y};

@@ -72,7 +72,7 @@ add_executable(collisiongrid_test
 target_compile_definitions(collisiongrid_test PRIVATE COLLISION_GRID_TESTS=1)
 
 target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
-target_link_libraries(game_with_app_framework dxgi dxguid opengl32  gdi32 dsound assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
+target_link_libraries(game_with_app_framework dxgi dxguid opengl32 gdiplus comctl32 gdi32 dsound assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
 target_link_libraries(animtest dsound dxgi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation)
 
 message(STATUS "Detected source files: ${ENGINE_SRC}")

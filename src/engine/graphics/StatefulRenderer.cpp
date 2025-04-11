@@ -172,7 +172,7 @@ void StatefulRenderer::bindCamera(Camera *camera) {
 void StatefulRenderer::bindShadowMapCamera(Camera *camera) {
 }
 
-void StatefulRenderer::font(Bitmap *fontBitmap) {
+void StatefulRenderer::font(gru::Bitmap *fontBitmap) {
 }
 
 

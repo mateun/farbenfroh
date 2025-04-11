@@ -13,17 +13,18 @@ struct BITMAP_FILE {
     BITMAPINFOHEADER bminfoHeader;
 
 };
+namespace gru {
+    struct Bitmap {
+        Bitmap();
+        Bitmap(int w, int h, int bytes_per_pixel);
+        Bitmap(const std::string& file);
+        int width=-1;
+        int height=-1;
+        int bytes_per_pixel_ = 4;
+        uint8_t* pixels=nullptr;
 
-struct Bitmap {
-    Bitmap();
-    Bitmap(int w, int h, int bytes_per_pixel);
-    Bitmap(const std::string& file);
-    int width=-1;
-    int height=-1;
-    int bytes_per_pixel_ = 4;
-    uint8_t* pixels=nullptr;
-
-};
+    };
+}
 
 
 

@@ -19,6 +19,7 @@
 
 void Renderer::drawMesh(const MeshDrawData &drawData) {
     glBindVertexArray(drawData.mesh->vao);
+    auto err = glGetError();
     GL_ERROR_EXIT(123434);
     drawData.shader->bind();
     GL_ERROR_EXIT(1234341);
@@ -216,7 +217,9 @@ void Renderer::submitDeferredWidgetCalls() {
         } else {
             glScissor(mdd.viewport.x, mdd.viewport.y, mdd.viewport.z, mdd.viewport.w);
         }
+        GL_ERROR_EXIT(77663311);
         drawMesh(mdd);
+
 
         glPopDebugGroup();
 
@@ -249,7 +252,7 @@ std::shared_ptr<Texture> Renderer::getDefaultNormalMap() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-        auto bm = new Bitmap();
+        auto bm = new gru::Bitmap();
         bm->height = 1;
         bm->width = 1;
         bm->pixels = defaultNormalPixel;

@@ -121,13 +121,16 @@ void Menu::draw(float depth) {
 MessageHandleResult Menu::onMessage(const UIMessage &message) {
     switch (message.type) {
 
-        case MessageType::MouseDown: {
+        case MessageType::MouseUp: {
             if (app_hover_focus_) {
                 if (sub_menu_panel_) {
                     sub_menu_panel_->onMessage(message);
                 } else {
                     if (children_.empty()) {
-                        std::cout << "clicked on menu: " << text_ << std::endl;
+                        for (auto ab : action_callbacks_) {
+                            ab(shared_from_this());
+                        }
+                        app_hover_focus_ = false;
                         return MessageHandleResult {true, "", true};
                     }
                 }

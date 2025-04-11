@@ -29,6 +29,8 @@ public:
 
     TextDimensions calculateSizeForText(const std::string& str);
 
+    void setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) override;
+
 private:
     std::string text_;
     std::unique_ptr<Mesh> quadMesh;

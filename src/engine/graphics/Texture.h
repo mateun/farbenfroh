@@ -6,10 +6,11 @@
 #define TEXTURE_H
 
 #include <GL\glew.h>
+#include <engine/graphics/Bitmap.h>
 #include <memory>
 #include <string>
 
-class Bitmap;
+class gru::Bitmap;
 
 struct TextureCreationData {
     GLint internalFormat;
@@ -26,7 +27,7 @@ class Texture {
     Texture();
     explicit Texture(const std::string& fileName);
     explicit Texture(GLuint existingHandle);
-    explicit Texture(GLuint existingHandle, Bitmap* existingBitmap);
+    explicit Texture(GLuint existingHandle, gru::Bitmap* existingBitmap);
     void bindAt(int unitIndex) const;
     [[nodiscard]] GLuint handle() const;
 
@@ -34,14 +35,14 @@ class Texture {
 
     static std::unique_ptr<Texture> createEmptyFloatTexture(int w, int h);
     static std::unique_ptr<Texture> createEmptyTexture(int w, int h);
-    static std::unique_ptr<Texture> createTextureFromBitmap(Bitmap* bm, const TextureCreationData& textureData = {GL_SRGB8_ALPHA8, GL_RGBA, GL_LINEAR, GL_LINEAR});
+    static std::unique_ptr<Texture> createTextureFromBitmap(gru::Bitmap* bm, const TextureCreationData& textureData = {GL_SRGB8_ALPHA8, GL_RGBA, GL_LINEAR, GL_LINEAR});
 
     GLsizei height();
     GLsizei width();
 
 private:
     GLuint handle_;
-    Bitmap* bitmap_;
+    gru::Bitmap* bitmap_;
 
 
 };

@@ -26,7 +26,7 @@ TrueTypeFont::TrueTypeFont(const std::string &pathToTTF, float fontSize) {
     fclose(fp);
 
     // Define the bitmap dimensions and create a buffer
-    atlas_bitmap_ = std::make_unique<Bitmap>(atlas_bitmap_width_, atlas_bitmap_height_, 1);
+    atlas_bitmap_ = std::make_unique<gru::Bitmap>(atlas_bitmap_width_, atlas_bitmap_height_, 1);
 
     // Retrieve font measurements
     stbtt_fontinfo info;

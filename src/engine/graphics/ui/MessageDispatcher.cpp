@@ -62,7 +62,7 @@ void FocusBasedMessageDispatcher::onFrameMessages(const std::vector<RawWin32Mess
         auto transformed = MessageTransformer::transform(msg);
         transformed.sender = "focus-based-message-dispatcher";
 
-        //std::cout << "msg num: " << std::to_string(msg_number_) << " sent to widget: " << focused_widget->getId() << std::endl;
+        std::cout << "msg num: " << std::to_string(msg_number_) << " sent to widget: " << focused_widget->getId() << std::endl;
         focused_widget->onMessage(transformed);
     }
 }

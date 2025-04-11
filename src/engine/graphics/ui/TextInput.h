@@ -56,6 +56,7 @@ private:
     bool blink_timer_ready_ = true;
     float blink_timer_ = 0;
     std::string initial_text_;
+    bool fit_to_text_ = false;
 };
 
 

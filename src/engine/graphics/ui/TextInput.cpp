@@ -2,6 +2,7 @@
 // Created by mgrus on 07.04.2025.
 //
 
+#define NOMINMAX
 #include "TextInput.h"
 
 #include <iostream>
@@ -33,8 +34,21 @@ float TextInput::charCursorToPixelPos() {
 }
 
 glm::vec2 TextInput::getPreferredSize() {
-    auto labelPref = label_widget_->getPreferredSize();
-    return glm::vec2(labelPref.x, font_ ->getLineHeight() * 2);
+    if (fit_to_text_) {
+        auto labelPref = label_widget_->getPreferredSize();
+        return glm::vec2(labelPref.x, font_ ->getLineHeight() * 2);
+    }
+
+
+    // TODO find reasonable value, this is just hardcoded for now
+    // due to problem with textinput when part of e.g. an HBox layout,
+    // where the size gets very small in case of 1 digit text.
+    // In this case we do normally not want to have the input field shrink and grow with the text size,
+    // the field itself should be stable.
+    return {180, 30};
+
+
+
 
 }
 
@@ -80,7 +94,7 @@ void TextInput::draw(float depth) {
 
     // Background rect to hold the text label
     input_field_->setBgColor({.9, .9, .9, 1});
-    input_field_->setPreferredSize({global_size_.x - 12, 30});
+    input_field_->setPreferredSize({global_size_.x, 30});
     input_field_->setSize(input_field_->getPreferredSize());
     input_field_->setOrigin(origin() + glm::vec2(0, 0));
     input_field_->draw(depth + 0.02);

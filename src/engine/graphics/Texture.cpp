@@ -18,7 +18,7 @@ Texture::Texture() {
 }
 
 Texture::Texture(const std::string &fileName) {
-  bitmap_ = new Bitmap(fileName.c_str());
+  bitmap_ = new gru::Bitmap(fileName.c_str());
   glGenTextures(1, &handle_);
   glBindTexture(GL_TEXTURE_2D, handle_);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -56,7 +56,7 @@ Texture::Texture(const std::string &fileName) {
 Texture::Texture(GLuint existingHandle) : handle_(existingHandle) {
 }
 
-Texture::Texture(GLuint existingHandle, Bitmap *existingBitmap) : handle_(existingHandle) , bitmap_(existingBitmap) {
+Texture::Texture(GLuint existingHandle, gru::Bitmap *existingBitmap) : handle_(existingHandle) , bitmap_(existingBitmap) {
 }
 
 void Texture::bindAt(int unitIndex) const {
@@ -79,7 +79,7 @@ GLsizei Texture::width() {
 }
 
 
-std::unique_ptr<Texture> Texture::createTextureFromBitmap(Bitmap *bm, const TextureCreationData& data) {
+std::unique_ptr<Texture> Texture::createTextureFromBitmap(gru::Bitmap *bm, const TextureCreationData& data) {
   GLuint handle;
   glGenTextures(1, &handle);
 
@@ -108,7 +108,7 @@ std::unique_ptr<Texture> Texture::createTextureFromBitmap(Bitmap *bm, const Text
 
 std::unique_ptr<Texture> Texture::createEmptyTexture(int w, int h) {
   auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 32);
-  auto bm = new Bitmap();
+  auto bm = new gru::Bitmap();
   bm->width = w;
   bm->height = h;
   bm->pixels = pixels;
@@ -117,7 +117,7 @@ std::unique_ptr<Texture> Texture::createEmptyTexture(int w, int h) {
 
 std::unique_ptr<Texture> Texture::createEmptyFloatTexture(int w, int h) {
     auto pixels = (uint8_t *) _aligned_malloc(w*h*4, 32);
-    auto bm = new Bitmap();
+    auto bm = new gru::Bitmap();
     bm->width = w;
     bm->height = h;
     bm->pixels = pixels;

@@ -4,8 +4,10 @@
 
 #ifndef APPLICATION_H
 #define APPLICATION_H
+
 #include <complex>
 #include <Windows.h>
+#include <commctrl.h>
 #include <memory>
 #include <string>
 #include <glm/glm.hpp>
@@ -17,6 +19,19 @@
 #include "ui/CentralSubMenuManager.h"
 #include "ui/CursorType.h"
 
+namespace win32 {
+    class WinMenu;
+    class WinMenuBar;
+}
+
+
+struct NativeVSplitter {
+    HWND left;
+    HWND right;
+};
+
+
+class Logger;
 class TrueTypeFont;
 class FloatingWindow;
 class FocusManager;
@@ -37,6 +52,8 @@ class Application {
     std::vector<RawWin32Message> getLastMessages();
 
     void setMainMenuBar(const std::shared_ptr<MenuBar> &mainMenuBar);
+
+    HBITMAP loadBitmapFromFile(const std::wstring &fileName);
 
     RenderBackend* getRenderBackend() const;
 
@@ -76,18 +93,36 @@ class Application {
 
     std::shared_ptr<Widget> getMenuBar();
 
+    void log(const std::string& msg);
+
+    void createNativeToolbar();
+    void addMainToolbarButton(const std::wstring& bitmapFileName);
+
+    std::shared_ptr<win32::WinMenuBar> createNativeMenuBar();
+    std::shared_ptr<win32::WinMenu> createNativeMenu(const std::string& name);
+    HWND createNativePanel(glm::vec2 position, glm::vec2 size, int id, glm::ivec3 bgColor);
+    HWND createNativeVSplitter(HWND hwnd, HWND main_3d_content_pane, int id);
+
+    // Set toolbar to 0 if we don't have one.
+    HWND createNativeTreeView(glm::ivec2 pos, glm::ivec2 size, int id);
+    HTREEITEM addTreeItem(HWND treeViewer, const std::string text, HTREEITEM parent = TVI_ROOT, HTREEITEM insertAfter = TVI_LAST);
+
+    HWND hwnd();
+
 protected:
 
     // Gets called right after the successful construction, must be implemented by concrete
     // application subclasses.
     virtual void onCreated() = 0;
 
+    // Assign the top level widget for this application.
     void setTopLevelWidget(const std::shared_ptr<Widget>& widget);
 
-
-
-protected:
+    // Allows subclasses to implement logic which needs to run every frame
     virtual void doFrame();
+
+    bool temp_ignore_messages_ = false;
+    HIMAGELIST main_toolbar_image_list_ = nullptr;
 
 private:
     void clearClosedFloatingWindows();
@@ -96,11 +131,12 @@ private:
 
 
 
-    static LRESULT CALLBACK AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+    static ::LRESULT CALLBACK AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
     int height_ = -1;
     int width_ = -1;
     int fullscreen = 0;
-    HWND _window;
+    HINSTANCE h_instance_;
+    HWND window_;
     HDC hdc;
     std::shared_ptr<Widget> topLevelWidget;
     std::vector<std::shared_ptr<FloatingWindow>> floating_windows_;
@@ -122,6 +158,20 @@ private:
     uint64_t message_count = 0;
     std::shared_ptr<TrueTypeFont> font_;
     std::shared_ptr<MenuBar> main_menu_bar_;
+    std::shared_ptr<Logger> logger_;
+    std::stringstream log_stream_;
+
+    static const int IDM_NEW=101;
+    static const int IDM_OPEN=102;
+    static const int IDM_SAVE=103;
+
+    // The main toolbar
+    // TODO wrap into reusable widget
+    HWND hWndToolbar;
+
+    // Native control wrappers
+    std::shared_ptr<win32::WinMenuBar> native_main_menu_bar_;
+
 };
 
 std::shared_ptr<Application> getApplication();

@@ -4,13 +4,17 @@
 
 #include "Application.h"
 
+
+#include <commctrl.h>
 #include <ranges>
+
+
 
 #include <engine/profiling/PerformanceTimer.h>
 #include <engine/graphics/MeshDrawData.h>
 #include <GL/glew.h>
 #include "RenderBackend.h"
-#include "Widget.h"
+#include <engine/graphics/Widget.h>
 #include <engine/game/Timing.h>
 #include <engine/input/Input.h>
 
@@ -21,22 +25,25 @@
 #include <engine/graphics/ui/FocusManager.h>
 #include <engine/graphics/ui/MessageDispatcher.h>
 
-
-#include <engine/graphics/stb_truetype.h>
-
 #include <filesystem>
+#include <engine/io/Logger.h>
+
+
 
 #include "TrueTypeFont.h"
 #include "ui/CentralSubMenuManager.h"
 #include "ui/FloatingWindow.h"
 #include "ui/MenuBar.h"
 
+#include <gdiplus.h>
+
+
 
 // This function must be provided by any Application implementor.
 extern std::shared_ptr<Application> getApplication();
 
 Application::Application(int w, int h, bool fullscreen) : width_(w), height_(h), fullscreen(fullscreen), scaled_width_(width_), scaled_height_(height_) {
-
+    logger_ = std::make_shared<Logger>(log_stream_);
 }
 
 Application::~Application() {
@@ -54,7 +61,7 @@ bool Application::changeResolution(int width, int height, int refreshRate, const
     width_ = width;
     height_ = height;
 
-    auto dpi = GetDpiForWindow(_window);
+    auto dpi = GetDpiForWindow(window_);
     auto dpiScaleFactor = static_cast<float>(dpi) / 96.0f;
     scaled_width_ = width / dpiScaleFactor;
     scaled_height_ = height / dpiScaleFactor;
@@ -76,9 +83,9 @@ bool Application::changeResolution(int width, int height, int refreshRate, const
         }
 
         // Remove window borders and make it topmost
-        SetWindowLong(_window, GWL_STYLE, WS_POPUP);
-        SetWindowPos(_window, HWND_TOP, 0, 0, width, height, SWP_FRAMECHANGED);
-        ShowWindow(_window, SW_MAXIMIZE);
+        SetWindowLong(window_, GWL_STYLE, WS_POPUP);
+        SetWindowPos(window_, HWND_TOP, 0, 0, width, height, SWP_FRAMECHANGED);
+        ShowWindow(window_, SW_MAXIMIZE);
 
         // Update our internal window size variables:
 
@@ -100,9 +107,17 @@ void Application::setMainMenuBar(const std::shared_ptr<MenuBar> &mainMenuBar) {
     getApplication()->getCentralSubMenuManager()->registerMenuBar(mainMenuBar);
 }
 
+HBITMAP Application::loadBitmapFromFile(const std::wstring& fileName) {
+    Gdiplus::Bitmap bitmap(fileName.c_str());
+    HBITMAP hBitmap;
+    bitmap.GetHBITMAP(Gdiplus::Color::Transparent, &hBitmap);
+    return hBitmap;
+
+}
 
 void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpstr, int nShowCmd) {
 
+    h_instance_ = hInstance;
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     auto performance_frequency = freq.QuadPart;
@@ -146,7 +161,7 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 
 
-    _window = CreateWindow(
+    window_ = CreateWindow(
 			 g_szClassName,
              "Application",
 			 //WS_POPUP,
@@ -156,14 +171,14 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
 
 
 
-    if (_window == NULL) {
+    if (window_ == NULL) {
         MessageBox(NULL, "Window Creation Failed", "Error", MB_ICONEXCLAMATION | MB_OK);
     }
 
-    ShowWindow(_window, SW_NORMAL);
-    UpdateWindow(_window);
-    hdc = GetDC(_window);
-    render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, _window, width_, height_);
+    ShowWindow(window_, SW_NORMAL);
+    UpdateWindow(window_);
+    hdc = GetDC(window_);
+    render_backend_ = std::make_unique<RenderBackend>(RenderBackendType::OpenGL, hdc, window_, width_, height_);
 
     // Load the resize cursor (horizontal resize cursor)
     resize_cursor_horizontal_ = LoadCursor(NULL, IDC_SIZEWE);
@@ -179,6 +194,10 @@ void Application::initialize(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
     addMessageSubscriber(simple_message_dispatcher_);
     addMessageSubscriber(focus_manager_);
     addMessageSubscriber(focus_based_message_dispatcher_);
+
+    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+    ULONG_PTR gdiplusToken;
+    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
 }
 
@@ -269,6 +288,79 @@ std::shared_ptr<Widget> Application::getMenuBar() {
     return main_menu_bar_;
 }
 
+void Application::createNativeToolbar() {
+    // Declare and initialize local constants.
+    const int ImageListID    = 0;
+    const int numButtons     = 3;
+    const int bitmapSize     = 16;
+
+    const DWORD buttonStyles = BTNS_AUTOSIZE;
+
+    // Create the toolbar.
+    hWndToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+                                      WS_CHILD | TBSTYLE_WRAPABLE, 0, 0, 0, 0,
+                                      window_, NULL, h_instance_, NULL);
+
+    if (hWndToolbar == NULL)
+        throw std::runtime_error("CreateWindowEx for toolbar failed");
+
+    // Create the image list.
+    main_toolbar_image_list_ = ImageList_Create(bitmapSize, bitmapSize,   // Dimensions of individual bitmaps.
+                                    ILC_COLOR32,
+                                    numButtons, 0);
+
+    // Set the image list.
+    SendMessage(hWndToolbar, TB_SETIMAGELIST,
+                (WPARAM)ImageListID,
+                (LPARAM)main_toolbar_image_list_);
+
+    // Load the button images.
+    SendMessage(hWndToolbar, TB_LOADIMAGES,
+                (WPARAM)IDB_STD_SMALL_COLOR,
+                (LPARAM)HINST_COMMCTRL);
+
+    // Initialize button info.
+    // IDM_NEW, IDM_OPEN, and IDM_SAVE are application-defined command constants.
+
+    TBBUTTON tbButtons[numButtons] =
+    {
+        { MAKELONG(STD_FILENEW,  ImageListID), IDM_NEW,  TBSTATE_ENABLED, buttonStyles, {0}, 0, (INT_PTR)L"New" },
+        { MAKELONG(STD_FILEOPEN, ImageListID), IDM_OPEN, TBSTATE_ENABLED, buttonStyles, {0}, 0, (INT_PTR)L"Open"},
+        { MAKELONG(STD_FILESAVE, ImageListID), IDM_SAVE, 0,               buttonStyles, {0}, 0, (INT_PTR)L"Save"}
+    };
+
+    // Add buttons.
+    SendMessage(hWndToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+    SendMessage(hWndToolbar, TB_ADDBUTTONS,       (WPARAM)numButtons,       (LPARAM)&tbButtons);
+
+    // Resize the toolbar, and then show it.
+    SendMessage(hWndToolbar, TB_AUTOSIZE, 0, 0);
+    ShowWindow(hWndToolbar,  TRUE);
+
+}
+
+void Application::addMainToolbarButton(const std::wstring &bitmapFileName) {
+    auto hbm = loadBitmapFromFile(bitmapFileName);
+
+
+    int imageIndex = ImageList_Add(main_toolbar_image_list_, hbm, NULL);
+    TBBUTTON tbButton = {};
+    tbButton.iBitmap = imageIndex; // this is the index in the image list.
+    tbButton.idCommand = 123; // Your command identifier.
+    tbButton.fsState   = TBSTATE_ENABLED;
+    tbButton.fsStyle   = BTNS_BUTTON;
+    tbButton.iString   = (INT_PTR)L"Custom";
+
+    // Add the button to the toolbar as usual.
+    SendMessage(hWndToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+    SendMessage(hWndToolbar, TB_ADDBUTTONS, (WPARAM)1, (LPARAM)&tbButton);
+}
+
+
+HWND Application::hwnd() {
+    return window_;
+}
+
 void Application::doFrame() {
     // noop
 }
@@ -320,7 +412,7 @@ std::vector<std::shared_ptr<FloatingWindow>> Application::getFloatingWindows() {
 glm::vec2 Application::getCurrentMousePos() {
     POINT pt;
     GetCursorPos(&pt);
-    ScreenToClient(_window, &pt);
+    ScreenToClient(window_, &pt);
     return glm::vec2(pt.x, scaled_height_ - pt.y);
 }
 
@@ -351,10 +443,16 @@ void Application::mainLoop() {
 
 	    clearClosedFloatingWindows();
 
-	    // Send raw frame messages to all subscribers:
-	    for (auto& msgSub : messageSubscribers) {
-	        msgSub->onFrameMessages(frame_messages_);
+	    // Send raw frame messages to all subscribers,
+	    // unless we are currently shutting off the messages.
+	    // This might be the case when we have a native modal dialog opened,
+	    // which interferes with our regular message pump flow.
+	    if (!temp_ignore_messages_) {
+	        for (auto& msgSub : messageSubscribers) {
+	            msgSub->onFrameMessages(frame_messages_);
+	        }
 	    }
+
 
 	    if (topLevelWidget) {
 	        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -409,7 +507,14 @@ LRESULT Application::AppWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
 
     switch (message) {
 
+        case WM_COMMAND: {
+            switch (LOWORD(wParam)) {
+                case IDM_NEW: std::cout << "new clicked!!" << std::endl; break;
+                default: break;
+            }
 
+            break;
+        }
 
         case WM_CLOSE:
         DestroyWindow(hWnd);

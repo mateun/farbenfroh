@@ -49,7 +49,7 @@ MessageHandleResult ButtonWidget::onMessage(const UIMessage &message) {
             }
             break;
         }
-        case MessageType::MouseDown: {
+        case MessageType::MouseUp: {
             if (message.num == last_processed_message_num_) {
                 return MessageHandleResult {false, "", true};
             }

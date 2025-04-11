@@ -53,6 +53,8 @@ public:
 
   void draw(float depth) override;
 
+  void setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) override;
+
 private:
   std::shared_ptr<TreeModel> tree_model_;
   std::shared_ptr<LabelWidget> label_widget_;

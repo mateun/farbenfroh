@@ -74,6 +74,12 @@ AreaWidget::AreaWidget(std::shared_ptr<Widget> top, std::shared_ptr<Widget> bott
                                                                                        right_((right)) {
 
     createPlaceholdersForNullParts();
+    children_.push_back(top_);
+    children_.push_back(bottom_);
+    children_.push_back(right_);
+    children_.push_back(center_);
+    children_.push_back(left_);
+
     if (size().x == 0 || size().y == 0) {
         setSize({getApplication()->width(), getApplication()->height()});
     }

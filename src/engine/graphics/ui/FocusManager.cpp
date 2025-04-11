@@ -103,6 +103,7 @@ std::shared_ptr<Widget> FocusManager::getFocusedWidget() {
 
              // Next pass the message on to the toplevel widget of the application:
              {
+                 if (!getApplication()->getTopLevelWidget()) continue;
                  auto visitor = HitVisitor();
                  visitor.visit(getApplication()->getTopLevelWidget(), mouse_x, mouse_y);
                  if (auto highestHitWidget = visitor.getHighestHitWidget()) {

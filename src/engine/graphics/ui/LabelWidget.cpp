@@ -55,6 +55,10 @@ TextDimensions LabelWidget::calculateSizeForText(const std::string &str) {
     return textRenderer_->calculateTextDimension(str);
 }
 
+void LabelWidget::setHoverFocus(std::shared_ptr<Widget> prevFocusHolder) {
+    Widget::setHoverFocus(prevFocusHolder);
+}
+
 glm::vec2 LabelWidget::getPreferredSize() {
     auto textSize = textRenderer_->calculateTextDimension(text_);
     return {textSize.dimensions.x, textSize.dimensions.y * 2};

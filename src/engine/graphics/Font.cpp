@@ -9,7 +9,7 @@
 #include "Renderer.h"
 
 FBFont::FBFont(const std::string &fileName) {
-    bitmap = std::make_unique<Bitmap>("../assets/font.bmp");
+    bitmap = std::make_unique<gru::Bitmap>("../assets/font.bmp");
 
     // TODO handle the size? What if this is not a good size?
     texture  = Texture::createEmptyTexture(512, 32);
@@ -147,7 +147,7 @@ void FBFont::drawText(const char* text, int posx, int posy) {
 
 }
 
-void FBFont::drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, Bitmap* bitmap, int offsetX, int offsetY) {
+void FBFont::drawBitmapTile(int posx, int posy, int tileSize, int tilex, int tiley, gru::Bitmap* bitmap, int offsetX, int offsetY) {
 	int srcIndex = 0;
 
 	for (int y = 0; y < tileSize; y++) {
@@ -187,7 +187,7 @@ void FBFont::setPixel(int x, int y, int r, int g, int b, int a) {
 	bb[pixel+3] = a* col.w;
 }
 
-void FBFont::drawBitmap(int posx, int posy, Bitmap* bitmap) {
+void FBFont::drawBitmap(int posx, int posy, gru::Bitmap* bitmap) {
 	int srcIndex = 0;
 	for (int y = 0; y < bitmap->width ; y++) {
 		for (int x = 0; x < bitmap->height; x++) {

@@ -37,7 +37,7 @@ class TrueTypeFont {
     std::vector<stbtt_bakedchar> bakedChars;
     int atlas_bitmap_width_ = 512;
     int atlas_bitmap_height_ = 512;
-    std::unique_ptr<Bitmap> atlas_bitmap_;
+    std::unique_ptr<gru::Bitmap> atlas_bitmap_;
     std::shared_ptr<Texture> atlas_texture_;
     float line_height_ = -1;
     float scaled_ascent_ = 0;
