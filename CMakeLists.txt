@@ -37,7 +37,7 @@ add_executable(command_repl WIN32
         ${GS_REPL_SRC}
 )
 
-target_link_libraries(command_repl dxgi.lib d3d11 d2d1 dwrite d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
+target_link_libraries(command_repl dxgi.lib d3d11 d2d1 dwrite d3dcompiler gdiplus opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
 message(STATUS "Detected repl source files: ${GS_REPL_SRC}")
 
 add_executable(game WIN32

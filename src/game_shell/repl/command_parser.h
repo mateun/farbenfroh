@@ -35,4 +35,7 @@ std::vector<Token> tokenize(const std::string& input);
 
 int parse(const std::vector<Token>& tokens);
 
+void processSpecialKey(UINT vkCode);
+void processKeystroke(char c);
+
 #endif //LEXER_H
