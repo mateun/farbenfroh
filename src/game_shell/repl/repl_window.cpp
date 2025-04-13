@@ -23,12 +23,17 @@ static int g_win_height = 600;
 static int g_win_width = 800;
 static int g_main_xPos = 0;
 static int g_main_yPos = 0;
-static std::string g_type_prop = "";
-static std::vector<std::string> gLines = { "Game Engine Shell, version 0.0.1" };
+static std::string g_type_prop = "";    // The current type-ahead proposition
+static std::vector<std::string> gLines = { "Game Engine Shell, version 0.0.1" };        // The raw lines which are printed on WM_PAINT (include the prompt sign etc.)
+static std::vector<std::string> gInputs = {};   // The raw inputs of the user - can be used for history
 static std::string gInput;
+static int historyIndex = 0;
 static bool g_cursor_visible = true;
 
+// Windows
 HWND g_mainHwnd;
+HWND g_helpHwnd;
+
 HINSTANCE g_hinstance;
 ULONG_PTR g_GdiPlusToken;
 
@@ -71,7 +76,6 @@ void updateActualInput(const std::string& newInput) {
         auto shortened = gInput.substr(0, lastSpacePos+1);
         gInput = shortened+ newInput;
     }
-
 
 }
 
@@ -180,13 +184,42 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
     {
 
         case WM_KEYUP:
-            processSpecialKey((UINT)w);
-            break;
+            {
+                UINT vkcode = (UINT) w;
+                if (VK_TAB == vkcode) {
+                    processSpecialKey(vkcode);
+                }
+                else if (VK_UP == vkcode) {
+                    historyIndex++;
+                    int actualIndex = gInputs.size() - historyIndex;
+                    if (actualIndex >= 0) {
+                        gInput = gInputs[actualIndex];
+                        InvalidateRect(hwnd, nullptr, FALSE);
+                    } else {
+                        historyIndex--;
+                    }
+                }
+                else if (VK_DOWN == vkcode) {
+                    historyIndex--;
+                    int actualIndex = gInputs.size() - historyIndex;
+                    if (actualIndex < gInputs.size()) {
+                        gInput = gInputs[actualIndex];
+                        InvalidateRect(hwnd, nullptr, FALSE);
+                    } else {
+                        historyIndex++;
+                    }
+
+
+                }
+                break;
+
+            }
 
         case WM_CHAR:
             if (w == VK_TAB) processSpecialKey((UINT)w);
             else if (w == VK_BACK) { if (!gInput.empty()) gInput.pop_back(); }
             else if (w == VK_RETURN) {
+
                 gLines.push_back("> " + gInput);
                 //gLines.push_back("Executed: " + gInput);
                 // Processing
@@ -201,7 +234,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
                     }
                     //tcp_client_send(g_clientSocket, gInput);
                 }
-
+                gInputs.push_back(gInput);
+                historyIndex = 0;
                 gInput.clear();
             }
             else {
@@ -221,6 +255,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
             EndPaint(hwnd, &ps);
             return 0;
         }
+        case WM_MOVE: {
+            RECT windowRect;
+            if(GetWindowRect(g_mainHwnd, &windowRect))
+            {
+                // The window's position is given by the left and top of the RECT.
+                int x = windowRect.left;
+                int y = windowRect.top;
+
+                // Calculate width and height.
+                int width = windowRect.right - windowRect.left;
+                int height = windowRect.bottom - windowRect.top;
+
+                SetWindowPos(g_helpHwnd, NULL, x + width + 10, y, 400, 200, 0);
+
+            }
+        }
+
         case WM_TIMER:
             g_cursor_visible = !g_cursor_visible;
             InvalidateRect(hwnd, nullptr, FALSE);
@@ -244,8 +295,23 @@ void openHelpWindow() {
     wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(155, 0, 0)));
     RegisterClass(&wc);
 
-    HWND hwnd = CreateWindowEx(0, "HelpWindowClass", "Help", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-        g_main_xPos + g_win_width + 20, g_main_yPos - 20, 400, 200, g_mainHwnd, nullptr, g_hinstance, nullptr);
+    RECT windowRect;
+    if(GetWindowRect(g_mainHwnd, &windowRect))
+    {
+        // The window's position is given by the left and top of the RECT.
+        int x = windowRect.left;
+        int y = windowRect.top;
+
+        // Calculate width and height.
+        int width = windowRect.right - windowRect.left;
+        int height = windowRect.bottom - windowRect.top;
+
+        g_helpHwnd = CreateWindowEx(0, "HelpWindowClass", "Help", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        x + width + 5 , y, 400, 200, g_mainHwnd, nullptr, g_hinstance, nullptr);
+
+    }
+
+
 }
 
 

@@ -178,6 +178,7 @@ void processSpecialKey(UINT vkCode) {
         if (!g_currentTypeAheadWord.empty()) {
             updateActualInput(g_currentTypeAheadWord + getTypeProp());
             g_currentTypeAheadWord.clear();
+            clearTypeProp();
         }
     }
 }
