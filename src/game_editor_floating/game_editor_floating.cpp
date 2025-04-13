@@ -123,89 +123,6 @@ void clearTypeProp() {
     g_type_prop.clear();
 }
 
-void Render(HDC hdc)
-{
-    RECT client;
-    GetClientRect(WindowFromDC(hdc), &client);
-
-    // Create a memory DC for double buffering
-    HDC memDC = CreateCompatibleDC(hdc);
-    SelectObject(memDC, gFont);
-    HBITMAP memBitmap = CreateCompatibleBitmap(hdc, client.right, client.bottom);
-    HBITMAP oldMemBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
-
-    // Blit the pre-rendered scanlines bitmap onto our off-screen buffer
-    if (g_hScanlineBitmap)
-    {
-        HDC overlayDC = CreateCompatibleDC(hdc);
-        HBITMAP oldOverlay = (HBITMAP)SelectObject(overlayDC, g_hScanlineBitmap);
-        // Use BitBlt to copy the overlay into the memory DC
-        BitBlt(memDC, 0, 0, client.right, client.bottom, overlayDC, 0, 0, SRCCOPY);
-        SelectObject(overlayDC, oldOverlay);
-        DeleteDC(overlayDC);
-    }
-
-    SetBkMode(memDC, TRANSPARENT);
-
-    int lineHeight = 20;
-    int y = 10;
-
-    int startLineIndex = 0;
-    // How many lines can we display?
-    int maxLinesToDisplay = (g_win_height / lineHeight) - 8;
-
-    if (gLines.size() > maxLinesToDisplay) {
-        startLineIndex =  (gLines.size() - maxLinesToDisplay);
-    }
-
-    for (int i = startLineIndex; i < gLines.size(); i++)
-    {
-        auto line = gLines[i];
-        if (line.starts_with("syntax")) {
-            SetTextColor(memDC, SYNTAX_ERROR_COLOR); // Amber
-        } else {
-            SetTextColor(memDC, PRIMARY_TEXT_COLOR); // Red
-        }
-
-        TextOut(memDC, 10, y, line.c_str(), (int)line.size());
-        y += lineHeight;
-    }
-
-    // Prompt rendering.
-    // This is a science in itself :)
-    // First we reset the color:
-    SetTextColor(memDC, PRIMARY_TEXT_COLOR);
-
-    int cursorX = 10;
-
-    // Next the base prompt- what the user actually typed:
-    std::string prompt = "> " + gInput;
-
-    // Print this and measure where we are in x:
-    SIZE textSize;
-    GetTextExtentPoint32(memDC, prompt.c_str(), (int)prompt.size(), &textSize);
-    TextOut(memDC, cursorX, y, prompt.c_str(), (int)prompt.size());
-
-    // Next render any type ahead - in a different color:
-    SetTextColor(memDC, RGB(120, 120, 125));
-    cursorX +=textSize.cx;
-    TextOut(memDC, cursorX, y, g_type_prop.c_str(), (int)g_type_prop.size());
-
-    // Finally cursor rendering - blinky:
-    if (g_cursor_visible ) {
-        SetTextColor(memDC, PRIMARY_TEXT_COLOR);
-        prompt = "_";
-        TextOut(memDC, cursorX, y, prompt.c_str(), (int)prompt.size());
-    }
-
-    // Finally, copy the off-screen buffer to the window's DC
-    BitBlt(hdc, 0, 0, client.right, client.bottom, memDC, 0, 0, SRCCOPY);
-
-    // Cleanup
-    SelectObject(memDC, oldMemBitmap);
-    DeleteObject(memBitmap);
-    DeleteDC(memDC);
-}
 
 LRESULT CALLBACK HelpWindowProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
     return DefWindowProc(hwnd, msg, w, l);
@@ -279,15 +196,7 @@ LRESULT CALLBACK ConsoleWndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
             InvalidateRect(hwnd, nullptr, FALSE);
             return 0;
 
-        case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hwnd, &ps);
-            SelectObject(hdc, gFont);
-            Render(hdc);
-            EndPaint(hwnd, &ps);
-            return 0;
-        }
+
         case WM_MOVE: {
             RECT windowRect;
             if(GetWindowRect(g_mainHwnd, &windowRect))
