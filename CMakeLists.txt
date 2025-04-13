@@ -30,6 +30,15 @@ file(GLOB_RECURSE LUA_SRC extlibs/lua547/src/*.c)
 file(GLOB_RECURSE ENGINE_SRC src/engine/*.cpp)
 file(GLOB_RECURSE GAME_RAW_SRC games/opengl/test_terrain/*.cpp)
 file(GLOB_RECURSE GAME_FX_SRC games/opengl/GameEditor/*.cpp)
+file(GLOB_RECURSE GS_REPL_SRC src/game_shell/repl/*.cpp)
+
+
+add_executable(command_repl WIN32
+        ${GS_REPL_SRC}
+)
+
+target_link_libraries(command_repl dxgi.lib d3d11 d2d1 dwrite d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
+message(STATUS "Detected repl source files: ${GS_REPL_SRC}")
 
 add_executable(game WIN32
         ${RECAST_SRC}
@@ -71,8 +80,12 @@ add_executable(collisiongrid_test
 )
 target_compile_definitions(collisiongrid_test PRIVATE COLLISION_GRID_TESTS=1)
 
+
+
+
+
 target_link_libraries(game dxgi.lib d3d11 d3dcompiler opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
 target_link_libraries(game_with_app_framework dxgi dxguid opengl32 gdiplus comctl32 gdi32 dsound assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
 target_link_libraries(animtest dsound dxgi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation)
 
-message(STATUS "Detected source files: ${ENGINE_SRC}")
+
