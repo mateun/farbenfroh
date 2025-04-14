@@ -20,11 +20,12 @@
 
 LRESULT CALLBACK GameObjectTreeProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l);
 extern void createNewGameDialog(HINSTANCE hInstance, HWND parentWindow);
+extern HWND createGameObjectTreeWindow(HWND hwnd, HINSTANCE hInstance);
+extern void createEmptyLevel(const std::string& name, const std::string& projectFolder, HWND parentWindow);
 void showConsoleWindow();
 
 static std::wstring gClassName = L"GameEditorFloating";
 static std::wstring gWindowTitle = L"GameEditor v0.0.1";
-
 
 #define PRIMARY_TEXT_COLOR RGB(255, 255, 85)
 #define SYNTAX_ERROR_COLOR RGB(255, 0, 0)
@@ -47,6 +48,7 @@ static bool g_cursor_visible = true;
 HWND g_mainHwnd;
 HWND g_helpHwnd;
 HWND g_consoleHwnd;
+HWND g_objectTreeHwnd;
 
 HINSTANCE g_hinstance;
 ULONG_PTR g_GdiPlusToken;
@@ -288,37 +290,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
     return DefWindowProc(hwnd, msg, w, l);
 }
 
-void openGameObjectTreeWindow() {
-    WNDCLASS wc = { 0 };
-    wc.lpfnWndProc = GameObjectTreeProc;
-    wc.hInstance = g_hinstance;
-    wc.lpszClassName = L"GameObjectTreeWindowClass";
-    wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(15, 15, 15)));
-    RegisterClass(&wc);
 
-    RECT windowRect;
-    if(GetWindowRect(g_mainHwnd, &windowRect))
-    {
-        // The window's position is given by the left and top of the RECT.
-        int x = windowRect.left;
-        int y = windowRect.top;
-
-        // Calculate width and height.
-        int width = windowRect.right - windowRect.left;
-        int height = windowRect.bottom - windowRect.top;
-
-        auto g_gameObjectTreeWindow = CreateWindowEx(0, L"GameObjectTreeWindowClass", L"GameObjectTree", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-        x - 300 , y, 400, 200, g_mainHwnd, nullptr, g_hinstance, nullptr);
-
-    }
-}
 
 /**
  * Called when the user created a new project.
  * @param data Mainly name of the project and folder location
  */
 void onNewGameCreated(const NewGameData& data) {
-    openGameObjectTreeWindow();
+    createEmptyLevel("Level1", data.projectLocation + "/Assets/Levels/main.json", g_mainHwnd);
+    // loadLevel(data.projectLocation + L"/Assets/Levels/main.json");
+    ShowWindow(g_objectTreeHwnd, SW_HIDE);
 }
 
 
@@ -404,6 +385,8 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     InitCommonControlsEx(&icex);
 
     createMainMenu(g_mainHwnd);
+    g_objectTreeHwnd = createGameObjectTreeWindow(g_mainHwnd, g_hinstance);
+    ShowWindow(g_objectTreeHwnd, SW_HIDE);
 
     MSG msg = {};
     while (GetMessage(&msg, nullptr, 0, 0))
