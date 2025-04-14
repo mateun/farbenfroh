@@ -39,12 +39,34 @@ add_executable(command_repl WIN32
 )
 target_link_libraries(command_repl dxgi.lib d3d11 d2d1 dwrite d3dcompiler gdiplus opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
 
+#message(STATUS "Detected repl source files: ${GS_REPL_SRC}")
+
+####################################################################
+# Game editor floating:
 add_executable(game_editor_floating WIN32
         ${GAME_EDITOR_FLOATING_SRC}
+        src/engine/io/io.cpp
 )
-target_link_libraries(game_editor_floating dxgi.lib d3d11 d2d1 dwrite d3dcompiler gdiplus opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
 
-message(STATUS "Detected repl source files: ${GS_REPL_SRC}")
+#set_source_files_properties(resource.rc PROPERTIES COMPILE_FLAGS "")
+
+set(CMAKE_MSVC_GENERATE_MANIFEST FALSE)
+SET ( CMAKE_SHARED_LINKER_FLAGS /MANIFEST:NO )
+
+target_link_libraries(game_editor_floating dxgi.lib d3d11 d2d1 comctl32 dwrite d3dcompiler gdiplus opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput uxtheme)
+add_custom_command(TARGET
+        game_editor_floating
+        POST_BUILD
+        COMMAND
+        "mt.exe" -manifest \"${CMAKE_CURRENT_SOURCE_DIR}\\app.manifest\" -outputresource:\"${CMAKE_CURRENT_BINARY_DIR}\\game_editor_floating.exe\"\;\#2
+        COMMENT
+        "Adding custom manifest containing commctrl6.0 dependency..."
+)
+####################################################################
+
+
+
+
 
 add_executable(game WIN32
         ${RECAST_SRC}

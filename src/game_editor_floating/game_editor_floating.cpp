@@ -8,16 +8,22 @@
 
 // #define UNICODE
 // #define _UNICODE
+
+#define UNICODE
 #include <Windows.h>
+#include <commctrl.h>
 #include <string>
 #include <vector>
 #include <gdiplus.h>
+#include "editor_data.h"
 
+
+LRESULT CALLBACK GameObjectTreeProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l);
 extern void createNewGameDialog(HINSTANCE hInstance, HWND parentWindow);
 void showConsoleWindow();
 
-static LPCSTR gClassName = "GameEditorFloating";
-static LPCSTR gWindowTitle = "GameEditor v0.0.1";
+static std::wstring gClassName = L"GameEditorFloating";
+static std::wstring gWindowTitle = L"GameEditor v0.0.1";
 
 
 #define PRIMARY_TEXT_COLOR RGB(255, 255, 85)
@@ -58,15 +64,15 @@ void createMainMenu(HWND hwnd) {
     auto mainMenu = CreateMenu();
     auto menuFile = CreatePopupMenu();
     auto menuFileNew = CreatePopupMenu();
-    AppendMenu(mainMenu, MF_POPUP, (UINT_PTR)menuFile, "&File");
-    AppendMenu(menuFile, MF_POPUP, (UINT_PTR) menuFileNew, "&New");
-    AppendMenu(menuFileNew, MF_STRING, ID_MENU_NEW_GAME, "&Game");
-    AppendMenu(menuFileNew, MF_STRING, ID_MENU_NEW_LEVEL, "&Level");
-    AppendMenu(menuFileNew, MF_STRING, ID_MENU_NEW_GAME_OBJECT, "&Game Object");
+    AppendMenu(mainMenu, MF_POPUP, (UINT_PTR)menuFile, L"&File");
+    AppendMenu(menuFile, MF_POPUP, (UINT_PTR) menuFileNew, L"&New");
+    AppendMenu(menuFileNew, MF_STRING, ID_MENU_NEW_GAME, L"&Game");
+    AppendMenu(menuFileNew, MF_STRING, ID_MENU_NEW_LEVEL, L"&Level");
+    AppendMenu(menuFileNew, MF_STRING, ID_MENU_NEW_GAME_OBJECT, L"&Game Object");
 
     auto windowMenu = CreatePopupMenu();
-    AppendMenu(mainMenu, MF_POPUP, (UINT_PTR)windowMenu, "&Window");
-    AppendMenu(windowMenu, MF_STRING, ID_MENU_WINDOW_CONSOLE, "Console");
+    AppendMenu(mainMenu, MF_POPUP, (UINT_PTR)windowMenu, L"&Window");
+    AppendMenu(windowMenu, MF_STRING, ID_MENU_WINDOW_CONSOLE, L"Console");
 
     SetMenu(hwnd, mainMenu);
 }
@@ -221,7 +227,6 @@ LRESULT CALLBACK ConsoleWndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 
         case WM_DESTROY:
             DeleteObject(gFont);
-            PostQuitMessage(0);
             return 0;
     }
     return DefWindowProc(hwnd, msg, w, l);
@@ -283,13 +288,46 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
     return DefWindowProc(hwnd, msg, w, l);
 }
 
+void openGameObjectTreeWindow() {
+    WNDCLASS wc = { 0 };
+    wc.lpfnWndProc = GameObjectTreeProc;
+    wc.hInstance = g_hinstance;
+    wc.lpszClassName = L"GameObjectTreeWindowClass";
+    wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(15, 15, 15)));
+    RegisterClass(&wc);
+
+    RECT windowRect;
+    if(GetWindowRect(g_mainHwnd, &windowRect))
+    {
+        // The window's position is given by the left and top of the RECT.
+        int x = windowRect.left;
+        int y = windowRect.top;
+
+        // Calculate width and height.
+        int width = windowRect.right - windowRect.left;
+        int height = windowRect.bottom - windowRect.top;
+
+        auto g_gameObjectTreeWindow = CreateWindowEx(0, L"GameObjectTreeWindowClass", L"GameObjectTree", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        x - 300 , y, 400, 200, g_mainHwnd, nullptr, g_hinstance, nullptr);
+
+    }
+}
+
+/**
+ * Called when the user created a new project.
+ * @param data Mainly name of the project and folder location
+ */
+void onNewGameCreated(const NewGameData& data) {
+    openGameObjectTreeWindow();
+}
+
 
 void openHelpWindow() {
 
     WNDCLASS wc = { 0 };
     wc.lpfnWndProc = HelpWindowProc;
     wc.hInstance = g_hinstance;
-    wc.lpszClassName = "HelpWindowClass";
+    wc.lpszClassName = L"HelpWindowClass";
     wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(155, 0, 0)));
     RegisterClass(&wc);
 
@@ -304,7 +342,7 @@ void openHelpWindow() {
         int width = windowRect.right - windowRect.left;
         int height = windowRect.bottom - windowRect.top;
 
-        g_helpHwnd = CreateWindowEx(0, "HelpWindowClass", "Help", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        g_helpHwnd = CreateWindowEx(0, L"HelpWindowClass", L"Help", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         x + width + 5 , y, 400, 200, g_mainHwnd, nullptr, g_hinstance, nullptr);
 
     }
@@ -316,7 +354,7 @@ void showConsoleWindow() {
     WNDCLASS wc = { 0 };
     wc.lpfnWndProc = ConsoleWndProc;
     wc.hInstance = g_hinstance;
-    wc.lpszClassName = "ConsoleWindowClass";
+    wc.lpszClassName = L"ConsoleWindowClass";
     wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(2, 0, 0)));
     RegisterClass(&wc);
 
@@ -325,7 +363,7 @@ void showConsoleWindow() {
     g_main_xPos = (screenWidth - g_win_width) / 2;
     g_main_yPos = (screenHeight - g_win_height - 100) ;
 
-    g_mainHwnd = CreateWindowEx(0, "ConsoleWindowClass", "GameShell Console", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+    g_mainHwnd = CreateWindowEx(0, L"ConsoleWindowClass", L"GameShell Console", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         g_main_xPos + g_win_width + 5, g_main_yPos, g_win_width, g_win_height, g_mainHwnd, nullptr, g_hinstance, nullptr);
 
     CreateScanlineOverlay(g_win_width, g_win_height);
@@ -346,7 +384,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     WNDCLASS wc = { 0 };
     wc.lpfnWndProc = WndProc;
     wc.hInstance = h;
-    wc.lpszClassName = gClassName;
+    wc.lpszClassName = gClassName.c_str();
     wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(2, 0, 0)));
     RegisterClass(&wc);
 
@@ -355,13 +393,15 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     g_main_xPos = (screenWidth - g_win_width) / 2;
     g_main_yPos = (screenHeight - g_win_height - 100) ;
 
-    g_mainHwnd = CreateWindowEx(0, gClassName, gWindowTitle, WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+    g_mainHwnd = CreateWindowEx(0, gClassName.c_str(), gWindowTitle.c_str(), WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         g_main_xPos, g_main_yPos, g_win_width, g_win_height, nullptr, nullptr, h, nullptr);
 
     gFont = CreateFontW(-16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
         FIXED_PITCH | FF_MODERN, L"Courier");
 
+    INITCOMMONCONTROLSEX icex = { sizeof(icex), ICC_STANDARD_CLASSES };
+    InitCommonControlsEx(&icex);
 
     createMainMenu(g_mainHwnd);
 

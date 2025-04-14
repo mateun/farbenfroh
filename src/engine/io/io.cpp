@@ -14,6 +14,26 @@ static  SOCKET serverSocket = INVALID_SOCKET;
 static  std::mutex queueMutex;
 static std::queue<std::string> packetQueue;
 
+std::string WStringToUtf8(const std::wstring& wstr)
+{
+    if (wstr.empty())
+        return {};
+
+    int size_needed = WideCharToMultiByte(
+        CP_UTF8, 0,
+        wstr.data(), (int)wstr.size(),
+        nullptr, 0, nullptr, nullptr);
+
+    std::string result(size_needed, 0);
+
+    WideCharToMultiByte(
+        CP_UTF8, 0,
+        wstr.data(), (int)wstr.size(),
+        result.data(), size_needed, nullptr, nullptr);
+
+    return result;
+}
+
 std::string readFile(const std::string &fileName) {
     std::string result = "";
 

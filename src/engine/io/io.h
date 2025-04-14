@@ -17,4 +17,7 @@ std::string getLatestSocketMessage();
 float bytesToFloat(const std::vector<uint8_t>& bytes);
 uint16_t bytesToUint16(const std::vector<uint8_t>& bytes);
 
+// Windows native wstring to string converter
+std::string WStringToUtf8(const std::wstring& wstr);
+
 #endif //IO_H
