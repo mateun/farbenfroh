@@ -17,6 +17,7 @@
 #include <gdiplus.h>
 #include "editor_data.h"
 #include "paint_2d.h"
+#include "fonts.h"
 
 
 #define PRIMARY_TEXT_COLOR RGB(255, 255, 85)
@@ -32,6 +33,9 @@ static LRESULT CALLBACK GameObjectTreeProc(HWND hwnd, UINT msg, WPARAM w, LPARAM
 static void showConsoleWindow();
 static std::wstring gClassName = L"GameEditorFloating";
 static std::wstring gWindowTitle = L"GameEditor v0.0.1";
+
+static IDWriteTextFormat* orbitron_bold;
+static IDWriteTextFormat* orbitron_small;
 
 
 HFONT gFont;
@@ -263,7 +267,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 
         case WM_PAINT:
         {
-            paint2d_draw_filled_rect({0, 0}, {800, 36}, {0xC0, 0xFE, 0x02, 0xFF});
+            paint2d_draw_filled_rect({0, 36}, {800, 36}, {0xC0, 0xFE, 0x02, 0xFF});
+            paint2d_draw_text(L"_BORST EDITOR", {8, 8}, {500, 60}, {220, 220, 220, 255}, orbitron_bold);
+
+            // pseudo menu testing for noew
+            paint2d_draw_text(L"File", {8, 40}, {80, 48}, {0x0a, 0x0a, 0x0a, 255}, orbitron_small);
             return 0;
         }
         case WM_MOVE: {
@@ -412,6 +420,8 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     g_splashIntroWindow = createSplahIntroWindow(g_mainHwnd, g_hinstance);
 
     paint2d_init(g_mainHwnd);
+    createDWriteFont(L"../assets/Orbitron-VariableFont_wght.ttf", &orbitron_bold, 18.0f);
+    createDWriteFont(L"consolas", &orbitron_small, 14.0f);
 
     MSG msg = {};
     while (GetMessage(&msg, nullptr, 0, 0))

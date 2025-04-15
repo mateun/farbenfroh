@@ -1,6 +1,7 @@
 //
 // Created by mgrus on 15.04.2025.
 //
+#include <cmath>
 #include <d2d1.h>
 #include <d2d1helper.h>
 #include <glm/vec2.hpp>
@@ -34,6 +35,9 @@ void paint2d_init(HWND hwnd) {
         D2D1::HwndRenderTargetProperties(hwnd, size),
         &d2d_render_target);
 
+    d2d_render_target->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+    //d2d_render_target->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
+
     hr = d2d_render_target->CreateSolidColorBrush(
                D2D1::ColorF(0xC7FF00),
                &shared_brush
@@ -59,11 +63,14 @@ void paint2d_draw_filled_rect(glm::vec2 position, glm::vec2 size, glm::vec4 colo
 void paint2d_draw_text(const std::wstring& text, glm::vec2 position, glm::vec2 size, glm::vec4 color, IDWriteTextFormat* text_format) {
     shared_brush->SetColor({color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f});
     d2d_render_target->BeginDraw();
+    float pxX = std::floor(position.x + 0.5f);
+    float pxY = std::floor(position.y + 0.5f);
     d2d_render_target->DrawText(
            text.c_str(),
-           text.size() - 1,
+           text.size(),
            text_format,
-           D2D1::RectF(position.x, position.y, size.x, size.y),
+           D2D1::RectF(pxX, pxY, position.x + size.x, position.y + size.y),
            shared_brush
            );
+    d2d_render_target->EndDraw();
 }
