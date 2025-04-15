@@ -103,7 +103,7 @@ HWND createGameObjectTreeWindow(HWND parentWindow, HINSTANCE hInstance) {
         int width = windowRect.right - windowRect.left;
         int height = windowRect.bottom - windowRect.top;
 
-        auto win = CreateWindowEx(0, L"GameObjectTreeWindowClass", L"GameObjectTree", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        auto win = CreateWindowEx(0, L"GameObjectTreeWindowClass", L"GameObjectTree", WS_OVERLAPPED | WS_VISIBLE,
         x - 408 , y, 400, height, parentWindow, nullptr, hInstance, nullptr);
         return win;
 

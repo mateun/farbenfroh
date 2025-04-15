@@ -16,23 +16,27 @@
 #include <vector>
 #include <gdiplus.h>
 #include "editor_data.h"
+#include "paint_2d.h"
 
-
-LRESULT CALLBACK GameObjectTreeProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l);
-extern void createNewGameDialog(HINSTANCE hInstance, HWND parentWindow);
-extern HWND createGameObjectTreeWindow(HWND hwnd, HINSTANCE hInstance);
-extern void createEmptyLevel(const std::string& name, const std::string& projectFolder, HWND parentWindow);
-void showConsoleWindow();
-
-static std::wstring gClassName = L"GameEditorFloating";
-static std::wstring gWindowTitle = L"GameEditor v0.0.1";
 
 #define PRIMARY_TEXT_COLOR RGB(255, 255, 85)
 #define SYNTAX_ERROR_COLOR RGB(255, 0, 0)
 #define PRIMARY_BG_COLOR RGB(0, 0, 170)
 
+extern HWND createSplahIntroWindow(HWND parentWindow, HINSTANCE hInstance);
+extern HWND createGameObjectTreeWindow(HWND hwnd, HINSTANCE hInstance);
+extern void createNewGameDialog(HINSTANCE hInstance, HWND parentWindow);
+extern void createEmptyLevel(const std::string& name, const std::string& projectFolder, HWND parentWindow);
+
+static LRESULT CALLBACK GameObjectTreeProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l);
+static void showConsoleWindow();
+static std::wstring gClassName = L"GameEditorFloating";
+static std::wstring gWindowTitle = L"GameEditor v0.0.1";
+
+
 HFONT gFont;
 static SOCKET g_clientSocket = INVALID_SOCKET;
+static HBITMAP g_hScanlineBitmap = nullptr;
 static int g_win_height = 600;
 static int g_win_width = 800;
 static int g_main_xPos = 0;
@@ -48,20 +52,22 @@ static bool g_cursor_visible = true;
 HWND g_mainHwnd;
 HWND g_helpHwnd;
 HWND g_consoleHwnd;
-HWND g_objectTreeHwnd;
+static HWND g_objectTreeHwnd;
+static HWND g_splashIntroWindow;
 
 HINSTANCE g_hinstance;
 ULONG_PTR g_GdiPlusToken;
 
-HBITMAP g_hScanlineBitmap = NULL;
-
 // Command IDS
-
 static const uint32_t ID_MENU_NEW_GAME = 100;
 static const uint32_t ID_MENU_NEW_GAME_OBJECT = 101;
 static const uint32_t ID_MENU_NEW_LEVEL = 102;
 static const uint32_t ID_MENU_WINDOW_CONSOLE = 103;
 
+/**
+ * Creates the editors (application) main toplevel menu.
+ * @param hwnd The main window handle
+ */
 void createMainMenu(HWND hwnd) {
     auto mainMenu = CreateMenu();
     auto menuFile = CreatePopupMenu();
@@ -79,6 +85,11 @@ void createMainMenu(HWND hwnd) {
     SetMenu(hwnd, mainMenu);
 }
 
+/**
+ * Creates a Bitmap witch scanlines (semitransparent) lines useable as a background image.
+ * @param width
+ * @param height
+ */
 void CreateScanlineOverlay(int width, int height)
 {
     HDC hdcScreen = GetDC(NULL);
@@ -108,7 +119,7 @@ void CreateScanlineOverlay(int width, int height)
     ReleaseDC(NULL, hdcScreen);
 }
 
-void updateActualInput(const std::string& newInput) {
+static void updateActualInput(const std::string& newInput) {
     size_t lastSpacePos = gInput.find_last_of(' ');
     if (lastSpacePos == std::string::npos) {
         gInput = newInput;
@@ -252,11 +263,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 
         case WM_PAINT:
         {
-            PAINTSTRUCT ps;
-            // HDC hdc = BeginPaint(hwnd, &ps);
-            // SelectObject(hdc, gFont);
-            //
-            EndPaint(hwnd, &ps);
+            paint2d_draw_filled_rect({0, 0}, {800, 36}, {0xC0, 0xFE, 0x02, 0xFF});
             return 0;
         }
         case WM_MOVE: {
@@ -351,7 +358,20 @@ void showConsoleWindow() {
     SetTimer(g_mainHwnd, 1, 500, NULL); // 500ms blink
 }
 
+/*
+    Palette
+    Purpose | Hex Color | Notes
+    Background | #0A0A0A | Almost black
+    Panel/Surface | #1A1A1A | Very dark gray
+    UI Lines | #3A3A3A | Mid-gray separation lines
+    Accent Red | #E03C31 |  style blood orange
+    Toxic Green | #3BEA55 | Status lights, highlights
+    Warning Yellow | #EFBF1A | Optional caution color
+    Soft White Text | #EAEAEA | Comfortable on dark bg
+    Hard White Text | #FFFFFF | For small UI elements
 
+
+ */
 
 int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
 {
@@ -366,7 +386,8 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     wc.lpfnWndProc = WndProc;
     wc.hInstance = h;
     wc.lpszClassName = gClassName.c_str();
-    wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(2, 0, 0)));
+    //0A0A0A
+    wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(0x0A, 0x0A, 0x0A)));
     RegisterClass(&wc);
 
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -374,7 +395,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     g_main_xPos = (screenWidth - g_win_width) / 2;
     g_main_yPos = (screenHeight - g_win_height - 100) ;
 
-    g_mainHwnd = CreateWindowEx(0, gClassName.c_str(), gWindowTitle.c_str(), WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+    g_mainHwnd = CreateWindowEx(0, gClassName.c_str(), gWindowTitle.c_str(), WS_POPUP | WS_VISIBLE,
         g_main_xPos, g_main_yPos, g_win_width, g_win_height, nullptr, nullptr, h, nullptr);
 
     gFont = CreateFontW(-16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
@@ -384,9 +405,13 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     INITCOMMONCONTROLSEX icex = { sizeof(icex), ICC_STANDARD_CLASSES };
     InitCommonControlsEx(&icex);
 
-    createMainMenu(g_mainHwnd);
+    //createMainMenu(g_mainHwnd);
     g_objectTreeHwnd = createGameObjectTreeWindow(g_mainHwnd, g_hinstance);
     ShowWindow(g_objectTreeHwnd, SW_HIDE);
+
+    g_splashIntroWindow = createSplahIntroWindow(g_mainHwnd, g_hinstance);
+
+    paint2d_init(g_mainHwnd);
 
     MSG msg = {};
     while (GetMessage(&msg, nullptr, 0, 0))
