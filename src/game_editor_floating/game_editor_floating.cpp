@@ -10,14 +10,20 @@
 // #define _UNICODE
 
 #define UNICODE
+#include <algorithm>
 #include <Windows.h>
 #include <commctrl.h>
 #include <string>
 #include <vector>
 #include <gdiplus.h>
+#include <windowsx.h>
+#include <engine/graphics/Widget.h>
+
 #include "editor_data.h"
 #include "paint_2d.h"
 #include "fonts.h"
+#include "d2d_ui.h"
+#include <game_editor_floating/standard_widgets/standard_widgets.h>
 
 
 #define PRIMARY_TEXT_COLOR RGB(255, 255, 85)
@@ -30,7 +36,6 @@ extern void createNewGameDialog(HINSTANCE hInstance, HWND parentWindow);
 extern void createEmptyLevel(const std::string& name, const std::string& projectFolder, HWND parentWindow);
 
 static LRESULT CALLBACK GameObjectTreeProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l);
-static void showConsoleWindow();
 static std::wstring gClassName = L"GameEditorFloating";
 static std::wstring gWindowTitle = L"GameEditor v0.0.1";
 
@@ -50,6 +55,8 @@ static std::vector<std::string> gLines = { "Game Engine Shell, version 0.0.1" };
 static std::vector<std::string> gInputs = {};   // The raw inputs of the user - can be used for history
 static std::string gInput;
 static int historyIndex = 0;
+static bool resizing_ = false;
+static int header_height_ = 40;
 static bool g_cursor_visible = true;
 
 // Editor Windows
@@ -59,8 +66,13 @@ HWND g_consoleHwnd;
 static HWND g_objectTreeHwnd;
 static HWND g_splashIntroWindow;
 
-HINSTANCE g_hinstance;
-ULONG_PTR g_GdiPlusToken;
+static HINSTANCE g_hinstance;
+static ULONG_PTR g_GdiPlusToken;
+
+// UI framework stuff:
+d2d_Widget* hoveredWidget = nullptr;
+d2d_Widget* lastHoveredWidget = nullptr;
+static std::vector<d2d_Widget*> widgets_;
 
 // Command IDS
 static const uint32_t ID_MENU_NEW_GAME = 100;
@@ -87,40 +99,6 @@ void createMainMenu(HWND hwnd) {
     AppendMenu(windowMenu, MF_STRING, ID_MENU_WINDOW_CONSOLE, L"Console");
 
     SetMenu(hwnd, mainMenu);
-}
-
-/**
- * Creates a Bitmap witch scanlines (semitransparent) lines useable as a background image.
- * @param width
- * @param height
- */
-void CreateScanlineOverlay(int width, int height)
-{
-    HDC hdcScreen = GetDC(NULL);
-    HDC memDC = CreateCompatibleDC(hdcScreen);
-
-    // Create a bitmap to hold the scanline overlay
-    g_hScanlineBitmap = CreateCompatibleBitmap(hdcScreen, width, height);
-    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, g_hScanlineBitmap);
-
-    // Fill with a transparent background (if needed) or just leave as is
-    Gdiplus::Graphics graphics(memDC);
-    Gdiplus::Rect rect(0, 0, width, height);
-    // Optionally clear with transparent color (depends on your composition)
-    Gdiplus::SolidBrush transparentBrush(Gdiplus::Color(255, 0, 0, 145));
-    graphics.FillRectangle(&transparentBrush, rect);
-
-    // Draw scanlines once into the bitmap
-    Gdiplus::SolidBrush scanlineBrush(Gdiplus::Color(128, 0, 0, 0)); // Semi-transparent black
-    for (int y = 0; y < height; y += 2)
-    {
-        graphics.FillRectangle(&scanlineBrush, 0, y, width, 1);
-    }
-
-    // Cleanup
-    SelectObject(memDC, oldBitmap);
-    DeleteDC(memDC);
-    ReleaseDC(NULL, hdcScreen);
 }
 
 static void updateActualInput(const std::string& newInput) {
@@ -152,104 +130,6 @@ LRESULT CALLBACK HelpWindowProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 }
 
 
-LRESULT CALLBACK ConsoleWndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
-    switch (msg)
-    {
-
-        case WM_KEYUP:
-            {
-                UINT vkcode = (UINT) w;
-                if (VK_TAB == vkcode) {
-                    //processSpecialKey(vkcode);
-                }
-                else if (VK_UP == vkcode) {
-                    historyIndex++;
-                    int actualIndex = gInputs.size() - historyIndex;
-                    if (actualIndex >= 0) {
-                        gInput = gInputs[actualIndex];
-                        InvalidateRect(hwnd, nullptr, FALSE);
-                    } else {
-                        historyIndex--;
-                    }
-                }
-                else if (VK_DOWN == vkcode) {
-                    historyIndex--;
-                    int actualIndex = gInputs.size() - historyIndex;
-                    if (actualIndex < gInputs.size()) {
-                        gInput = gInputs[actualIndex];
-                        InvalidateRect(hwnd, nullptr, FALSE);
-                    } else {
-                        historyIndex++;
-                    }
-
-
-                }
-                break;
-
-            }
-
-        case WM_CHAR:
-            // if (w == VK_TAB) processSpecialKey((UINT)w);
-            // else if (w == VK_BACK) { if (!gInput.empty()) gInput.pop_back(); }
-            // else if (w == VK_RETURN) {
-            //
-            //     gLines.push_back("> " + gInput);
-            //     //gLines.push_back("Executed: " + gInput);
-            //     // Processing
-            //     {
-            //         // Validate and tokenize the input:
-            //         auto tokens = tokenize(gInput);
-            //         auto parseResultError = parse(tokens);
-            //         if (parseResultError) {
-            //             gLines.push_back("syntax error!");
-            //         } else {
-            //             gLines.push_back("cmd ok!");
-            //         }
-            //         //tcp_client_send(g_clientSocket, gInput);
-            //     }
-            //     gInputs.push_back(gInput);
-            //     historyIndex = 0;
-            //     gInput.clear();
-            // }
-            // else {
-            //     gInput.push_back(w);
-            //     processKeystroke(w);
-            // }
-
-            InvalidateRect(hwnd, nullptr, FALSE);
-            return 0;
-
-
-        case WM_MOVE: {
-            RECT windowRect;
-            if(GetWindowRect(g_mainHwnd, &windowRect))
-            {
-                // The window's position is given by the left and top of the RECT.
-                int x = windowRect.left;
-                int y = windowRect.top;
-
-                // Calculate width and height.
-                int width = windowRect.right - windowRect.left;
-                int height = windowRect.bottom - windowRect.top;
-
-                SetWindowPos(g_helpHwnd, NULL, x + width + 10, y, 400, 200, 0);
-
-            }
-        }
-
-        case WM_TIMER:
-            g_cursor_visible = !g_cursor_visible;
-            InvalidateRect(hwnd, nullptr, FALSE);
-            return 0;
-
-        case WM_DESTROY:
-            DeleteObject(gFont);
-            return 0;
-    }
-    return DefWindowProc(hwnd, msg, w, l);
-}
-
-
 
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
@@ -257,50 +137,148 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
     {
 
         case WM_COMMAND: {
-
             switch (w) {
-                case ID_MENU_WINDOW_CONSOLE: showConsoleWindow();break;
+                // case ID_MENU_WINDOW_CONSOLE: showConsoleWindow();break;
                 case ID_MENU_NEW_GAME: createNewGameDialog(g_hinstance, g_mainHwnd);break;
-            }
-        }
-
-
-        case WM_PAINT:
-        {
-            paint2d_draw_filled_rect({0, 36}, {800, 36}, {0xC0, 0xFE, 0x02, 0xFF});
-            paint2d_draw_text(L"_BORST EDITOR", {8, 8}, {500, 60}, {220, 220, 220, 255}, orbitron_bold);
-
-            // pseudo menu testing for noew
-            paint2d_draw_text(L"File", {8, 40}, {80, 48}, {0x0a, 0x0a, 0x0a, 255}, orbitron_small);
-            return 0;
-        }
-        case WM_MOVE: {
-            RECT windowRect;
-            if(GetWindowRect(g_mainHwnd, &windowRect))
-            {
-                // The window's position is given by the left and top of the RECT.
-                int x = windowRect.left;
-                int y = windowRect.top;
-
-                // Calculate width and height.
-                int width = windowRect.right - windowRect.left;
-                int height = windowRect.bottom - windowRect.top;
-
-                SetWindowPos(g_helpHwnd, NULL, x + width + 10, y, 400, 200, 0);
-
             }
             break;
         }
 
-        // case WM_TIMER:
-        //     g_cursor_visible = !g_cursor_visible;
-        //     InvalidateRect(hwnd, nullptr, FALSE);
-        //     return 0;
+        case WM_PAINT:
+        {
+            // Begin/EndPaint are important, otherwise flickering!
+            // If we catch WM_PAINT, it must be wrapped inside this bracket!
+            PAINTSTRUCT ps;
+            BeginPaint(hwnd, &ps);
+            paint2d_begin_draw();
+            paint2d_clear({0x0a, 0x0a, 0x0a, 0xff});
 
-        case WM_DESTROY:
+            // Use our widget "framework"
+            std::ranges::sort(widgets_, [](d2d_Widget* w1, d2d_Widget* w2) {
+                return w1->z < w2->z;
+            });
+            for (auto& w : widgets_) {
+                w->draw();
+            }
+
+            // Window Header
+            paint2d_draw_text(L"_BORST EDITOR", {8, 8}, {500, header_height_}, {220, 220, 220, 255}, orbitron_bold);
+
+            // Menu bar in toxic green
+            // TODO replace with widgets from framework
+            // paint2d_draw_filled_rect({0, 36}, {g_win_width, 36}, {0xC0, 0xFE, 0x02, 0xFF});
+            // paint2d_draw_text(L"File", {8, 40}, {80, 48}, {0x0a, 0x0a, 0x0a, 255}, orbitron_small);
+            // paint2d_draw_text(L"About", {100, 40}, {80, 48}, {0x0a, 0x0a, 0x0a, 255}, orbitron_small);
+
+            paint2d_end_draw();
+            EndPaint(hwnd, &ps);
+
+            return 0;
+        }
+
+        // We only allow resizing on bottom left corner:
+        case WM_NCHITTEST:
+            {
+            POINT pt = { GET_X_LPARAM(l), GET_Y_LPARAM(l) };
+            ScreenToClient(hwnd, &pt);
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+
+            const int border = 16;
+
+            if (pt.y >= rc.bottom - border && pt.x >= rc.right - border) {
+                resizing_ = true;
+                return HTBOTTOMRIGHT;
+            }
+
+            resizing_ = false;
+            return HTCLIENT;
+        }
+
+        case WM_MOUSEMOVE: {
+            lastHoveredWidget = hoveredWidget;
+            hoveredWidget = nullptr;
+
+            POINT pt = { GET_X_LPARAM(l), GET_Y_LPARAM(l) };
+
+            auto reverse_sorted = widgets_;
+            std::ranges::sort(reverse_sorted, [](d2d_Widget* w1, d2d_Widget* w2) {
+                return w1->z > w2->z;
+            });
+            for (auto it = widgets_.rbegin(); it != widgets_.rend(); ++it)
+            {
+                if ((*it)->hitTest(pt)) {
+                    printf("hoverwidget found!\n");
+                    hoveredWidget = *it;
+                    break;
+                }
+            }
+
+            if (!hoveredWidget) {
+                printf("no hover widget found!\n");
+            }
+
+            if (hoveredWidget != lastHoveredWidget) {
+                static int counter = 0;
+                counter++;
+                if (lastHoveredWidget) {
+                    printf("set hover false (%d)!\n", counter);
+                    lastHoveredWidget->isHovered_ = false;
+                }
+                if (hoveredWidget) {
+                    printf("set hover true (%d)!\n", counter);
+                    hoveredWidget->isHovered_ = true;
+                }
+                InvalidateRect(hwnd, nullptr, FALSE);
+            } else {
+                printf("no change in widget hovering!\n");
+            }
+
+            break;
+        }
+        case WM_ERASEBKGND:
+            return 1;  // Don't clear → we fully redraw in WM_PAINT
+
+
+        case WM_SIZE: {
+            g_win_width = LOWORD(l);
+            g_win_height = HIWORD(l);
+            paint2d_resize(g_win_width, g_win_height);
+        }
+
+        case WM_LBUTTONDOWN:
+        {
+            POINT pt = { GET_X_LPARAM(l), GET_Y_LPARAM(l) };
+
+
+            if (pt.y < header_height_) { // or a real hit test
+                ReleaseCapture();
+                SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+            }
+
+            if (hoveredWidget) {
+                hoveredWidget->onClick();
+                return 0;
+            }
+
+
+            break;
+        }
+
+        case WM_SETCURSOR: {
+            if (resizing_) {
+                SetCursor(LoadCursor(nullptr, IDC_SIZENWSE));
+            } else {
+                SetCursor(LoadCursor(nullptr, IDC_ARROW));
+            }
+
+            return TRUE;
+        }
+        case WM_DESTROY: {
             DeleteObject(gFont);
             PostQuitMessage(0);
             return 0;
+        }
     }
     return DefWindowProc(hwnd, msg, w, l);
 }
@@ -317,38 +295,32 @@ void onNewGameCreated(const NewGameData& data) {
     ShowWindow(g_objectTreeHwnd, SW_HIDE);
 }
 
-
-void openHelpWindow() {
-
-    WNDCLASS wc = { 0 };
-    wc.lpfnWndProc = HelpWindowProc;
-    wc.hInstance = g_hinstance;
-    wc.lpszClassName = L"HelpWindowClass";
-    wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(155, 0, 0)));
-    RegisterClass(&wc);
-
-    RECT windowRect;
-    if(GetWindowRect(g_mainHwnd, &windowRect))
-    {
-        // The window's position is given by the left and top of the RECT.
-        int x = windowRect.left;
-        int y = windowRect.top;
-
-        // Calculate width and height.
-        int width = windowRect.right - windowRect.left;
-        int height = windowRect.bottom - windowRect.top;
-
-        g_helpHwnd = CreateWindowEx(0, L"HelpWindowClass", L"Help", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-        x + width + 5 , y, 400, 200, g_mainHwnd, nullptr, g_hinstance, nullptr);
-
+struct d2d_HeaderWidget : d2d_Widget {
+    void draw() override {
+        if (isHovered_) {
+            paint2d_draw_filled_rect({0, 0}, {g_win_width, 48}, {0x1a, 0x1a, 0x1a, 255});
+        }
     }
+};
 
-
+d2d_Widget* createHeaderBg() {
+    auto w = new d2d_HeaderWidget();
+    w->bounds = { 0, 0, (float)g_win_width, (float) header_height_ };
+    w->z = -1;  // below...
+    return w;
 }
 
+d2d_Widget* createCloseButtonWidget() {
+    auto cbWidget = new d2d_CloseButtonWidget();
+    cbWidget->bounds = { g_win_width - 36.0f, 8, (float)g_win_width-8.0f, (float) header_height_ };
+    cbWidget->z = 100;  // really on top
+    return cbWidget;
+}
+
+#ifdef console__
 void showConsoleWindow() {
     WNDCLASS wc = { 0 };
-    wc.lpfnWndProc = ConsoleWndProc;
+    wc.lpfnWndProc = WndProc;
     wc.hInstance = g_hinstance;
     wc.lpszClassName = L"ConsoleWindowClass";
     wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(2, 0, 0)));
@@ -359,12 +331,12 @@ void showConsoleWindow() {
     g_main_xPos = (screenWidth - g_win_width) / 2;
     g_main_yPos = (screenHeight - g_win_height - 100) ;
 
-    g_mainHwnd = CreateWindowEx(0, L"ConsoleWindowClass", L"GameShell Console", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+    auto consoleWindow = CreateWindowEx(0, L"ConsoleWindowClass", L"GameShell Console", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         g_main_xPos + g_win_width + 5, g_main_yPos, g_win_width, g_win_height, g_mainHwnd, nullptr, g_hinstance, nullptr);
 
-    CreateScanlineOverlay(g_win_width, g_win_height);
-    SetTimer(g_mainHwnd, 1, 500, NULL); // 500ms blink
+    SetTimer(consoleWindow, 1, 500, NULL); // 500ms blink
 }
+#endif
 
 /*
     Palette
@@ -377,25 +349,27 @@ void showConsoleWindow() {
     Warning Yellow | #EFBF1A | Optional caution color
     Soft White Text | #EAEAEA | Comfortable on dark bg
     Hard White Text | #FFFFFF | For small UI elements
-
-
  */
 
 int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
 {
-
-
     // Initialize GDI+.
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     GdiplusStartup(&g_GdiPlusToken, &gdiplusStartupInput, NULL);
+
+    // Create widgets we need in our main editor window:
+    auto closeButtonWidget = createCloseButtonWidget();
+    auto headerBGWidget = createHeaderBg();
+    widgets_.push_back(headerBGWidget);
+    widgets_.push_back(closeButtonWidget);
+
 
     g_hinstance = h;
     WNDCLASS wc = { 0 };
     wc.lpfnWndProc = WndProc;
     wc.hInstance = h;
     wc.lpszClassName = gClassName.c_str();
-    //0A0A0A
-    wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(0x0A, 0x0A, 0x0A)));
+    wc.hbrBackground = (HBRUSH)(CreateSolidBrush(RGB(0x0A, 0x0A, 0x0A)));   // Actually not needed as we redraw with d2d on every WM_PAINT
     RegisterClass(&wc);
 
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -414,14 +388,14 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     InitCommonControlsEx(&icex);
 
     //createMainMenu(g_mainHwnd);
-    g_objectTreeHwnd = createGameObjectTreeWindow(g_mainHwnd, g_hinstance);
-    ShowWindow(g_objectTreeHwnd, SW_HIDE);
+    //g_objectTreeHwnd = createGameObjectTreeWindow(g_mainHwnd, g_hinstance);
+    //ShowWindow(g_objectTreeHwnd, SW_HIDE);
 
-    g_splashIntroWindow = createSplahIntroWindow(g_mainHwnd, g_hinstance);
+    //g_splashIntroWindow = createSplahIntroWindow(g_mainHwnd, g_hinstance);
 
     paint2d_init(g_mainHwnd);
     createDWriteFont(L"../assets/Orbitron-VariableFont_wght.ttf", &orbitron_bold, 18.0f);
-    createDWriteFont(L"consolas", &orbitron_small, 14.0f);
+    createDWriteFont(L"../assets/Orbitron-VariableFont_wght.ttf", &orbitron_small, 12.0f);
 
     MSG msg = {};
     while (GetMessage(&msg, nullptr, 0, 0))
@@ -431,6 +405,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     }
 
     Gdiplus::GdiplusShutdown(g_GdiPlusToken);
+    delete(headerBGWidget);
     return 0;
 }
 
