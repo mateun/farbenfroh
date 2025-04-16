@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
 set(CMAKE_SYSTEM_VERSION 10.0.22621.0)
 
+
 add_subdirectory(extlibs/ozz extlibs/ozz/out/)
 
 include_directories(src extlibs/glm-0.9.9.8/glm extlibs/ $ENV{VULKAN_SDK}/Include
@@ -33,6 +34,7 @@ file(GLOB_RECURSE GAME_RAW_SRC games/opengl/test_terrain/*.cpp)
 file(GLOB_RECURSE GAME_FX_SRC games/opengl/GameEditor/*.cpp)
 file(GLOB_RECURSE GS_REPL_SRC src/game_shell/repl/*.cpp)
 file(GLOB_RECURSE GAME_EDITOR_FLOATING_SRC src/game_editor_floating/*.cpp)
+file(GLOB_RECURSE GAME_EDITOR_QT_SRC src/game_editor_qt/*.cpp)
 
 
 add_executable(command_repl WIN32
@@ -43,18 +45,39 @@ target_link_libraries(command_repl dxgi.lib d3d11 d2d1 dwrite d3dcompiler gdiplu
 #message(STATUS "Detected repl source files: ${GS_REPL_SRC}")
 
 ####################################################################
+# GameEditor qt based
+set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64/lib/cmake")
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+add_executable(GameEditorQT ${GAME_EDITOR_QT_SRC})
+target_link_libraries(GameEditorQT PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_compile_definitions(GameEditorQT PRIVATE QT_QPA_PLATFORM_PLUGIN_PATH=C:/Qt/6.9.0/msvc2022_64/plugins/platforms)
+
+# Optional: enable Qt's preprocessor (for signals/slots)
+set_target_properties(GameEditorQT PROPERTIES
+        AUTOMOC ON
+        AUTORCC ON
+        AUTOUIC ON
+)
+
+####################################################################
+
+
+
+####################################################################
 # Game editor floating:
 add_executable(game_editor_floating WIN32
         ${GAME_EDITOR_FLOATING_SRC}
         src/engine/io/io.cpp
 )
-
 #set_source_files_properties(resource.rc PROPERTIES COMPILE_FLAGS "")
-
 set(CMAKE_MSVC_GENERATE_MANIFEST FALSE)
 SET ( CMAKE_SHARED_LINKER_FLAGS /MANIFEST:NO )
 
-target_link_libraries(game_editor_floating dxgi.lib d3d11 d2d1 comctl32 dwrite d3dcompiler gdiplus shlwapi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput uxtheme)
+target_link_libraries(game_editor_floating dxgi.lib d3d11 d2d1 comctl32 dwrite d3dcompiler gdiplus shlwapi opengl32 gdi32
+        dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput uxtheme
+            )
+
+
 add_custom_command(TARGET
         game_editor_floating
         POST_BUILD
