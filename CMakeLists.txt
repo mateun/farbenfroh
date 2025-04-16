@@ -3,6 +3,7 @@ project(game_engine)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+set(CMAKE_SYSTEM_VERSION 10.0.22621.0)
 
 add_subdirectory(extlibs/ozz extlibs/ozz/out/)
 
@@ -53,7 +54,7 @@ add_executable(game_editor_floating WIN32
 set(CMAKE_MSVC_GENERATE_MANIFEST FALSE)
 SET ( CMAKE_SHARED_LINKER_FLAGS /MANIFEST:NO )
 
-target_link_libraries(game_editor_floating dxgi.lib d3d11 d2d1 comctl32 dwrite d3dcompiler gdiplus opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput uxtheme)
+target_link_libraries(game_editor_floating dxgi.lib d3d11 d2d1 comctl32 dwrite d3dcompiler gdiplus shlwapi opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput uxtheme)
 add_custom_command(TARGET
         game_editor_floating
         POST_BUILD

@@ -469,6 +469,34 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     closeButton = createCloseButtonWidget();
     headerBGWidget = createHeaderBg();
     auto topTitleLabel = createTopTitleLabel(L"_BORST EDITOR");
+
+    // Toolbar pseudo impl here. TODO make real toolbar:
+    float toolbarXCursor = 12;
+    float toolbarY = 48;
+    auto tbi_new_game = new d2d_ToolbarIconButton(L"../assets/icon_new_game.svg");
+    tbi_new_game->z = 10;
+    tbi_new_game->bounds_ = {toolbarXCursor, toolbarY, toolbarXCursor + 24.0f, toolbarY + 24.0f};
+
+    auto tbi_save_game = new d2d_ToolbarIconButton(L"../assets/icon_save_game.svg");
+    toolbarXCursor += 48;
+    tbi_save_game->z = 10;
+    tbi_save_game->bounds_ = {toolbarXCursor, toolbarY, toolbarXCursor + 24.0f, toolbarY + 24.0f};
+
+    auto tbi_play = new d2d_ToolbarIconButton(L"../assets/icon_play.svg");
+    toolbarXCursor += 48;
+    tbi_play->z = 10;
+    tbi_play->bounds_ = {toolbarXCursor, toolbarY, toolbarXCursor + 24.0f, toolbarY + 24.0f};
+
+    auto tbi_pause = new d2d_ToolbarIconButton(L"../assets/icon_pause.svg");
+    toolbarXCursor += 48;
+    tbi_pause->z = 10;
+    tbi_pause->bounds_ = {toolbarXCursor, toolbarY, toolbarXCursor + 24.0f, toolbarY + 24.0f};
+
+    auto tbi_stop = new d2d_ToolbarIconButton(L"../assets/icon_stop.svg");
+    toolbarXCursor += 48;
+    tbi_stop->z = 10;
+    tbi_stop->bounds_ = {toolbarXCursor, toolbarY, toolbarXCursor + 24.0f, toolbarY + 24.0f};
+
     auto btnNewGame = new d2d_Button({16, 48, 16 + 9*8, 48 + 4*8});
     btnNewGame->label_ = new d2d_Label(L"New Game");
     btnNewGame->label_->font_name_ = calibri_font;
@@ -482,7 +510,12 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     widgets_.push_back(headerBGWidget);
     widgets_.push_back(closeButton);
     widgets_.push_back(topTitleLabel);
-    widgets_.push_back(btnNewGame);
+    //widgets_.push_back(btnNewGame);
+    widgets_.push_back(tbi_new_game);
+    widgets_.push_back(tbi_save_game);
+    widgets_.push_back(tbi_play);
+    widgets_.push_back(tbi_pause);
+    widgets_.push_back(tbi_stop);
     //////////////////////////////////////////////////////////////////////////////////////
 
 

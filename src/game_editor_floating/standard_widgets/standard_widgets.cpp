@@ -180,6 +180,19 @@ bool d2d_GripWidget::wants_capture_on_mouse_down() const {
     return true;
 }
 
+d2d_ToolbarIconButton::d2d_ToolbarIconButton(const std::wstring &svg_icon_file) {
+    svg_file_name_ = svg_icon_file;
+    paint2d_create_svg(svg_icon_file, &svg_icon);
+
+}
+
+void d2d_ToolbarIconButton::draw() {
+    // draw bg if hovered/pressed
+    if (svg_icon) {
+        paint2d_draw_svg(svg_icon, bounds_);
+    }
+}
+
 void d2d_Widget::drawBounds() {
     paint2d_draw_custom([this](ID2D1RenderTarget* render_target, ID2D1SolidColorBrush* brush) {
                  render_target->DrawRectangle(bounds_, brush);

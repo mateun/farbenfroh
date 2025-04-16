@@ -5,6 +5,7 @@
 #ifndef STANDARD_WIDGETS_H
 #define STANDARD_WIDGETS_H
 #include <d2d1.h>
+#include <d2d1_3.h>
 #include <functional>
 #include <map>
 
@@ -86,6 +87,16 @@ struct d2d_GripWidget : d2d_Widget {
   bool wants_capture_on_mouse_down() const override;
 
 
+};
+
+struct d2d_ToolbarIconButton : d2d_Widget {
+  d2d_ToolbarIconButton(const std::wstring& svg_icon_file);
+  std::wstring svg_file_name_;
+
+  void draw() override;
+
+private:
+  ID2D1SvgDocument* svg_icon = nullptr;
 };
 
 #endif //STANDARD_WIDGETS_H
