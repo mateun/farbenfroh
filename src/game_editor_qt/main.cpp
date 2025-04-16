@@ -20,9 +20,15 @@
 #include <QLineEdit>
 #include <QListView>
 #include <QStandardItemModel>
+#include <engine/dx11/dx11_api.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#include "D3DViewPortWidget.h"
 
 static QWidget* leftPanel;
 static QWidget* rightPanel;
+static QTabWidget* centerPanel;
 static QWidget* assetBrowser_;
 
 void setDarkTheme(QApplication* app) {
@@ -65,13 +71,6 @@ void addActionsToToolbar(QToolBar* toolbar) {
 
 void createThreeMainPanels(QWidget* centralWidget) {
 
-    // Main vertical layout (everything goes in here)
-    QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
-
-    // === 1. Top Split Area (Left - Center - Right)
-    QSplitter* topSplitter = new QSplitter(Qt::Horizontal);
     leftPanel = new QWidget();
     auto leftLayout = new QVBoxLayout();
     leftLayout->setContentsMargins(0, 0, 0, 0); // tight!
@@ -79,7 +78,7 @@ void createThreeMainPanels(QWidget* centralWidget) {
     leftPanel->setMinimumWidth(120);
     leftPanel->setStyleSheet("background-color: #222; color: white;");
 
-    auto centerPanel = new QLabel("Center Panel");
+    centerPanel = new QTabWidget();
     centerPanel->setStyleSheet("background-color: #111; color: white;");
 
     rightPanel = new QWidget();
@@ -90,36 +89,30 @@ void createThreeMainPanels(QWidget* centralWidget) {
     rightPanel->setMinimumWidth(160);
     rightPanel->setStyleSheet("background-color: #222; color: white;");
 
-    // === Splitter 1 (Left + Center) ===
-    auto leftCenterSplitter = new QSplitter(Qt::Horizontal);
-    leftCenterSplitter->addWidget(leftPanel);
-    leftCenterSplitter->addWidget(centerPanel);
-    leftCenterSplitter->setStretchFactor(1, 1); // Center grows
-
-    // === Splitter 2 (LeftCenter + Right) ===
-    auto mainSplitter = new QSplitter(Qt::Horizontal);
-    mainSplitter->addWidget(leftCenterSplitter);
-    mainSplitter->addWidget(rightPanel);
-
-    // Optional: fix minimum sizes, or stretch policies
-    mainSplitter->setStretchFactor(0, 5);
-    mainSplitter->setStretchFactor(1, 2);
-    topSplitter->addWidget(leftPanel);
-    topSplitter->addWidget(centerPanel);
-    topSplitter->addWidget(rightPanel);
-    topSplitter->setStretchFactor(1, 1);
+    QSplitter* horizontalSplitter = new QSplitter(Qt::Horizontal);
+    horizontalSplitter->addWidget(leftPanel);
+    horizontalSplitter->addWidget(centerPanel);
+    horizontalSplitter->addWidget(rightPanel);
+    horizontalSplitter->setStretchFactor(1, 1); // center stretches
 
     // === 2. Bottom Tabbed Panel
     QTabWidget* bottomTabs = new QTabWidget();
     assetBrowser_ = new QWidget();
     bottomTabs->addTab(assetBrowser_, "Asset Browser");
-    bottomTabs->setMinimumHeight(150); // Or whatever feels good
+    bottomTabs->setMinimumHeight(150);
 
-    // === 3. Put everything in vertical layout
-    mainLayout->addWidget(topSplitter);
-    mainLayout->addWidget(bottomTabs);
-    mainLayout->setStretch(0, 3); // Splitter area
-    mainLayout->setStretch(1, 1); // Asset browser area
+    // === Vertical splitter: top 3-panel area + bottom asset area ===
+    QSplitter* verticalSplitter = new QSplitter(Qt::Vertical);
+    verticalSplitter->addWidget(horizontalSplitter);
+    verticalSplitter->addWidget(bottomTabs);
+    verticalSplitter->setStretchFactor(0, 4); // top
+    verticalSplitter->setStretchFactor(1, 1); // bottom
+
+    // === Set into central layout ===
+    QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+    mainLayout->addWidget(verticalSplitter);
 
 }
 
@@ -201,6 +194,28 @@ void initAssetBrowser(QWidget* assetBrowser) {
     listView->setModel(model);
 }
 
+void initViewport(QTabWidget* targetTabWidget) {
+
+
+    auto viewportWidget = new D3DViewPortWidget();
+    viewportWidget->setMinimumSize(640, 480);
+    viewportWidget->setAttribute(Qt::WA_NativeWindow); // required
+    viewportWidget->setAttribute(Qt::WA_PaintOnScreen); // optional
+
+    targetTabWidget->addTab(viewportWidget, "3D Viewport");
+
+
+    // 3. Pass HWND to your DirectX initialization code
+
+
+
+}
+
+void clearViewport() {
+    dx11_clearBackbuffer({1, 0, 1, 1});
+    dx11_presentBackbuffer();
+}
+
 
 int main(int argc, char *argv[]) {
     qputenv("QT_DEBUG_PLUGINS", "1");
@@ -229,8 +244,12 @@ int main(int argc, char *argv[]) {
     createGameObjectTree(leftPanel);
     updatePropertiesFor(nullptr);
     initAssetBrowser(assetBrowser_);
+    initViewport(centerPanel);
+
 
     mainWindow.show();
+
+    clearViewport();
 
     return app.exec();
 }

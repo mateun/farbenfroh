@@ -1,6 +1,7 @@
 //
 // Created by mgrus on 13.04.2025.
 //
+
 #include <d3d11.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
@@ -9,6 +10,9 @@
 #include <dxgi.h>
 #include <string>
 #include <stb_image.h>
+#include <vector>
+#include <glm/vec4.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 static ID3D11Device *device;
 static ID3D11DeviceContext *ctx;
@@ -87,19 +91,59 @@ void GetWindowClientSize(HWND hwnd, int& width, int& height)
     }
 }
 
-void initDX11(HWND hwnd, HINSTANCE hinst) {
+void dx11_presentBackbuffer() {
+    auto hr = swapChain->Present(0, 0);
+    if (FAILED(hr)) {
+        exit(999);
+    }
+
+}
+
+void dx11_drawFromVertexBuffer(ID3D11Buffer* vertexBuffer, uint32_t stride, uint32_t offset) {
+    ctx->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+    ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+    ctx->Draw(84, 0); // 84 vertices → 42 lines
+}
+
+ID3D11Buffer* dx11_createVertexBuffer(std::vector<glm::vec3> vertices) {
+    D3D11_BUFFER_DESC bd = {};
+    bd.Usage = D3D11_USAGE_DEFAULT;
+    bd.ByteWidth = sizeof(glm::vec3) * vertices.size(); // 84 from above
+    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    bd.CPUAccessFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = vertices.data();
+
+    ID3D11Buffer* vertexBuffer = nullptr;
+    device->CreateBuffer(&bd, &initData, &vertexBuffer);
+    return vertexBuffer;
+}
+
+void dx11_clearBackbuffer(glm::vec4 clearColors) {
+    ID3D11RenderTargetView* rtvs[1] = { rtv };
+    ctx->OMSetRenderTargets(1, rtvs, depthStencilView);
+    ctx->ClearRenderTargetView(rtv, glm::value_ptr(clearColors));
+
+    // clear our depth target as well
+    ctx->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH, 1, 0);
+}
+
+void dx11_init(HWND hwnd) {
     int w, h;
     GetWindowClientSize(hwnd, w, h);
     D3D_FEATURE_LEVEL featureLevels =  D3D_FEATURE_LEVEL_11_1;
     HRESULT result = D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_DEBUG, &featureLevels, 1, D3D11_SDK_VERSION,
                                        &device, NULL, &ctx);
     if (FAILED(result)) {
-        OutputDebugString(reinterpret_cast<LPCSTR>(L"CreateDevice failed\n"));
+        OutputDebugString((L"CreateDevice failed\n"));
         exit(2);
     }
 
     UINT ql;
-    device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UINT, 8, &ql);
+    device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, &ql);
+
 
     DXGI_SWAP_CHAIN_DESC scdesc;
     ZeroMemory(&scdesc, sizeof(scdesc));
@@ -119,8 +163,11 @@ void initDX11(HWND hwnd, HINSTANCE hinst) {
     scdesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 
     scdesc.OutputWindow = hwnd;
-    scdesc.SampleDesc.Count = 8;	// 1 sample per pixel
-    scdesc.SampleDesc.Quality = 0;
+
+        // fallback to no MSAA
+        scdesc.SampleDesc.Count = 1;
+        scdesc.SampleDesc.Quality = 0;
+
     scdesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     scdesc.Flags = 0;
 
@@ -146,7 +193,7 @@ void initDX11(HWND hwnd, HINSTANCE hinst) {
     debugger = 0;
     result = device->QueryInterface(__uuidof(ID3D11Debug), (void**)&debugger);
     if (FAILED(result)) {
-        OutputDebugString("debuger creation failed\n");
+        OutputDebugString(L"debuger creation failed\n");
         exit(1);
     }
 
@@ -155,14 +202,14 @@ void initDX11(HWND hwnd, HINSTANCE hinst) {
     // Create a backbuffer
     result = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
     if (FAILED(result)) {
-        OutputDebugString("backbuffer creation failed\n");
+        OutputDebugString(L"backbuffer creation failed\n");
         exit(1);
     }
 
     // Bind the backbuffer as our render target
     result = device->CreateRenderTargetView(backBuffer, NULL, &rtv);
     if (FAILED(result)) {
-        OutputDebugString("rtv creation failed\n");
+        OutputDebugString(L"rtv creation failed\n");
         exit(1);
     }
 
@@ -173,7 +220,7 @@ void initDX11(HWND hwnd, HINSTANCE hinst) {
     td.MipLevels = 1;
     td.ArraySize = 1;
     td.Format = DXGI_FORMAT_D32_FLOAT;
-    td.SampleDesc.Count = 8;
+    td.SampleDesc.Count = 1;
     td.SampleDesc.Quality = 0;
     td.Usage = D3D11_USAGE_DEFAULT;
     td.BindFlags = D3D11_BIND_DEPTH_STENCIL;
@@ -182,7 +229,7 @@ void initDX11(HWND hwnd, HINSTANCE hinst) {
 
     result = device->CreateTexture2D(&td, 0, &depthStencilBuffer);
     if (FAILED(result)) {
-        OutputDebugString("D S buffer creation failed\n");
+        OutputDebugString(L"D S buffer creation failed\n");
         exit(1);
     }
 
@@ -190,11 +237,11 @@ void initDX11(HWND hwnd, HINSTANCE hinst) {
     ZeroMemory(&dpd, sizeof(dpd));
     dpd.Flags = 0;
     dpd.Format = DXGI_FORMAT_D32_FLOAT;
-    dpd.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+    dpd.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 
     result = device->CreateDepthStencilView(depthStencilBuffer, &dpd, &depthStencilView);
     if (FAILED(result)) {
-        OutputDebugString("D S view creation failed\n");
+        OutputDebugString(L"D S view creation failed\n");
         exit(1);
     }
 
@@ -235,5 +282,79 @@ void initDX11(HWND hwnd, HINSTANCE hinst) {
     //ImGui_ImplWin32_Init(hwnd);
     //ImGui_ImplDX11_Init(device, ctx);
 
+
+}
+
+void dx11_setShaderAndInputLayout(ID3D11InputLayout* inputLayout, ID3D11VertexShader* vertexShader, ID3D11PixelShader* pixelShader) {
+    ctx->IASetInputLayout(inputLayout);
+    ctx->VSSetShader(vertexShader, nullptr, 0);
+    ctx->PSSetShader(pixelShader, nullptr, 0);
+}
+
+void dx11_setPixelShaderConstantBuffer(int slot, int num, ID3D11Buffer* buffers) {
+    ctx->PSSetConstantBuffers(1, 1, &buffers);
+}
+
+void dx11_setVertexShaderConstantBuffer(int slot, int num, ID3D11Buffer* buffers) {
+    ctx->VSSetConstantBuffers(slot, num, &buffers);
+
+
+}
+
+void dx11_createInputLayout(
+    const D3D11_INPUT_ELEMENT_DESC* layout,
+    UINT layoutCount,
+    ID3DBlob* vsBlob,
+    ID3D11InputLayout** outLayout
+) {
+    device->CreateInputLayout(layout, layoutCount, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), outLayout);
+}
+
+
+
+void dx11_createVertexShaderFromByteCode(ID3DBlob* bc, ID3D11VertexShader** outVS) {
+    assert(device != nullptr);
+
+    auto hr = device->CreateVertexShader(bc->GetBufferPointer(),
+        bc->GetBufferSize(), nullptr, outVS);
+
+}
+
+ID3D11PixelShader* dx11_createPixelShaderFromByteCode(ID3DBlob* bc) {
+    ID3D11PixelShader* ps = nullptr;
+    auto hr = device->CreatePixelShader(bc->GetBufferPointer(),
+        bc->GetBufferSize(), nullptr, &ps);
+    if (SUCCEEDED(hr)) return ps;
+    return nullptr;
+}
+
+bool dx11_compileShader(const std::wstring& filename, ID3DBlob** shaderByteCode, const std::string& entryPoint, const std::string& shaderTargetVersion)
+{
+    if (GetFileAttributesW(filename.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        printf("Shader file not found: %ls\n", filename.c_str());
+        return false;
+    }
+
+    UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if _DEBUG
+    flags |= D3DCOMPILE_DEBUG;
+#endif
+    ID3DBlob* errorBlob;
+    HRESULT hr = D3DCompileFromFile(filename.c_str(), nullptr, nullptr,
+         entryPoint.c_str(), shaderTargetVersion.c_str() , flags, 0, shaderByteCode, &errorBlob);
+
+
+    if (FAILED(hr)) {
+        if (errorBlob) {
+            std::string errorMsg((char*)errorBlob->GetBufferPointer(), errorBlob->GetBufferSize());
+            OutputDebugStringA(errorMsg.c_str());
+            printf("[Shader Compilation Error]: %s\n", errorMsg.c_str());
+            errorBlob->Release();
+        } else {
+            printf("[Shader Compilation Error]: Unknown error (no error blob)\n");
+        }
+        return false;
+    }
+    return true;
 
 }

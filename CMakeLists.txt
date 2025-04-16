@@ -39,6 +39,7 @@ file(GLOB_RECURSE GAME_EDITOR_QT_SRC src/game_editor_qt/*.cpp)
 
 add_executable(command_repl WIN32
         ${GS_REPL_SRC}
+
 )
 target_link_libraries(command_repl dxgi.lib d3d11 d2d1 dwrite d3dcompiler gdiplus opengl32 gdi32 dsound dxguid assimp-vc143-mt Jolt vulkan-1 glew32 ozz_animation XInput)
 
@@ -48,8 +49,8 @@ target_link_libraries(command_repl dxgi.lib d3d11 d2d1 dwrite d3dcompiler gdiplu
 # GameEditor qt based
 set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64/lib/cmake")
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-add_executable(GameEditorQT ${GAME_EDITOR_QT_SRC})
-target_link_libraries(GameEditorQT PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+add_executable(GameEditorQT ${GAME_EDITOR_QT_SRC} src/engine/dx11/dx11_impl.cpp)
+target_link_libraries(GameEditorQT PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets d3dcompiler)
 target_compile_definitions(GameEditorQT PRIVATE QT_QPA_PLATFORM_PLUGIN_PATH=C:/Qt/6.9.0/msvc2022_64/plugins/platforms)
 
 # Optional: enable Qt's preprocessor (for signals/slots)
