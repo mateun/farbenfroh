@@ -72,7 +72,15 @@ static ULONG_PTR g_GdiPlusToken;
 // UI framework stuff:
 d2d_Widget* hoveredWidget = nullptr;
 d2d_Widget* lastHoveredWidget = nullptr;
+d2d_Widget* capturing_widget = nullptr;
+HCURSOR current_cursor = LoadCursor(NULL, IDC_ARROW);
+HCURSOR crs_arrow  = current_cursor;
+HCURSOR crs_size_nwse = LoadCursor(nullptr, IDC_SIZENWSE);
 static std::vector<d2d_Widget*> widgets_;
+
+// My editor widgets:
+d2d_Widget * headerBGWidget = nullptr;
+d2d_Widget * closeButton = nullptr;
 
 // Command IDS
 static const uint32_t ID_MENU_NEW_GAME = 100;
@@ -130,7 +138,17 @@ LRESULT CALLBACK HelpWindowProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 }
 
 
+// This gets called on WM_SIZE and we must resize all size-critical widgets here, e.g. header, close box etc.
+void resize_editor_widgets() {
+    if (headerBGWidget) {
+        headerBGWidget->bounds_.right = g_win_width;
+    }
+    if (closeButton) {
+        closeButton->bounds_ = { g_win_width - 36.0f, 8, (float)g_win_width-8.0f, (float) header_height_ };
+    }
 
+
+}
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
     switch (msg)
@@ -150,27 +168,29 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
             // If we catch WM_PAINT, it must be wrapped inside this bracket!
             PAINTSTRUCT ps;
             BeginPaint(hwnd, &ps);
+
+            ////////////////////////////////////////////////////////////////////////////////////////
+            // Rendering
+            // Use our widget "framework"
+            // Here we just naively implement the framework render function.
+            // We may want to move this into a separate convencience struct/function, but for now
+            // this is how a client application would use the framework:
+            // Begin d2d draw.
+            // Clear everything with d2d.
+            // Sort the widgets by z-order ascending.
+            // Iterate all the widgets and call draw on each.
+            // End d2d draw.
             paint2d_begin_draw();
             paint2d_clear({0x0a, 0x0a, 0x0a, 0xff});
-
-            // Use our widget "framework"
             std::ranges::sort(widgets_, [](d2d_Widget* w1, d2d_Widget* w2) {
                 return w1->z < w2->z;
             });
             for (auto& w : widgets_) {
                 w->draw();
             }
-
-            // Window Header
-            paint2d_draw_text(L"_BORST EDITOR", {8, 8}, {500, header_height_}, {220, 220, 220, 255}, orbitron_bold);
-
-            // Menu bar in toxic green
-            // TODO replace with widgets from framework
-            // paint2d_draw_filled_rect({0, 36}, {g_win_width, 36}, {0xC0, 0xFE, 0x02, 0xFF});
-            // paint2d_draw_text(L"File", {8, 40}, {80, 48}, {0x0a, 0x0a, 0x0a, 255}, orbitron_small);
-            // paint2d_draw_text(L"About", {100, 40}, {80, 48}, {0x0a, 0x0a, 0x0a, 255}, orbitron_small);
-
             paint2d_end_draw();
+            ////////////////////////////////////////////////////////////////////////////////////////
+
             EndPaint(hwnd, &ps);
 
             return 0;
@@ -214,8 +234,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
                 }
             }
 
-            if (!hoveredWidget) {
-                printf("no hover widget found!\n");
+            if (capturing_widget) {
+                capturing_widget->on_mouse_move(pt.x, pt.y);
+            }
+            else if (hoveredWidget) {
+                hoveredWidget->on_mouse_move(pt.x, pt.y);
+                HCURSOR desired_cursor = hoveredWidget->get_cursor();
+                if (desired_cursor != current_cursor) {
+                    current_cursor = desired_cursor;
+                }
+            } else {
+                current_cursor = crs_arrow;
             }
 
             if (hoveredWidget != lastHoveredWidget) {
@@ -244,33 +273,50 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
             g_win_width = LOWORD(l);
             g_win_height = HIWORD(l);
             paint2d_resize(g_win_width, g_win_height);
+            resize_editor_widgets();
+            InvalidateRect(hwnd, NULL, FALSE);
+            break;
         }
 
         case WM_LBUTTONDOWN:
         {
             POINT pt = { GET_X_LPARAM(l), GET_Y_LPARAM(l) };
-
-
-            if (pt.y < header_height_) { // or a real hit test
-                ReleaseCapture();
-                SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
-            }
+            // if (pt.y < header_height_) { // or a real hit test
+            //     ReleaseCapture();
+            //     SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+            // }
 
             if (hoveredWidget) {
-                hoveredWidget->onClick();
+                hoveredWidget->on_mouse_down(pt.x, pt.y);
+                if (hoveredWidget->wants_capture_on_mouse_down()) {
+                    SetCapture(hwnd);
+                    capturing_widget = hoveredWidget;
+                }
                 return 0;
             }
+            break;
+        }
 
+        case WM_LBUTTONUP: {
+            if (hoveredWidget) {
+                hoveredWidget->onClick();
+            };
 
+            if (capturing_widget) {
+                POINT pt = { GET_X_LPARAM(l), GET_Y_LPARAM(l) };
+                capturing_widget->on_mouse_up(pt.x, pt.y);
+                capturing_widget = nullptr;
+                ReleaseCapture();
+            }
             break;
         }
 
         case WM_SETCURSOR: {
             if (resizing_) {
-                SetCursor(LoadCursor(nullptr, IDC_SIZENWSE));
-            } else {
-                SetCursor(LoadCursor(nullptr, IDC_ARROW));
+                current_cursor = crs_size_nwse;
             }
+
+            SetCursor(current_cursor);
 
             return TRUE;
         }
@@ -303,16 +349,36 @@ struct d2d_HeaderWidget : d2d_Widget {
     }
 };
 
-d2d_Widget* createHeaderBg() {
-    auto w = new d2d_HeaderWidget();
-    w->bounds = { 0, 0, (float)g_win_width, (float) header_height_ };
-    w->z = -1;  // below...
+d2d_Widget* createTopTitleLabel(std::wstring title) {
+    auto w = new d2d_Label(title);
+    w->bounds_ = {16, 8, 300, 36};
+    w->font_name_ = L"../assets/Orbitron-VariableFont_wght.ttf";
+    w->text_color_ = {200, 200, 200, 255};
+    w->font_size_ = 20.0f;
+    w->z = 20;
     return w;
+
+}
+
+d2d_Widget* createHeaderBg() {
+    auto w = new d2d_GripWidget(g_mainHwnd);
+    w->bounds_ = { 0, 0, (float)g_win_width - 0, (float) header_height_ };
+    w->orientation_ = GripOrientation::Horizontal;
+    w->dotRadius = 1.2f;
+    w->debugDrawBounds_ = false;
+    w->spacing = 6.0f;
+    w->dotColor = {85, 85, 85, 255};
+    w->z = -3;
+    return w;
+}
+
+d2d_Widget* createToolbar() {
+    return {};
 }
 
 d2d_Widget* createCloseButtonWidget() {
     auto cbWidget = new d2d_CloseButtonWidget();
-    cbWidget->bounds = { g_win_width - 36.0f, 8, (float)g_win_width-8.0f, (float) header_height_ };
+    cbWidget->bounds_ = { g_win_width - 36.0f, 8, (float)g_win_width-8.0f, (float) header_height_ };
     cbWidget->z = 100;  // really on top
     return cbWidget;
 }
@@ -351,17 +417,16 @@ void showConsoleWindow() {
     Hard White Text | #FFFFFF | For small UI elements
  */
 
+
+
+
 int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
 {
     // Initialize GDI+.
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     GdiplusStartup(&g_GdiPlusToken, &gdiplusStartupInput, NULL);
 
-    // Create widgets we need in our main editor window:
-    auto closeButtonWidget = createCloseButtonWidget();
-    auto headerBGWidget = createHeaderBg();
-    widgets_.push_back(headerBGWidget);
-    widgets_.push_back(closeButtonWidget);
+
 
 
     g_hinstance = h;
@@ -396,6 +461,30 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int)
     paint2d_init(g_mainHwnd);
     createDWriteFont(L"../assets/Orbitron-VariableFont_wght.ttf", &orbitron_bold, 18.0f);
     createDWriteFont(L"../assets/Orbitron-VariableFont_wght.ttf", &orbitron_small, 12.0f);
+
+    //////////////////////////////////////////////////////////////////////////////////////
+    // Create widgets we need in our main editor window:
+    auto orbi_font = L"../assets/Orbitron-VariableFont_wght.ttf";
+    auto calibri_font = L"../assets/calibri.ttf";
+    closeButton = createCloseButtonWidget();
+    headerBGWidget = createHeaderBg();
+    auto topTitleLabel = createTopTitleLabel(L"_BORST EDITOR");
+    auto btnNewGame = new d2d_Button({16, 48, 16 + 9*8, 48 + 4*8});
+    btnNewGame->label_ = new d2d_Label(L"New Game");
+    btnNewGame->label_->font_name_ = calibri_font;
+    btnNewGame->label_->font_size_ = 10;
+    btnNewGame->label_->text_color_ = {0x0b, 0x0c, 0x0c, 255};
+
+    btnNewGame->click_callback_ = []() {
+        printf("new game clicked!\n");
+    };
+
+    widgets_.push_back(headerBGWidget);
+    widgets_.push_back(closeButton);
+    widgets_.push_back(topTitleLabel);
+    widgets_.push_back(btnNewGame);
+    //////////////////////////////////////////////////////////////////////////////////////
+
 
     MSG msg = {};
     while (GetMessage(&msg, nullptr, 0, 0))
