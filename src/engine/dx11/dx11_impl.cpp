@@ -22,6 +22,7 @@ static ID3D11Texture2D *backBuffer;
 static ID3D11RenderTargetView* rtv;
 static ID3D11Texture2D* depthStencilBuffer;
 static ID3D11DepthStencilView *depthStencilView;
+static ID3D11DepthStencilState *m_DepthStencilState;
 
 void loadTextureFromFile(const std::string& fileName, ID3D11Texture2D **textureTarget) {
     int imageChannels;
@@ -99,12 +100,39 @@ void dx11_presentBackbuffer() {
 
 }
 
+void dx11_drawFromIndexBuffer(ID3D11Buffer* indexBuffer, ID3D11Buffer* vertexBuffer, int vbStride, int count, int startIndex, int baseVertexLocation) {
+    UINT stride = vbStride;
+    UINT offset = 0;
+    ctx->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+    ctx->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+    ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx->DrawIndexed(count, startIndex, baseVertexLocation);
+}
+
 void dx11_drawFromVertexBuffer(ID3D11Buffer* vertexBuffer, uint32_t stride, uint32_t offset) {
     ctx->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
     ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
-    ctx->Draw(84, 0); // 84 vertices → 42 lines
+    // TODO, fix this hardcoded number here, omg!!
+    ctx->Draw(84, 0);
 }
+
+ID3D11Buffer* dx11_createIndexBuffer(std::vector<uint32_t> indices) {
+    D3D11_BUFFER_DESC bd = {};
+    bd.Usage = D3D11_USAGE_DEFAULT;
+    bd.ByteWidth = sizeof(uint32_t) * indices.size();
+    bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    bd.CPUAccessFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = indices.data();
+
+    ID3D11Buffer* buf = nullptr;
+    device->CreateBuffer(&bd, &initData, &buf);
+    return buf;
+}
+
+
 
 ID3D11Buffer* dx11_createVertexBuffer(std::vector<glm::vec3> vertices) {
     D3D11_BUFFER_DESC bd = {};
@@ -124,6 +152,7 @@ ID3D11Buffer* dx11_createVertexBuffer(std::vector<glm::vec3> vertices) {
 void dx11_clearBackbuffer(glm::vec4 clearColors) {
     ID3D11RenderTargetView* rtvs[1] = { rtv };
     ctx->OMSetRenderTargets(1, rtvs, depthStencilView);
+    //ctx->OMSetRenderTargets(1, rtvs, nullptr);
     ctx->ClearRenderTargetView(rtv, glm::value_ptr(clearColors));
 
     // clear our depth target as well
@@ -265,14 +294,23 @@ void dx11_init(HWND hwnd) {
     depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
     depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-    // Currently we just use the default from D3D11 ...
-    //ID3D11DepthStencilState *m_DepthStencilState;
-    //result = _device->CreateDepthStencilState(&depthStencilDesc, &m_DepthStencilState);
-    /*if (FAILED(result)) {
+    result = device->CreateDepthStencilState(&depthStencilDesc, &m_DepthStencilState);
+    if (FAILED(result)) {
         OutputDebugString(L"failed to set depth stencil state\n");
         exit(1);
-    }*/
-    //_ctx->OMSetDepthStencilState(m_DepthStencilState, 0);
+    }
+    ctx->OMSetDepthStencilState(m_DepthStencilState, 0);
+
+    D3D11_RASTERIZER_DESC rsDesc = {};
+    rsDesc.FillMode = D3D11_FILL_SOLID;
+    rsDesc.CullMode = D3D11_CULL_NONE; // <- Disable culling
+    rsDesc.FrontCounterClockwise = FALSE;
+    rsDesc.DepthClipEnable = TRUE;
+
+    ID3D11RasterizerState* rasterState = nullptr;
+    device->CreateRasterizerState(&rsDesc, &rasterState);
+    ctx->RSSetState(rasterState);
+
 
     // IMGUI
     //IMGUI_CHECKVERSION();
@@ -319,11 +357,12 @@ ID3D11DeviceContext* dx11_context() {
 }
 
 
-void dx11_createVertexShaderFromByteCode(ID3DBlob* bc, ID3D11VertexShader** outVS) {
-    assert(device != nullptr);
-
+ID3D11VertexShader* dx11_createVertexShaderFromByteCode(ID3DBlob* bc) {
+    ID3D11VertexShader* vs = nullptr;
     auto hr = device->CreateVertexShader(bc->GetBufferPointer(),
-        bc->GetBufferSize(), nullptr, outVS);
+        bc->GetBufferSize(), nullptr, &vs);
+
+    return vs;
 
 }
 

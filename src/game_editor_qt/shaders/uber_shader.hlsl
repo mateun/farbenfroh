@@ -47,7 +47,7 @@ cbuffer MaterialBuffer : register(b1)
 };
 
 float4 PSColorOnly(VSPosInput input) : SV_Target {
-    return float4(1, 0, 0, 1);
+    return baseColor;
 }
 
 float4 PSMain(VSOutput input) : SV_Target
