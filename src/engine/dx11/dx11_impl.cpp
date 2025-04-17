@@ -2,21 +2,28 @@
 // Created by mgrus on 13.04.2025.
 //
 
+
 #include <d3d11.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
 #include <DirectXColors.h>
 #include <d3dcompiler.h>
 #include <dxgi.h>
+#include <dxgi1_2.h>
 #include <string>
 #include <stb_image.h>
 #include <vector>
+#include <assimp/Importer.hpp>
+#include <assimp/mesh.h>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
 #include <glm/vec4.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "dx11_api.h"
 
 static ID3D11Device *device;
 static ID3D11DeviceContext *ctx;
-static IDXGISwapChain *swapChain;
+static IDXGISwapChain1 *swapChain;
 static ID3D11Debug* debugger;
 static ID3D11Texture2D *backBuffer;
 static ID3D11RenderTargetView* rtv;
@@ -24,7 +31,35 @@ static ID3D11Texture2D* depthStencilBuffer;
 static ID3D11DepthStencilView *depthStencilView;
 static ID3D11DepthStencilState *m_DepthStencilState;
 
-void loadTextureFromFile(const std::string& fileName, ID3D11Texture2D **textureTarget) {
+ID3D11SamplerState* dx11_createSamplerState() {
+    ID3D11SamplerState* ss;
+    D3D11_SAMPLER_DESC sd;
+    ZeroMemory(&sd, sizeof(sd));
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sd.MinLOD = 0;
+    sd.MaxLOD = D3D11_FLOAT32_MAX;
+    auto hr = device->CreateSamplerState(&sd, &ss);
+    if (FAILED(hr)) {
+        exit(101);
+    }
+    return ss;
+}
+
+ID3D11ShaderResourceView* dx11_createShaderResourceView(ID3D11Texture2D* texture) {
+    ID3D11ShaderResourceView *srv = nullptr;
+    auto res = device->CreateShaderResourceView(texture, NULL, &srv);
+    if (FAILED(res)) {
+        exit(100);
+    }
+    return srv;
+}
+
+ID3D11Texture2D * dx11_loadTextureFromFile(const std::string& fileName) {
+    ID3D11Texture2D *textureTarget;
     int imageChannels;
     int w, h;
     auto pixels = stbi_load(
@@ -37,7 +72,7 @@ void loadTextureFromFile(const std::string& fileName, ID3D11Texture2D **textureT
     desc.Width = w;
     desc.Height = h;
     desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    desc.Usage = D3D11_USAGE_DYNAMIC;
+    desc.Usage = D3D11_USAGE_DEFAULT;
     desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     desc.MiscFlags = 0;
     desc.MipLevels = 1;
@@ -45,37 +80,47 @@ void loadTextureFromFile(const std::string& fileName, ID3D11Texture2D **textureT
     desc.SampleDesc.Count = 1;
     desc.SampleDesc.Quality = 0;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    HRESULT res = const_cast<ID3D11Device*>(device)->CreateTexture2D(&desc, NULL, textureTarget);
+    D3D11_SUBRESOURCE_DATA initialData = {};
+    initialData.pSysMem = pixels;
+    initialData.SysMemPitch = w * 4;
+    initialData.SysMemSlicePitch = 0;
+
+    HRESULT res = device->CreateTexture2D(&desc, &initialData, &textureTarget);
     if (FAILED(res)) {
         printf("texture creation failed\n");
-        return;
+        return nullptr;
     }
+    return textureTarget;
 
-    D3D11_MAPPED_SUBRESOURCE mapped;
-    ctx->Map(*textureTarget, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-    BYTE* mappedData = reinterpret_cast<BYTE*>(mapped.pData);
-    for (UINT i = 0; i < h; ++i) {
-        memcpy(mappedData, pixels, w * 4);
-        mappedData += mapped.RowPitch;
-        pixels += (w * 4);
-    }
-    // Unused code for poking
-    // bgra values directly into the image -
-    // for procedural texture generation.
-    /*for (UINT x = 0; x < 64; x += 4) {
-    for (UINT i = 0; i < 64; ++i)
-    {
-    BYTE b = 0xaf;
-    BYTE g = 0xbb;
-    BYTE r = 0x10;
-    BYTE a = 0xff;
-    mappedData[x + (i * 64)] = b;
-    mappedData[x + (i * 64) + 1] = g;
-    mappedData[x + (i * 64) + 2] = r;
-    mappedData[x + (i * 64) + 3] = a;
-    }
-    }*/
-    ctx->Unmap(*textureTarget, 0);
+    // Writing data directly to this texture procedurally.
+    // D3D11_MAPPED_SUBRESOURCE mapped;
+    // ctx->Map(textureTarget, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    // BYTE* mappedData = reinterpret_cast<BYTE*>(mapped.pData);
+    // for (UINT i = 0; i < h; ++i) {
+    //     memcpy(mappedData, pixels, w * 4);
+    //     mappedData += mapped.RowPitch;
+    //     pixels += (w * 4);
+    // }
+    // // Unused code for poking
+    // // bgra values directly into the image -
+    // // for procedural texture generation.
+    // /*for (UINT x = 0; x < 64; x += 4) {
+    // for (UINT i = 0; i < 64; ++i)
+    // {
+    // BYTE b = 0xaf;
+    // BYTE g = 0xbb;
+    // BYTE r = 0x10;
+    // BYTE a = 0xff;
+    // mappedData[x + (i * 64)] = b;
+    // mappedData[x + (i * 64) + 1] = g;
+    // mappedData[x + (i * 64) + 2] = r;
+    // mappedData[x + (i * 64) + 3] = a;
+    // }
+    // }
+    // */
+    // ctx->Unmap(textureTarget, 0);
+
+
 }
 
 void GetWindowClientSize(HWND hwnd, int& width, int& height)
@@ -101,6 +146,8 @@ void dx11_presentBackbuffer() {
 }
 
 void dx11_drawFromIndexBuffer(ID3D11Buffer* indexBuffer, ID3D11Buffer* vertexBuffer, int vbStride, int count, int startIndex, int baseVertexLocation) {
+    assert(vertexBuffer != nullptr);
+
     UINT stride = vbStride;
     UINT offset = 0;
     ctx->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
@@ -174,46 +221,44 @@ void dx11_init(HWND hwnd) {
     device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, &ql);
 
 
-    DXGI_SWAP_CHAIN_DESC scdesc;
-    ZeroMemory(&scdesc, sizeof(scdesc));
-    scdesc.BufferCount = 1;
-    scdesc.BufferDesc.Width = w;
-    scdesc.BufferDesc.Height = h;
-    scdesc.Windowed = true;
+    DXGI_SWAP_CHAIN_DESC1 scdesc1 = {};
+    scdesc1.Width = w;
+    scdesc1.Height = h;
+    scdesc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    scdesc1.Stereo = FALSE;
+    scdesc1.SampleDesc.Count = 1;
+    scdesc1.SampleDesc.Quality = 0;
+    scdesc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    scdesc1.BufferCount = 2;
+    scdesc1.Scaling = DXGI_SCALING_NONE;
+    scdesc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    scdesc1.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+    scdesc1.Flags = 0;
 
-    scdesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-    scdesc.BufferDesc.RefreshRate.Numerator = 60;
-    scdesc.BufferDesc.RefreshRate.Denominator = 1;
-
-    scdesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-
-    scdesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-    scdesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-
-    scdesc.OutputWindow = hwnd;
-
-        // fallback to no MSAA
-        scdesc.SampleDesc.Count = 1;
-        scdesc.SampleDesc.Quality = 0;
-
-    scdesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-    scdesc.Flags = 0;
 
     IDXGIDevice * pDXGIDevice = nullptr;
     result = device->QueryInterface(__uuidof(IDXGIDevice), (void **)&pDXGIDevice);
     IDXGIAdapter * pDXGIAdapter = nullptr;
     result = pDXGIDevice->GetAdapter(&pDXGIAdapter);
-    IDXGIFactory * pIDXGIFactory = nullptr;
-    pDXGIAdapter->GetParent(__uuidof(IDXGIFactory), (void **)&pIDXGIFactory);
+    // IDXGIFactory * pIDXGIFactory = nullptr;
+    // pDXGIAdapter->GetParent(__uuidof(IDXGIFactory), (void **)&pIDXGIFactory);
 
-    result = pIDXGIFactory->CreateSwapChain(device, &scdesc, &swapChain);
+    IDXGIFactory2* pFactory2 = nullptr;
+    auto hr= pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&pFactory2);
+    if (FAILED(hr)) {
+        exit(5557788);
+    }
+
+    DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsdesc = {};
+    fsdesc.Windowed = TRUE;
+    result = pFactory2->CreateSwapChainForHwnd(pDXGIDevice, hwnd, &scdesc1, &fsdesc, nullptr, &swapChain);
     if (FAILED(result)) {
-        OutputDebugStringW(L"error creating swapchain\n");
+        printf("error creating swapchain 0x%08X\n ", result);
         exit(1);
     }
 
-    pIDXGIFactory->Release();
+    pFactory2->Release();
+    // pIDXGIFactory->Release();
     pDXGIAdapter->Release();
     pDXGIDevice->Release();
 
@@ -303,8 +348,8 @@ void dx11_init(HWND hwnd) {
 
     D3D11_RASTERIZER_DESC rsDesc = {};
     rsDesc.FillMode = D3D11_FILL_SOLID;
-    rsDesc.CullMode = D3D11_CULL_NONE; // <- Disable culling
-    rsDesc.FrontCounterClockwise = FALSE;
+    rsDesc.CullMode = D3D11_CULL_BACK;
+    rsDesc.FrontCounterClockwise = TRUE;
     rsDesc.DepthClipEnable = TRUE;
 
     ID3D11RasterizerState* rasterState = nullptr;
@@ -364,6 +409,195 @@ ID3D11VertexShader* dx11_createVertexShaderFromByteCode(ID3DBlob* bc) {
 
     return vs;
 
+}
+
+// !!!! ...................................................................
+// !!!! Blender export hint: y up, -z forward (!), 0.01 scale !!!!
+// !!!! ....................................................................
+void dx11_loadFirstMeshFromFile(const std::string& fileName, dx11_Mesh* mesh ) {
+    using namespace DirectX;
+
+    Assimp::Importer importer;
+
+    const auto scene = importer.ReadFile(fileName.c_str(), aiProcess_Triangulate |
+                                    // aiProcess_MakeLeftHanded |
+                                    // aiProcess_FlipWindingOrder |
+                                    aiProcess_CalcTangentSpace);
+    if (!scene) {
+        printf("model import failed!\n");
+        exit(1);
+    }
+
+    if (scene->mNumMeshes == 0) {
+        return;
+    }
+
+    aiMatrix4x4 correction;
+    aiMatrix4x4::RotationY(-AI_MATH_PI, correction);
+
+    auto ai_mesh = scene->mMeshes[0];
+
+    std::vector<float> interleaved_data;
+    for (int v = 0; v < ai_mesh->mNumVertices; ++v) {
+        aiVector3D vertex = ai_mesh->mVertices[v] ;
+        aiVector3D texCoord = ai_mesh->mTextureCoords[0][v];
+        aiVector3D normal = ai_mesh->mNormals[v];
+
+        vertex *= correction;
+        normal *= correction;
+
+        interleaved_data.push_back(vertex.x);
+        interleaved_data.push_back(vertex.y);
+        interleaved_data.push_back(-vertex.z);
+        interleaved_data.push_back(texCoord.x);
+        interleaved_data.push_back(1-texCoord.y);
+        interleaved_data.push_back(-normal.x);
+        interleaved_data.push_back(normal.y);
+        interleaved_data.push_back(normal.z);
+
+
+    }
+
+    for (int f = 0; f < ai_mesh->mNumFaces; ++f) {
+        aiFace face = ai_mesh->mFaces[f];
+        mesh->indices.push_back({ face.mIndices[0] });
+        mesh->indices.push_back({ face.mIndices[1] });
+        mesh->indices.push_back({ face.mIndices[2] });
+    }
+
+    // Positions, uvs and normals all go into 1 interleaved buffer.
+    // Indices get a separate buffer.
+    D3D11_BUFFER_DESC bd;
+    ZeroMemory(&bd, sizeof(bd));
+    bd.Usage = D3D11_USAGE_DEFAULT;
+    bd.ByteWidth = sizeof(float) * interleaved_data.size();
+    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    bd.CPUAccessFlags = 0;
+    D3D11_SUBRESOURCE_DATA interleaved;
+    interleaved.pSysMem = interleaved_data.data();
+    interleaved.SysMemPitch = 0;
+    interleaved.SysMemSlicePitch = 0;
+    auto hr = device->CreateBuffer(&bd, &interleaved, &mesh->pos_uv_normal_buffer);
+    if (FAILED(hr)) {
+        exit (007);
+    }
+
+    // Don't use separate buffers
+    // TODO make this configurable as a parameter?
+    // // UVs
+    // ZeroMemory(&bd, sizeof(bd));
+    // bd.Usage = D3D11_USAGE_DEFAULT;
+    // bd.ByteWidth = sizeof(XMFLOAT2) * mesh->uvs.size();
+    // bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    // D3D11_SUBRESOURCE_DATA uvData;
+    // uvData.pSysMem = mesh->uvs.data();
+    // uvData.SysMemPitch = 0;
+    // uvData.SysMemSlicePitch = 0;
+    // device->CreateBuffer(&bd, &uvData, &mesh->uvBuffer);
+    //
+    // // Normals
+    // ZeroMemory(&bd, sizeof(bd));
+    // bd.Usage = D3D11_USAGE_DEFAULT;
+    // bd.ByteWidth = sizeof(XMFLOAT3) * mesh->normals.size();
+    // bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    // D3D11_SUBRESOURCE_DATA normalData;
+    // normalData.pSysMem = mesh->normals.data();
+    // normalData.SysMemPitch = 0;
+    // normalData.SysMemSlicePitch = 0;
+    // device->CreateBuffer(&bd, &normalData, &mesh->normalBuffer);
+
+    // Indices
+    D3D11_BUFFER_DESC ibd;
+    ZeroMemory(&ibd, sizeof(ibd));
+    ibd.Usage = D3D11_USAGE_DEFAULT;
+    ibd.ByteWidth = sizeof(unsigned int) * mesh->indices.size();
+    ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    ibd.CPUAccessFlags = 0;
+    D3D11_SUBRESOURCE_DATA indexData;
+    indexData.pSysMem = mesh->indices.data();
+    indexData.SysMemPitch = 0;
+    indexData.SysMemSlicePitch = 0;
+
+    device->CreateBuffer(&ibd, &indexData, &mesh->indexBuffer);
+
+    // This does not belong into the import here
+    // ctx->VSSetShader(shaders::vertexShader, 0, 0);
+    // ctx->PSSetShader(shaders::pixelShader, 0, 0);
+    //
+    // ctx->IASetInputLayout(inputLayout);
+
+    // UINT uvstride = sizeof(XMFLOAT2);
+    // UINT stride = sizeof(XMFLOAT3);
+    // UINT offset = 0;
+    // ctx->IASetVertexBuffers(0, 1, &mesh->vertexBuffer, &stride, &offset);
+    // ctx->IASetVertexBuffers(1, 1, &mesh->uvBuffer, &uvstride, &offset);
+    // ctx->IASetVertexBuffers(2, 1, &mesh->normalBuffer, &stride, &offset);
+
+
+
+
+
+}
+
+void dx11_onResize(int w, int h) {
+    if (!ctx) return;
+    assert(w > 0 && h > 0);
+    printf("Trying ResizeBuffers to %dx%d\n", w, h);
+
+    ctx->OMSetRenderTargets(0, nullptr, nullptr);
+
+
+    if (rtv) {
+        rtv->Release(); rtv = nullptr;
+    }
+    if (depthStencilView) {
+        depthStencilView->Release(); depthStencilView = nullptr;
+    }
+    if (depthStencilBuffer) {
+        depthStencilBuffer->Release(); depthStencilBuffer = nullptr;
+    }
+
+    if (backBuffer) { backBuffer->Release(); backBuffer = nullptr; }
+
+    auto hr = swapChain->ResizeBuffers(
+        0,        // buffer count (0 = reuse)
+        w,
+        h,
+        DXGI_FORMAT_UNKNOWN, // reuse existing format
+        0
+    );
+
+    if (FAILED(hr)) {
+        printf("ResizeBuffers failed! HRESULT: 0x%08X\n", hr);
+    }
+    // Get backbuffer
+    ID3D11Texture2D* backBuffer = nullptr;
+    swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
+    D3D11_TEXTURE2D_DESC actualDesc;
+    backBuffer->GetDesc(&actualDesc);
+    printf("Backbuffer: %d x %d\n", actualDesc.Width, actualDesc.Height);
+    hr = device->CreateRenderTargetView(backBuffer, nullptr, &rtv);
+    backBuffer->Release();
+    if (FAILED(hr)) {
+        exit(11001);
+    }
+
+    // Create new depth stencil
+    D3D11_TEXTURE2D_DESC dsDesc = {};
+    dsDesc.Width = w;
+    dsDesc.Height = h;
+    dsDesc.MipLevels = 1;
+    dsDesc.ArraySize = 1;
+    dsDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsDesc.SampleDesc.Count = 1;
+    dsDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    hr = device->CreateTexture2D(&dsDesc, nullptr, &depthStencilBuffer);
+    if (FAILED(hr)) {
+        exit(11002);
+    }
+    device->CreateDepthStencilView(depthStencilBuffer, nullptr, &depthStencilView);
+    ctx->OMSetRenderTargets(1, &rtv, depthStencilView);
 }
 
 ID3D11PixelShader* dx11_createPixelShaderFromByteCode(ID3DBlob* bc) {

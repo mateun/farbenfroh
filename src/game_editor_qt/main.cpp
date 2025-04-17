@@ -24,12 +24,13 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include "AssetBrowserWidget.h"
 #include "D3DViewPortWidget.h"
 
 static QWidget* leftPanel;
 static QWidget* rightPanel;
 static QTabWidget* centerPanel;
-static QWidget* assetBrowser_;
+static AssetBrowserWidget* assetBrowser_;
 
 void setDarkTheme(QApplication* app) {
     QPalette darkPalette;
@@ -97,7 +98,7 @@ void createThreeMainPanels(QWidget* centralWidget) {
 
     // === 2. Bottom Tabbed Panel
     QTabWidget* bottomTabs = new QTabWidget();
-    assetBrowser_ = new QWidget();
+    assetBrowser_ = new AssetBrowserWidget();
     bottomTabs->addTab(assetBrowser_, "Asset Browser");
     bottomTabs->setMinimumHeight(150);
 
@@ -196,16 +197,12 @@ void initAssetBrowser(QWidget* assetBrowser) {
 
 void initViewport(QTabWidget* targetTabWidget) {
 
+    auto viewportWidget = new D3DViewPortWindow();
+    QWidget* dxContainer = QWidget::createWindowContainer(viewportWidget);
 
-    auto viewportWidget = new D3DViewPortWidget();
-    viewportWidget->setMinimumSize(640, 480);
-    viewportWidget->setAttribute(Qt::WA_NativeWindow); // required
-    viewportWidget->setAttribute(Qt::WA_PaintOnScreen); // optional
+    dxContainer->setMinimumSize(640, 480);
+    targetTabWidget->addTab(dxContainer, "3D Viewport");
 
-    targetTabWidget->addTab(viewportWidget, "3D Viewport");
-
-
-    // 3. Pass HWND to your DirectX initialization code
 
 
 

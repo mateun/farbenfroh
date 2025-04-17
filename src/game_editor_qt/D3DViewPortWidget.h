@@ -8,21 +8,36 @@
 #include <complex.h>
 #include <d3d11.h>
 #include <QWidget>
+#include <QWindow>
 #include <glm/glm.hpp>
+
+
+struct dx11_Mesh;
+/**
+ * This is the API which the 3d-viewport offers to
+ * render scene objects.
+ *
+ */
+struct SceneData {
+
+};
 
 struct MaterialBuffer {
     glm::vec4 baseColor;
-    bool useTexture = false;
-    glm::vec3 padding;
 };
 
 struct FrameTransform {
     glm::mat4 worldViewProj;
 };
 
-class D3DViewPortWidget : public QWidget {
+class D3DViewPortWindow : public QWindow {
 public:
+
+    D3DViewPortWindow(QWidget *parent = nullptr);
+
     void uploadGridData();
+
+    void exposeEvent(QExposeEvent*) override;
 
     void generateThickLineQuad(
         const glm::vec3 &p0,
@@ -31,11 +46,15 @@ public:
         std::vector<glm::vec3> &outVertices,
         std::vector<uint32_t> &outIndices);
 
-    D3DViewPortWidget(QWidget *parent = nullptr);
+
 
     void updateViewport();
 
-    void paintEvent(QPaintEvent *) override;
+    void render();
+
+    void resizeEvent(QResizeEvent *event) override;
+
+    void onSceneUpdate(SceneData *sceneData);
 
     void createPseudoGlowBlendState();
 
@@ -45,21 +64,28 @@ public:
 
     void createFrameConstantBuffer(ID3D11Buffer **targetBuffer);
 
-    QPaintEngine *paintEngine() const override;
+    //QPaintEngine *paintEngine() const override;
 
 private:
     ID3D11Buffer *grid_vertex_buffer_ = nullptr;
     ID3D11Buffer *grid_index_buffer_ = nullptr;
+    ID3D11SamplerState * sampler_state_ = nullptr;
+    ID3D11Texture2D * blocky_guy_texture_ = nullptr;
+    ID3D11ShaderResourceView * blocky_guy_srv_ = nullptr;
     ID3D11VertexShader *uber_pos_uv_vertex_shader_ = nullptr;
     ID3D11VertexShader *uber_pos_vertex_shader_ = nullptr;
-    ID3D11PixelShader *uber_pixel_shader_ = nullptr;
+    ID3D11PixelShader *uber_color_only_pixel_shader_ = nullptr;
+    ID3D11PixelShader *uber_textured_pixel_shader_ = nullptr;
     ID3D11InputLayout *uber_input_layout_ = nullptr;
+    ID3D11InputLayout * uber_pos_uv_normal_input_layout_ = nullptr;
     ID3D11Buffer *frame_transform_buffer_ = nullptr;
     ID3D11Buffer *frame_material_buffer_ = nullptr;
     ID3D11BlendState *additive_glow_blend_ = nullptr;
 
+    dx11_Mesh* cube_mesh_ = nullptr;
     std::vector<glm::vec3> grid_verts_;
     std::vector<uint32_t> grid_indices_;
+
 };
 
 

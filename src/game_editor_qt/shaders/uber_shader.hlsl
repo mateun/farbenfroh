@@ -6,7 +6,9 @@ cbuffer ObjectBuffer : register(b0)
 struct VSPosUVInput
 {
     float3 position : POSITION;
-    float2 uv : TEXCOORD0; // optional use
+    float2 uv : TEXCOORD0;
+    float3 normal : NORMAL;
+
 };
 
 struct VSPosInput
@@ -42,8 +44,6 @@ SamplerState samp : register(s0);
 cbuffer MaterialBuffer : register(b1)
 {
     float4 baseColor;  // Used when no texture bound
-    bool useTexture;
-    float3 padding;    // Align to 16 bytes
 };
 
 float4 PSColorOnly(VSPosInput input) : SV_Target {
@@ -52,12 +52,6 @@ float4 PSColorOnly(VSPosInput input) : SV_Target {
 
 float4 PSMain(VSOutput input) : SV_Target
 {
-    float4 color = baseColor;
-
-    if (useTexture)
-    {
-        color *= tex.Sample(samp, input.uv);
-    }
-
+    float4 color = tex.Sample(samp, input.uv);
     return color;
 }
