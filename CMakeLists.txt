@@ -57,6 +57,7 @@ target_link_libraries(GameEditorQT PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets d3dco
 target_compile_definitions(GameEditorQT PRIVATE QT_QPA_PLATFORM_PLUGIN_PATH=C:/Qt/6.9.0/msvc2022_64/plugins/platforms)
 message(STATUS "Assimp Libs: ${ASSIMP_LIBRARIES}")
 message(STATUS "MSVC_VERSION: ${MSVC_VERSION}")
+set(CMAKE_AUTOMOC ON)
 
 # Optional: enable Qt's preprocessor (for signals/slots)
 set_target_properties(GameEditorQT PROPERTIES

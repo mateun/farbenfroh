@@ -26,6 +26,7 @@
 
 #include "AssetBrowserWidget.h"
 #include "D3DViewPortWidget.h"
+#include "ProjectDash.h"
 
 static QWidget* leftPanel;
 static QWidget* rightPanel;
@@ -243,10 +244,18 @@ int main(int argc, char *argv[]) {
     initAssetBrowser(assetBrowser_);
     initViewport(centerPanel);
 
-
     mainWindow.show();
 
-    clearViewport();
+    ProjectDash dialog;
+    QObject::connect(&dialog, &ProjectDash::projectChosen, [](const QString& path){
+        qDebug() << "Project path selected:" << path;
+        // TODO: load or initialize project here
+    });
+
+    if (dialog.exec() == QDialog::Accepted) {
+        QString path = dialog.selectedProjectPath();
+        // Open the main editor window with this project...
+    }
 
     return app.exec();
 }

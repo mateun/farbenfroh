@@ -185,20 +185,24 @@ void D3DViewPortWindow::exposeEvent(QExposeEvent*) {
                 blocky_guy_texture_ = dx11_loadTextureFromFile("../assets/blocky_guy_diffuse.png");
                 blocky_guy_srv_ = dx11_createShaderResourceView(blocky_guy_texture_);
                 sampler_state_ = dx11_createSamplerState();
+
+
         }
-        else {
-            render();
-        }
+        // Render on every exposition
+        render();
 
     }
 }
 
 D3DViewPortWindow::D3DViewPortWindow(QWidget* parent) {
+
+    // printf("original w/h: %d/%d\n", width(), height());
+    // v_fov_original_ = glm::radians(25.0f);
+    // float aspect = (float) 640.0f / (float) 480.0f;
+    // h_fov_original_ = 2.0f * atan(tan(v_fov_original_ / 2.0f) * aspect);
+
+    h_fov_original_ = glm::radians(65.0f);
     setSurfaceType(QSurface::RasterSurface);
-    // HWND hwnd = reinterpret_cast<HWND>(winId());
-    // dx11_init(hwnd);
-
-
 
 }
 
@@ -236,8 +240,9 @@ void D3DViewPortWindow::render() {
 
     auto viewMatrix = glm::lookAtLH(glm::vec3{0, 10, 11}, {0, 0, 0}, {0,1, 0});
 
-    float aspect_ratio = (float)width() / (float)height();
-    auto projMatrix = glm::perspectiveLH(glm::radians(20.0f), aspect_ratio, 0.1f, 100.0f);
+    float aspect = float(width()) / float(height());
+    float v_fov = 2.0f * atan(tan(h_fov_original_ / 2.0f) / aspect);
+    auto projMatrix = glm::perspectiveLH(v_fov, aspect, 0.1f, 100.0f);
 
     float blendFactor[4] = {0, 0, 0, 0};
     UINT stride = sizeof(glm::vec3);
@@ -274,10 +279,10 @@ void D3DViewPortWindow::render() {
 }
 
 void D3DViewPortWindow::resizeEvent(QResizeEvent* event) {
-    printf("QWindow size: %d, %d" ,width(), height());
+    //printf("QWindow size: %d, %d" ,width(), height());
     RECT r;
     GetClientRect((HWND)winId(), &r);
-    printf("HWND client size: %d %d", r.right - r.left , r.bottom - r.top);
+    //printf("HWND client size: %d %d", r.right - r.left , r.bottom - r.top);
 
     dx11_onResize(event->size().width(), event->size().height());
     updateViewport();

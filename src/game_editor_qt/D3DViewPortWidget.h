@@ -86,6 +86,9 @@ private:
     std::vector<glm::vec3> grid_verts_;
     std::vector<uint32_t> grid_indices_;
 
+    float v_fov_original_ = 0;
+    float h_fov_original_ = 0;
+
 };
 
 

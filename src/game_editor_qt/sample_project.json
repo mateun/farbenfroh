@@ -1,0 +1,9 @@
+{
+  "name": "MyCoolGame",
+  "engineVersion": "0.1.0",
+  "defaultLevel": "Levels/start.json",
+  "paths": {
+    "assets": "Assets/",
+    "levels": "Levels/"
+  }
+}

@@ -574,8 +574,9 @@ void dx11_onResize(int w, int h) {
     ID3D11Texture2D* backBuffer = nullptr;
     swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
     D3D11_TEXTURE2D_DESC actualDesc;
+    if (!backBuffer) { return; }
     backBuffer->GetDesc(&actualDesc);
-    printf("Backbuffer: %d x %d\n", actualDesc.Width, actualDesc.Height);
+    //printf("Backbuffer: %d x %d\n", actualDesc.Width, actualDesc.Height);
     hr = device->CreateRenderTargetView(backBuffer, nullptr, &rtv);
     backBuffer->Release();
     if (FAILED(hr)) {
