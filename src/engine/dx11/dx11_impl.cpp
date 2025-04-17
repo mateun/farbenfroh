@@ -310,6 +310,13 @@ void dx11_createInputLayout(
     device->CreateInputLayout(layout, layoutCount, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), outLayout);
 }
 
+ID3D11Device* dx11_device() {
+    return device;
+}
+
+ID3D11DeviceContext* dx11_context() {
+    return ctx;
+}
 
 
 void dx11_createVertexShaderFromByteCode(ID3DBlob* bc, ID3D11VertexShader** outVS) {
