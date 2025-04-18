@@ -69,9 +69,13 @@ QString ProjectDash::selectedProjectPath() const {
     return selectedPath_;
 }
 
+QString ProjectDash::projectName() const {
+    return nameEdit_->text();
+}
+
 void ProjectDash::onRecentClicked(QListWidgetItem* item) {
     selectedPath_ = item->text().section(" - ", 1); // crude parsing
-    emit projectChosen(selectedPath_);
+    emit existingProjectChosen(selectedPath_);
     accept(); // close dialog
 }
 
@@ -80,6 +84,6 @@ void ProjectDash::onCreateProject() {
         return;
 
     selectedPath_ = pathEdit_->text() + "/" + nameEdit_->text();
-    emit projectChosen(selectedPath_);
+    emit existingProjectChosen(selectedPath_);
     accept(); // close dialog
 }

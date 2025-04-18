@@ -26,12 +26,15 @@
 
 #include "AssetBrowserWidget.h"
 #include "D3DViewPortWidget.h"
+#include "EditorController.h"
+#include "GameObjectTreeWidget.h"
 #include "ProjectDash.h"
 
 static QWidget* leftPanel;
 static QWidget* rightPanel;
 static QTabWidget* centerPanel;
 static AssetBrowserWidget* assetBrowser_;
+static GameObjectTreeWidget* gameObjectTreeWidget_;
 
 void setDarkTheme(QApplication* app) {
     QPalette darkPalette;
@@ -135,65 +138,14 @@ void updatePropertiesFor(void* gameObject) {
 }
 
 void createGameObjectTree(QWidget* targetPanel) {
-    auto tree = new QTreeWidget();
-    tree->setHeaderHidden(true); // no header if you want that minimal look
-    tree->setStyleSheet("background-color: #111; color: white;");
-
-    // Add some test nodes
-    auto root = new QTreeWidgetItem(tree, QStringList("Player"));
-    new QTreeWidgetItem(root, QStringList("Camera"));
-    new QTreeWidgetItem(root, QStringList("Collider"));
-
-    auto enemy = new QTreeWidgetItem(tree, QStringList("Enemy"));
-    new QTreeWidgetItem(enemy, QStringList("AI"));
-    new QTreeWidgetItem(enemy, QStringList("Health"));
-
-    tree->expandAll(); // for now
-
-    targetPanel->layout()->addWidget(tree);
+    gameObjectTreeWidget_= new GameObjectTreeWidget();
+    targetPanel->layout()->addWidget(gameObjectTreeWidget_);
 
 
 }
 
 void initAssetBrowser(QWidget* assetBrowser) {
-    // TODO add this to the asset browser
-    // also add a menu here.
 
-    auto* layout = new QVBoxLayout(assetBrowser);
-    // top menu or search bar
-    QHBoxLayout* topBar = new QHBoxLayout();
-    topBar->addWidget(new QLabel("Assets"));
-    topBar->addStretch();
-    topBar->addWidget(new QLineEdit("Search..."));
-    layout->addLayout(topBar);
-
-    auto listView = new QListView();
-    listView->setViewMode(QListView::IconMode);
-    listView->setResizeMode(QListView::Adjust);
-    listView->setSpacing(10);
-    listView->setMovement(QListView::Static);
-    listView->setIconSize(QSize(128, 128));
-    listView->setUniformItemSizes(true);
-
-    listView->setDragEnabled(true);
-    listView->setAcceptDrops(true);
-    listView->setDropIndicatorShown(true);
-    layout->addWidget(listView);
-
-    // Generate preview
-    // QPixmap::fromImage(...)
-    // Meshes on our own
-    // Sounds we just show an icon
-
-    auto model = new QStandardItemModel();
-
-    QIcon texturePreview("textures/diffuse1.png");
-    model->appendRow(new QStandardItem(QIcon("../assets/icon_package.svg"), "Mesh01"));
-    model->appendRow(new QStandardItem(QIcon("../assets/icon_play.svg"), "Sound01"));
-    model->appendRow(new QStandardItem(QIcon("../assets/icon_save_game.svg"), "Texture01"));
-
-
-    listView->setModel(model);
 }
 
 void initViewport(QTabWidget* targetTabWidget) {
@@ -223,13 +175,13 @@ int main(int argc, char *argv[]) {
 
     qDebug() << "Available image formats:" << QImageReader::supportedImageFormats();
 
+
+
     QMainWindow mainWindow;
     mainWindow.setWindowTitle("_Borst Game Editor");
     mainWindow.resize(800, 600);
     QWidget* centralWidget = new QWidget();
     mainWindow.setCentralWidget(centralWidget);
-
-
 
     auto toolbar = new QToolBar();
     toolbar->setMovable(false);
@@ -246,16 +198,30 @@ int main(int argc, char *argv[]) {
 
     mainWindow.show();
 
+    auto editor = new EditorController(&app); // Central controller
+    // Hook components to project/level updates:
+    QObject::connect(editor, &EditorController::projectChanged, assetBrowser_, &AssetBrowserWidget::setProject);
+    QObject::connect(editor, &EditorController::levelChanged, gameObjectTreeWidget_, &GameObjectTreeWidget::setLevel);
+    // TODO further hooks...
+
     ProjectDash dialog;
-    QObject::connect(&dialog, &ProjectDash::projectChosen, [](const QString& path){
+    QObject::connect(&dialog, &ProjectDash::existingProjectChosen, [editor](QString path){
         qDebug() << "Project path selected:" << path;
-        // TODO: load or initialize project here
+        editor->loadProject(path.toStdString());
+
+    });
+    QObject::connect(&dialog, &ProjectDash::newProjectToBeCreated, [editor](const QString& name, const QString& path){
+        qDebug() << "Project path selected:" << path;
+
+        //editor->createNewProject("project_xyz", path.toStdString());
+        editor->createNewProject(name.toStdString(), path.toStdString());
+
     });
 
-    if (dialog.exec() == QDialog::Accepted) {
-        QString path = dialog.selectedProjectPath();
-        // Open the main editor window with this project...
-    }
+    // Just block until the dash is closed.
+    // If the user chose not to create or load a project,
+    // we activate the editor. A project then will need to be choseen via menu or toolbar.
+    dialog.exec();
 
     return app.exec();
 }

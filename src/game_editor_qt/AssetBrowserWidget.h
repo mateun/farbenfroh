@@ -4,18 +4,40 @@
 
 #ifndef ASSETBROWSERWIDGET_H
 #define ASSETBROWSERWIDGET_H
+#include <qstandarditemmodel.h>
+#include <qtreewidget.h>
 #include <QWidget>
 
+
+class QListView;
+class QTreeWidget;
+struct Project;
 
 class AssetBrowserWidget : public QWidget {
 
 public:
     AssetBrowserWidget(QWidget *parent = nullptr);
 
+    void refreshAssetListFor(const std::string& folderPath);
+
+    void onFolderSelected(QTreeWidgetItem *item, int column);
+
+    void showFolderContextMenu(const QPoint &pos);
+
+    void setProject(Project* project);
+
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent* event) override;
 
+
+private:
+    Project * project_ = nullptr;
+    QTreeWidget* folderTree_ = nullptr;
+    QListView* assetList_ = nullptr;
+    QStandardItemModel * asset_list_model_ = nullptr;
+
+    std::string currentFolderPath_;
 };
 
 

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.26)
 project(game_engine)
 
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
 set(CMAKE_SYSTEM_VERSION 10.0.22621.0)
 
 

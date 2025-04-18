@@ -25,10 +25,12 @@ class ProjectDash : public QDialog {
 public:
     explicit ProjectDash(QWidget *parent = nullptr);
     QString selectedProjectPath() const;
+    QString projectName() const;
 
 
     signals:
-        void projectChosen(const QString& path);
+        void existingProjectChosen(QString path);
+        void newProjectToBeCreated(const QString& name, const QString& path);
 
 
     private slots:
