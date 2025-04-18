@@ -45,7 +45,7 @@ namespace editor {
                 if (ImGui::MenuItem("New Level")) {
                     open_new_level_popup = true;
                     // TODO ask if the current level should be saved?
-                    level = new Level();
+                    level = new ed_Level();
 
                 }
 
@@ -1057,7 +1057,7 @@ namespace editor {
 
     Editor::Editor(HWND hwnd) : hwnd_(hwnd) {
         state = new EditorState();
-        level = new Level();
+        level = new ed_Level();
 
         // Create images (textures):
         //playButtonTexture = createTextureFromFile("../src/engine/editor/assets/button_play.png");

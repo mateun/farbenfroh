@@ -21,7 +21,7 @@ void EditorController::loadProject(const std::string& path) {
     // Load logic here, or stub it
     qDebug() << "Loading project from" << path;
 
-     currentProject_ = std::make_unique<Project>();
+     currentProject_ = std::make_unique<edqt::Project>();
      currentProject_->name = "StubProject";
      currentProject_->systemFilePath = path;
 
@@ -44,7 +44,7 @@ bool EditorController::createNewProject(const QString& name, const QString& path
         }
     }
 
-    currentProject_ = std::make_unique<Project>();
+    currentProject_ = std::make_unique<edqt::Project>();
     currentProject_->name = name.toStdString();
     currentProject_->systemFilePath = folderPath.toStdString();
     auto assetFolderOK = QDir().mkpath(folderPath + "/Assets");
@@ -56,7 +56,7 @@ bool EditorController::createNewProject(const QString& name, const QString& path
     saveProjectToJsonFile(currentProject_.get());
 
     // Also create an initial level
-    currentLevel_ = std::make_unique<Level>();
+    currentLevel_ = std::make_unique<edqt::Level>();
     currentLevel_->name = "UntitledLevel";
     currentLevel_->relativePath = "levels/UntitledLevel.json";
     // TODO and think about the new "empty shell" level, what to do and when to save it etc.
@@ -126,7 +126,7 @@ void EditorController::setAssetTargetTabPanel(QTabWidget *assetTabWidget) {
     asset_tab_widget_ = assetTabWidget;
 }
 
-void EditorController::saveProjectToJsonFile(Project* project) {
+void EditorController::saveProjectToJsonFile(edqt::Project* project) {
     using namespace nlohmann;
     json j;
 

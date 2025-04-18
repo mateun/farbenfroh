@@ -15,12 +15,14 @@ class GameObjectTreeWidget : public QTreeWidget {
   public:
     GameObjectTreeWidget(QWidget* parent = nullptr);
 
-    void setLevel(Level* level) {
-        level_ = level;
-    };
+    QTreeWidgetItem *setGenRoot();
+
+    void showContextMenu(const QPoint &pos);
+
+    void setLevel(edqt::Level* level);
 
 private:
-    Level* level_;
+    edqt::Level* level_ = nullptr;
 
 };
 

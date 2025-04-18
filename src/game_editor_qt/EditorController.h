@@ -24,18 +24,18 @@ public:
 
     void setAssetTargetTabPanel(QTabWidget* assetTabWidget);
 
-    void saveProjectToJsonFile(Project *project);
+    void saveProjectToJsonFile(edqt::Project *project);
 
-    Project* currentProject() const { return currentProject_.get(); }
-    Level* currentLevel() const { return currentLevel_.get(); }
+    edqt::Project* currentProject() const { return currentProject_.get(); }
+    edqt::Level* currentLevel() const { return currentLevel_.get(); }
 
     signals:
-        void projectChanged(Project* project);
-        void levelChanged(Level* level);
+        void projectChanged(edqt::Project* project);
+        void levelChanged(edqt::Level* level);
 
 private:
-    std::unique_ptr<Project> currentProject_;
-    std::unique_ptr<Level> currentLevel_;
+    std::unique_ptr<edqt::Project> currentProject_;
+    std::unique_ptr<edqt::Level> currentLevel_;
     QTabWidget * asset_tab_widget_ = nullptr;
     std::map<QString, QString> tab_fullpath_map_;
 };

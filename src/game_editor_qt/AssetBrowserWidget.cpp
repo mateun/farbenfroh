@@ -233,7 +233,7 @@ void AssetBrowserWidget::showFolderContextMenu(const QPoint& pos) {
  * Our task here is to reload the assets and examine the file system at the projects location.
  * @param project The new now "current" project.
  */
-void AssetBrowserWidget::setProject(Project *project) {
+void AssetBrowserWidget::setProject(edqt::Project *project) {
     // folderTree_->clear();
     // auto root  = new QTreeWidgetItem(folderTree_, QStringList("Assets"));
     // project_ = project;

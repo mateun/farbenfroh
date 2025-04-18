@@ -71,7 +71,7 @@ protected:
 
 
 
-struct Level {
+struct ed_Level {
     std::vector<GameObject*> gameObjects;
 };
 

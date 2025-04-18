@@ -9,9 +9,13 @@
 #include <QWidget>
 
 
+namespace edqt {
+    struct Project;
+}
+
 class QListView;
 class QTreeWidget;
-struct Project;
+struct ed_Project;
 
 class AssetBrowserWidget : public QWidget {
     Q_OBJECT
@@ -26,7 +30,7 @@ public:
 
     void showFolderContextMenu(const QPoint &pos);
 
-    void setProject(Project* project);
+    void setProject(edqt::Project* project);
 
     signals:
         void assetDoubleClicked(const QString& assetPath);
@@ -37,7 +41,7 @@ protected:
 
 
 private:
-    Project * project_ = nullptr;
+    edqt::Project * project_ = nullptr;
     QTreeWidget* folderTree_ = nullptr;
     QListView* assetList_ = nullptr;
     QStandardItemModel * asset_list_model_ = nullptr;

@@ -14,7 +14,7 @@ namespace ozz::math {
     struct SoaTransform;
 }
 
-class Level;
+class ed_Level;
 class GameObject;
 class FolderAssetLoader;
 class CameraMover;
@@ -38,7 +38,7 @@ namespace editor {
     private:
         EditorState* state = nullptr;
         //Texture* playButtonTexture = nullptr;
-        Level* level;
+        ed_Level* level;
         GameObject* currentSelectedGameObjectInTree = nullptr;
         FolderAssetLoader *assetLoader = nullptr;
         std::unique_ptr<FrameBuffer> skeletalMeshWindowFrameBuffer = nullptr;
