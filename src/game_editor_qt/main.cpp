@@ -29,6 +29,8 @@
 #include "EditorController.h"
 #include "GameObjectTreeWidget.h"
 #include "ProjectDash.h"
+#include <QShortcut>
+#include <QKeySequence>
 
 static QWidget* leftPanel;
 static QWidget* rightPanel;
@@ -199,9 +201,14 @@ int main(int argc, char *argv[]) {
     mainWindow.show();
 
     auto editor = new EditorController(&app); // Central controller
+    // Where the assets should be appended to as tabs when opened
+    editor->setAssetTargetTabPanel(centerPanel);
     // Hook components to project/level updates:
     QObject::connect(editor, &EditorController::projectChanged, assetBrowser_, &AssetBrowserWidget::setProject);
     QObject::connect(editor, &EditorController::levelChanged, gameObjectTreeWidget_, &GameObjectTreeWidget::setLevel);
+    QObject::connect(assetBrowser_, &AssetBrowserWidget::assetDoubleClicked, editor, &EditorController::openScriptInTab);
+    QShortcut* saveShortcut = new QShortcut(QKeySequence("Ctrl+S"), &mainWindow);
+    QObject::connect(saveShortcut, &QShortcut::activated, editor, &EditorController::saveCurrentScript);
     // TODO further hooks...
 
     ProjectDash dialog;
@@ -212,9 +219,10 @@ int main(int argc, char *argv[]) {
     });
     QObject::connect(&dialog, &ProjectDash::newProjectToBeCreated, [editor](const QString& name, const QString& path){
         qDebug() << "Project path selected:" << path;
-
-        //editor->createNewProject("project_xyz", path.toStdString());
-        editor->createNewProject(name.toStdString(), path.toStdString());
+        auto result = editor->createNewProject(name, path);
+        if (!result) {
+            // TODO what can we do here?!
+        }
 
     });
 

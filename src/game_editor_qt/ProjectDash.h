@@ -7,6 +7,7 @@
 
 
 #include <QDialog>
+#include <qlabel.h>
 #include <QString>
 #include <QVector>
 #include <QListWidget>
@@ -24,6 +25,11 @@ class ProjectDash : public QDialog {
     Q_OBJECT
 public:
     explicit ProjectDash(QWidget *parent = nullptr);
+
+    bool validateOpeningPath(const QString& folderName) const;
+
+    bool validateCreationPath() const;
+
     QString selectedProjectPath() const;
     QString projectName() const;
 
@@ -45,6 +51,7 @@ private:
     QPushButton* createButton_;
 
     QString selectedPath_;
+    QLabel * error_label_ = nullptr;
 };
 
 

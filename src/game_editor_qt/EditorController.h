@@ -5,6 +5,8 @@
 
 #include <QObject>
 #include <memory>
+#include <qtabwidget.h>
+
 #include "editor_model.h"
 
 class EditorController : public QObject {
@@ -14,7 +16,15 @@ public:
     explicit EditorController(QObject* parent = nullptr);
 
     void loadProject(const std::string& path);
-    void createNewProject(const std::string& name, const std::string& path);
+    bool createNewProject(const QString& name, const QString& path);
+
+    void saveCurrentScript();
+
+    void openScriptInTab(const QString& scriptPath);
+
+    void setAssetTargetTabPanel(QTabWidget* assetTabWidget);
+
+    void saveProjectToJsonFile(Project *project);
 
     Project* currentProject() const { return currentProject_.get(); }
     Level* currentLevel() const { return currentLevel_.get(); }
@@ -26,5 +36,7 @@ public:
 private:
     std::unique_ptr<Project> currentProject_;
     std::unique_ptr<Level> currentLevel_;
+    QTabWidget * asset_tab_widget_ = nullptr;
+    std::map<QString, QString> tab_fullpath_map_;
 };
 

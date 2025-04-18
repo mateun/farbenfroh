@@ -16,6 +16,11 @@
 #include <QSplitter>
 #include <QStandardItemModel>
 #include <QTreeWidget>
+#include <QInputDialog>
+#include <QMessageBox>
+
+#include "editor_model.h"
+#include "ProjectDash.h"
 
 AssetBrowserWidget::AssetBrowserWidget(QWidget *parent) : QWidget(parent) {
     setAcceptDrops(true);
@@ -34,21 +39,35 @@ AssetBrowserWidget::AssetBrowserWidget(QWidget *parent) : QWidget(parent) {
     folderTree_->setMinimumWidth(180);
     folderTree_->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Expanding);
     folderTree_->setContextMenuPolicy(Qt::CustomContextMenu);
-    auto root = new QTreeWidgetItem(folderTree_, QStringList("Assets"));
-    root->setExpanded(true);
+
     connect(folderTree_, &QTreeWidget::customContextMenuRequested,
             this, &AssetBrowserWidget::showFolderContextMenu);
     connect(folderTree_, &QTreeWidget::itemClicked,
         this, &AssetBrowserWidget::onFolderSelected);
 
+    // Enable dynamic expansion:
+    connect(folderTree_, &QTreeWidget::itemExpanded, this, [=](QTreeWidgetItem* item) {
+        // Only load if dummy child present
+        if (item->childCount() == 1 && item->child(0)->text(0).isEmpty()) {
+            item->removeChild(item->child(0)); // remove dummy
 
-    // Add some test folders here
-    new QTreeWidgetItem(root, QStringList("Scripts"));
-    new QTreeWidgetItem(root, QStringList("Meshes"));
-    new QTreeWidgetItem(root, QStringList("Textures"));
-    new QTreeWidgetItem(root, QStringList("Materials"));
+            QString path = item->data(0, Qt::UserRole).toString();
+            QDir dir(path);
+            QStringList subFolders = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 
+            for (const QString& folder : subFolders) {
+                QString fullPath = dir.absoluteFilePath(folder);
+                QTreeWidgetItem* subItem = new QTreeWidgetItem(item, QStringList(folder));
+                subItem->setData(0, Qt::UserRole, fullPath);
 
+                if (QDir(fullPath).entryList(QDir::Dirs | QDir::NoDotAndDotDot).size() > 0) {
+                    subItem->addChild(new QTreeWidgetItem()); // add dummy again
+                }
+            }
+        }
+    });
+
+    // Our asset list viewer:
     assetList_ = new QListView();
     assetList_->setViewMode(QListView::IconMode);
     assetList_->setResizeMode(QListView::Adjust);
@@ -60,6 +79,8 @@ AssetBrowserWidget::AssetBrowserWidget(QWidget *parent) : QWidget(parent) {
     assetList_->setDragEnabled(true);
     assetList_->setAcceptDrops(true);
     assetList_->setDropIndicatorShown(true);
+    connect(assetList_, &QListView::doubleClicked, this, &AssetBrowserWidget::onAssetDoubleClicked);
+
     splitter->addWidget(folderTree_);
     splitter->addWidget(assetList_);
     splitter->setStretchFactor(1, 1);
@@ -82,9 +103,35 @@ AssetBrowserWidget::AssetBrowserWidget(QWidget *parent) : QWidget(parent) {
     assetList_->setModel(asset_list_model_);
 }
 
+void AssetBrowserWidget::onAssetDoubleClicked(const QModelIndex& index) {
+    QString assetName = index.data(Qt::DisplayRole).toString();
+    QString assetPath = QString::fromStdString(currentFolderPath_) + "/" + assetName;
+    qDebug() << "Double-clicked asset:" << assetPath;
+
+    // Emit signal to open it in a new tab, or do it directly:
+    emit assetDoubleClicked(assetPath);
+}
+
+
 void AssetBrowserWidget::refreshAssetListFor(const std::string &folderPath) {
-    auto assets = QDir("assets/myfolder").entryList();
+    auto assets = QDir(QString::fromStdString(folderPath)).entryList(QDir::Files);
     asset_list_model_->clear();
+    for (auto asset: assets) {
+        QString suffix = QFileInfo(asset).suffix().toLower();
+
+        QIcon icon;
+        if (suffix == "lua") {
+            icon = QIcon("../assets/icon_sourcefile.svg");
+        } else if (suffix == "glb" || suffix == "obj") {
+            icon = QIcon(":/icons/icon_mesh.svg");
+        } else if (suffix == "png" || suffix == "jpg") {
+            icon = QIcon(":/icons/icon_texture.svg");
+        } else {
+            icon = QIcon(":/icons/icon_default.svg"); // fallback
+        }
+        asset_list_model_->appendRow(new QStandardItem(icon, asset));
+
+    }
 }
 
 void AssetBrowserWidget::onFolderSelected(QTreeWidgetItem* item, int column) {
@@ -98,16 +145,86 @@ void AssetBrowserWidget::onFolderSelected(QTreeWidgetItem* item, int column) {
 
 void AssetBrowserWidget::showFolderContextMenu(const QPoint& pos) {
     QTreeWidgetItem* item = folderTree_->itemAt(pos);
+    if (!item) return;
+
+
+    QString relativePath;
+    QTreeWidgetItem* current = item;
+    while (current && current->parent()) {
+        relativePath = current->text(0) + "/" + relativePath;
+        current = current->parent();
+    }
+    relativePath = "Assets/" + relativePath; // Assuming "Assets" is the root
+    QString projectRoot = QString::fromStdString(project_->systemFilePath);
+    QString fullPath = QDir(projectRoot).filePath(relativePath);
+    QDir baseDir(fullPath); // wherever your current folder is
+
 
     QMenu menu(this);
-    QAction* createAction = menu.addAction("New Folder");
+    auto newAssetSubMenu = menu.addMenu("New ... ");
+    QAction* createAction = newAssetSubMenu->addAction("Folder");
+    QAction* createScriptAction = newAssetSubMenu->addAction("Script");
+    QAction* createMaterialAction = newAssetSubMenu->addAction("Material");
+    menu.addSeparator();
+    auto importSubMenu = menu.addMenu("Import...");
+    QAction* importMeshAction = importSubMenu->addAction("Mesh");
+    QAction* importTextureAction = importSubMenu->addAction("Texture");
+    menu.addSeparator();
     QAction* deleteAction = menu.addAction("Delete Folder");
+
+
+
     QAction* chosen = menu.exec(folderTree_->viewport()->mapToGlobal(pos));
 
     if (chosen == createAction) {
         // Call your new-folder logic
+        qDebug() << "Creating folder under " << item;
+        bool ok;
+        QString folderName = QInputDialog::getText(
+            this,
+            "Create New Folder",
+            "Folder Name:",
+            QLineEdit::Normal,
+            "",
+            &ok
+        );
+
+        if (ok && !folderName.isEmpty()) {
+
+            if (!baseDir.mkpath(folderName)) {
+                QMessageBox::warning(this, "Error", "Failed to create folder.");
+            } else {
+
+                new QTreeWidgetItem(item, QStringList(folderName));
+                folderTree_->expandItem(item);
+            }
+        }
+
     } else if (chosen == deleteAction) {
         // Delete logic here
+    } else if (chosen == createScriptAction) {
+        bool ok;
+        QString fileName = QInputDialog::getText(
+            this,
+            "Create New Script",
+            "File Name:",
+            QLineEdit::Normal,
+            "",
+            &ok
+        );
+
+        if (ok && !fileName.isEmpty()) {
+
+            auto info = QFileInfo(fullPath + "/" + fileName);
+            if (info.suffix().isEmpty()) {
+                fileName += ".lua";
+
+            }
+            auto newFile = new QFile(fullPath + "/" + fileName);
+            newFile->open(QIODevice::WriteOnly);
+            newFile->close();
+
+        }
     }
 }
 
@@ -117,11 +234,36 @@ void AssetBrowserWidget::showFolderContextMenu(const QPoint& pos) {
  * @param project The new now "current" project.
  */
 void AssetBrowserWidget::setProject(Project *project) {
+    // folderTree_->clear();
+    // auto root  = new QTreeWidgetItem(folderTree_, QStringList("Assets"));
+    // project_ = project;
+    // auto subFolders = QDir(QString::fromStdString(project_->systemFilePath) + "/Assets").entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    // for (auto f : subFolders) {
+    //     new QTreeWidgetItem(root, QStringList(f));
+    // }
+
+    folderTree_->clear();
     project_ = project;
-    // For now we expect a fixed folder hierarchy in a project to load assets from:
-    // the /assets folder holds all physical assets flat.
-    // But we also have virtual folders. each asset in the project.json has a virtual folder, so we need
-    // to respect that as well.
+
+    auto root = new QTreeWidgetItem(folderTree_, QStringList("Assets"));
+    root->setData(0, Qt::UserRole, QString::fromStdString(project_->systemFilePath) + "/Assets");
+    folderTree_->addTopLevelItem(root);
+
+    QDir baseDir(QString::fromStdString(project_->systemFilePath) + "/Assets");
+    QStringList subFolders = baseDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
+    for (const QString& folder : subFolders) {
+        QString fullPath = baseDir.absoluteFilePath(folder);
+        QTreeWidgetItem* item = new QTreeWidgetItem(root, QStringList(folder));
+        item->setData(0, Qt::UserRole, fullPath);
+
+        // Lazy loading: add dummy if subfolders exist
+        if (QDir(fullPath).entryList(QDir::Dirs | QDir::NoDotAndDotDot).size() > 0) {
+            item->addChild(new QTreeWidgetItem()); // dummy
+        }
+    }
+
+    root->setExpanded(true);
 
 }
 
