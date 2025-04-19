@@ -4,6 +4,7 @@
 
 #include "GameObjectTreeWidget.h"
 
+#include "editor_model.h"
 #include <QInputDialog>
 #include <QMenu>
 
@@ -67,6 +68,7 @@ void GameObjectTreeWidget::showContextMenu(const QPoint& pos) {
 
             auto ngo = new edqt::GameObject();
             ngo->name = name.toStdString();
+            ngo->components.push_back(std::make_unique<edqt::TransformComponent>());
             level_->gameObjects.push_back(ngo);
             auto newGob = new QTreeWidgetItem(item, QStringList(name));
             newGob->setData(0, Qt::UserRole, QVariant::fromValue(ngo));

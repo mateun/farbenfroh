@@ -7,8 +7,10 @@
 
 #include <QTreeWidget>
 
-#include "editor_model.h"
-
+namespace edqt {
+    struct GameObject;
+    struct Level;
+}
 
 class GameObjectTreeWidget : public QTreeWidget {
     Q_OBJECT

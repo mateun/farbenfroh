@@ -9,23 +9,32 @@
 #include <vector>
 #include <glm/vec3.hpp>
 
+#include "GameObjectPropertiesWidget.h"
+
 namespace edqt {
 
   struct GameObject;
   struct Component {
     virtual ~Component() {}
+
+    virtual QWidget * createPropertyWidget(GameObjectPropertiesWidget * game_object_properties_widget) = 0;
+
     GameObject* owner = nullptr;
     bool enabled = true;
 
   };
 
-  struct TransformComponent : public Component {
+  struct TransformComponent : Component {
     glm::vec3 position = {0,0, 0};
     glm::vec3 orientation_euler = {0, 0, 0};
     glm::vec3 scale = {1, 1, 1};
+
+    QWidget *createPropertyWidget(GameObjectPropertiesWidget *game_object_properties_widget) override;
   };
 
-  struct MeshComponent : public Component {
+
+
+  struct MeshComponent : Component {
 
   };
 

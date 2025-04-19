@@ -14,6 +14,7 @@ GameObjectPropertiesWidget::GameObjectPropertiesWidget(QWidget *parent) : QWidge
     layout->setSpacing(5);
     setLayout(layout);
 
+
 }
 
 /**
@@ -23,10 +24,18 @@ GameObjectPropertiesWidget::GameObjectPropertiesWidget(QWidget *parent) : QWidge
 void GameObjectPropertiesWidget::setGameObject(edqt::GameObject *gameObject) {
     qDebug() << "GameObjectPropertiesWidget::setGameObject called for " << gameObject->name;
 
-    for (auto& comp : gameObject->components) {
-        // TODO render the components properties
-        // Maybe delegate to the actual component?!
-        // Classic textbook polymorphic use-case here :)!
+    // Clear the child widgets
+    QLayoutItem* child;
+    while ((child = layout()->takeAt(0)) != nullptr) {
+        delete child->widget(); // deletes label + field
+        delete child;
+    }
+
+    for (auto& component : gameObject->components) {
+        QWidget* propWidget = component->createPropertyWidget(this);
+        if (propWidget)
+            layout()->addWidget(propWidget);
+
     }
 
 

@@ -91,10 +91,7 @@ void createThreeMainPanels(QWidget* centralWidget) {
     centerPanel->setStyleSheet("background-color: #111; color: white;");
 
     rightPanel = new GameObjectPropertiesWidget();
-    // auto* rightLayout = new QFormLayout();
-    // rightLayout->setLabelAlignment(Qt::AlignRight);
-    // rightLayout->setFormAlignment(Qt::AlignTop);
-    // rightPanel->setLayout(rightLayout);
+
     rightPanel->setMinimumWidth(160);
     // rightPanel->setStyleSheet("background-color: #222; color: white;");
 
