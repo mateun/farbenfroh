@@ -16,10 +16,22 @@ GameObjectTreeWidget::GameObjectTreeWidget(QWidget* parent) : QTreeWidget(parent
 
     this->setHeaderHidden(true); // no header if you want that minimal look
     this->setStyleSheet("background-color: #111; color: white;");
+    connect(this, &QTreeWidget::itemSelectionChanged, this, &GameObjectTreeWidget::selectionChanged);
 
     // Add some test nodes
     auto root = setGenRoot();
 
+
+}
+
+void GameObjectTreeWidget::selectionChanged() {
+    if (!selectedItems().isEmpty()) {
+        QTreeWidgetItem* item = selectedItems().first();
+        auto gameObject = item->data(0, Qt::UserRole).value<edqt::GameObject*>();
+        if (gameObject) {
+            emit gameObjectSelected(gameObject);
+        }
+    }
 
 }
 
@@ -55,12 +67,9 @@ void GameObjectTreeWidget::showContextMenu(const QPoint& pos) {
 
             auto ngo = new edqt::GameObject();
             ngo->name = name.toStdString();
-            if (level_) {
-                level_->gameObjects.push_back(ngo);
-            }
-            // TODO for now just add it visibly to the tree
-            // Need to make sure we only do this when we have a level.
-            new QTreeWidgetItem(item, QStringList(name));
+            level_->gameObjects.push_back(ngo);
+            auto newGob = new QTreeWidgetItem(item, QStringList(name));
+            newGob->setData(0, Qt::UserRole, QVariant::fromValue(ngo));
             expandItem(item);
         }
 

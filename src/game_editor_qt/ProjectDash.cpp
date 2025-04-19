@@ -45,8 +45,6 @@ ProjectDash::ProjectDash(QWidget* parent)
 
     connect(recentList_, &QListWidget::itemClicked, this, &ProjectDash::onRecentClicked);
 
-
-
     // --- Create New Project ---
     layout->addWidget(new QLabel("Create New Project:"));
     auto* formLayout = new QVBoxLayout();

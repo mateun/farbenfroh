@@ -9,6 +9,8 @@
 
 #include "editor_model.h"
 
+class QTreeWidget;
+
 class EditorController : public QObject {
     Q_OBJECT
 
@@ -23,6 +25,10 @@ public:
     void openScriptInTab(const QString& scriptPath);
 
     void setAssetTargetTabPanel(QTabWidget* assetTabWidget);
+
+    void onGameObjectSelected(QTreeWidget* treeWidget);
+
+    std::unique_ptr<edqt::Level> loadLevelFromPath(const QString &path);
 
     void saveProjectToJsonFile(edqt::Project *project);
 

@@ -32,8 +32,10 @@
 #include <QShortcut>
 #include <QKeySequence>
 
+#include "GameObjectPropertiesWidget.h"
+
 static QWidget* leftPanel;
-static QWidget* rightPanel;
+static GameObjectPropertiesWidget* rightPanel;
 static QTabWidget* centerPanel;
 static AssetBrowserWidget* assetBrowser_;
 static GameObjectTreeWidget* gameObjectTreeWidget_;
@@ -88,13 +90,13 @@ void createThreeMainPanels(QWidget* centralWidget) {
     centerPanel = new QTabWidget();
     centerPanel->setStyleSheet("background-color: #111; color: white;");
 
-    rightPanel = new QWidget();
-    auto* rightLayout = new QFormLayout();
-    rightLayout->setLabelAlignment(Qt::AlignRight);
-    rightLayout->setFormAlignment(Qt::AlignTop);
-    rightPanel->setLayout(rightLayout);
+    rightPanel = new GameObjectPropertiesWidget();
+    // auto* rightLayout = new QFormLayout();
+    // rightLayout->setLabelAlignment(Qt::AlignRight);
+    // rightLayout->setFormAlignment(Qt::AlignTop);
+    // rightPanel->setLayout(rightLayout);
     rightPanel->setMinimumWidth(160);
-    rightPanel->setStyleSheet("background-color: #222; color: white;");
+    // rightPanel->setStyleSheet("background-color: #222; color: white;");
 
     QSplitter* horizontalSplitter = new QSplitter(Qt::Horizontal);
     horizontalSplitter->addWidget(leftPanel);
@@ -194,7 +196,7 @@ int main(int argc, char *argv[]) {
 
     createThreeMainPanels(centralWidget);
     createGameObjectTree(leftPanel);
-    updatePropertiesFor(nullptr);
+    //updatePropertiesFor(nullptr);
     initAssetBrowser(assetBrowser_);
     initViewport(centerPanel);
 
@@ -207,6 +209,9 @@ int main(int argc, char *argv[]) {
     QObject::connect(editor, &EditorController::projectChanged, assetBrowser_, &AssetBrowserWidget::setProject);
     QObject::connect(editor, &EditorController::levelChanged, gameObjectTreeWidget_, &GameObjectTreeWidget::setLevel);
     QObject::connect(assetBrowser_, &AssetBrowserWidget::assetDoubleClicked, editor, &EditorController::openScriptInTab);
+    QObject::connect(gameObjectTreeWidget_, &GameObjectTreeWidget::gameObjectSelected, rightPanel, &GameObjectPropertiesWidget::setGameObject);
+    // TODO also wire up the 3d viewport to the gameojbect selection, we might outline the currently selected game object there.
+
     QShortcut* saveShortcut = new QShortcut(QKeySequence("Ctrl+S"), &mainWindow);
     QObject::connect(saveShortcut, &QShortcut::activated, editor, &EditorController::saveCurrentScript);
     // TODO further hooks...
@@ -217,12 +222,13 @@ int main(int argc, char *argv[]) {
         editor->loadProject(path.toStdString());
 
     });
-    QObject::connect(&dialog, &ProjectDash::newProjectToBeCreated, [editor](const QString& name, const QString& path){
+    QObject::connect(&dialog, &ProjectDash::newProjectToBeCreated, [editor, &mainWindow](const QString& name, const QString& path){
         qDebug() << "Project path selected:" << path;
         auto result = editor->createNewProject(name, path);
         if (!result) {
-            // TODO what can we do here?!
+            qFatal() << "Error creating new project" ;
         }
+        mainWindow.setWindowTitle("Unnamed Level *");
 
     });
 

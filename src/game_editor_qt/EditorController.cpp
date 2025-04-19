@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QMessageBox>
 #include <QTextEdit>
+#include <qtreewidget.h>
 #include <engine/io/nljson.h>
 
 #include "editor_model.h"
@@ -21,11 +22,55 @@ void EditorController::loadProject(const std::string& path) {
     // Load logic here, or stub it
     qDebug() << "Loading project from" << path;
 
-     currentProject_ = std::make_unique<edqt::Project>();
-     currentProject_->name = "StubProject";
-     currentProject_->systemFilePath = path;
+    QFile file(QString::fromStdString(path) + "/.project.json");
+    if (file.open(QIODevice::ReadOnly)) {
+        auto data = file.readAll();
+        file.close();
+        try {
+            nlohmann::json json = nlohmann::json::parse(data);
+            currentProject_ = std::make_unique<edqt::Project>();
+            currentProject_->name = json["name"].get<std::string>();
+            currentProject_->systemFilePath = path;
+
+        } catch (const nlohmann::json::exception& e) {
+            qCritical() << "Failed to parse project file" << e.what();
+        }
+
+    } else {
+        qFatal() << "Failed to open project file at: " << path;
+
+    }
+
+    // Level loading:
+    // We first try to load the "editor_startup_level" as a convenience.
+    // If this fails or is empty, we load the first level we
+    // find in the projects level folder.
+    // If this also fails, we just create a dummy in-memory level and use that as a fallback.
+    // The user might have created the project, but not yet saved a level, which is fine,
+    // we should handle this gracefully.
+    // First check, do we even have any levels yet?
+    // Otherwise we do not need to look for the editor_startup_level or any other level to load, and
+    // we can create an empty one right away:
+    auto levelsDirectory = QDir(QString::fromStdString(currentProject_->systemFilePath) + "/Levels");
+    if (!levelsDirectory.exists()) {
+        currentLevel_ = std::make_unique<edqt::Level>();
+    } else {
+        if (!currentProject_->editor_startup_level.empty()) {
+            auto levelDir = QDir(QString::fromStdString(currentProject_->systemFilePath) + "/Levels/" + QString::fromStdString(currentProject_->editor_startup_level));
+            if (levelDir.exists()) {
+                auto current_level_ = loadLevelFromPath(levelDir.path());
+            } else {
+                qWarning() << "Failed to load editor level from" << levelDir.path();
+                if (levelsDirectory.entryList(QDir::Dirs).size() > 0) {
+                    currentLevel_ = loadLevelFromPath(levelsDirectory.entryList(QDir::Dirs)[0]);
+                }
+            }
+        }
+    }
+
 
     emit projectChanged(currentProject_.get());
+    emit levelChanged(currentLevel_.get());
 }
 
 bool EditorController::createNewProject(const QString& name, const QString& path) {
@@ -55,11 +100,14 @@ bool EditorController::createNewProject(const QString& name, const QString& path
 
     saveProjectToJsonFile(currentProject_.get());
 
-    // Also create an initial level
+    // Also create an initial level, which is not yet saved to disk of now.
+    // So we provide an in-memory level for the user to fill, but
+    // we should always mark the current level as unsaved so the user shall save it.
     currentLevel_ = std::make_unique<edqt::Level>();
     currentLevel_->name = "UntitledLevel";
-    currentLevel_->relativePath = "levels/UntitledLevel.json";
-    // TODO and think about the new "empty shell" level, what to do and when to save it etc.
+    currentLevel_->gameObjects = {};
+    //currentLevel_->relativePath = "levels/UntitledLevel.json";
+
 
     emit projectChanged(currentProject_.get());
     emit levelChanged(currentLevel_.get());
@@ -126,6 +174,30 @@ void EditorController::setAssetTargetTabPanel(QTabWidget *assetTabWidget) {
     asset_tab_widget_ = assetTabWidget;
 }
 
+std::unique_ptr<edqt::Level> EditorController::loadLevelFromPath(const QString& path) {
+    QFile file(path + "/.level.json");
+    if (file.open(QIODevice::ReadOnly)) {
+        auto data = file.readAll();
+        file.close();
+        try {
+            nlohmann::json json = nlohmann::json::parse(data);
+            auto level = std::make_unique<edqt::Level>();
+            level->name = json["name"].get<std::string>();
+            level->relativePath = QFileInfo(path).fileName().toStdString();
+            // TODO load gameobject data...
+
+            return level;
+
+        } catch (const nlohmann::json::exception& e) {
+            qCritical() << "Failed to parse project file" << e.what();
+        }
+
+    } else {
+        qFatal() << "Failed to open project file at: " << path;
+
+    }
+}
+
 void EditorController::saveProjectToJsonFile(edqt::Project* project) {
     using namespace nlohmann;
     json j;
@@ -142,6 +214,8 @@ void EditorController::saveProjectToJsonFile(edqt::Project* project) {
     // for (const auto* asset : project.assets) {
     //     j["assets"].push_back(asset->filePath);
     // }
+
+    j["last_open_level"] = "";
 
     std::string outputPath = project->systemFilePath + "/.project.json";
     std::ofstream outFile(outputPath);

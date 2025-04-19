@@ -67,6 +67,7 @@ struct Level {
 
 struct Project {
   std::string name;
+  std::string editor_startup_level;
 
   std::string systemFilePath; // absolute path to project folder
 
