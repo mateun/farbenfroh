@@ -34,6 +34,7 @@ file(GLOB_RECURSE GAME_FX_SRC games/opengl/GameEditor/*.cpp)
 file(GLOB_RECURSE GS_REPL_SRC src/game_shell/repl/*.cpp)
 file(GLOB_RECURSE GAME_EDITOR_FLOATING_SRC src/game_editor_floating/*.cpp)
 file(GLOB_RECURSE GAME_EDITOR_QT_SRC src/game_editor_qt/*.cpp)
+file(GLOB_RECURSE ACTOR_MODEL_SRC src/engine/actor_model/*.cpp)
 
 
 add_executable(command_repl WIN32
@@ -51,7 +52,7 @@ set(CMAKE_PREFIX_PATH "C:/Qt/6.9.0/msvc2022_64/lib/cmake"  )
 set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};c:/dev/lib/assimp/installation-debug")
 find_package(assimp CONFIG REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-add_executable(GameEditorQT ${GAME_EDITOR_QT_SRC} src/engine/dx11/dx11_impl.cpp)
+add_executable(GameEditorQT ${GAME_EDITOR_QT_SRC} src/engine/dx11/dx11_impl.cpp ${ACTOR_MODEL_SRC})
 target_link_libraries(GameEditorQT PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets d3dcompiler assimp::assimp)
 target_compile_definitions(GameEditorQT PRIVATE QT_QPA_PLATFORM_PLUGIN_PATH=C:/Qt/6.9.0/msvc2022_64/plugins/platforms)
 message(STATUS "Assimp Libs: ${ASSIMP_LIBRARIES}")

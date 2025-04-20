@@ -31,6 +31,7 @@
 #include "ProjectDash.h"
 #include <QShortcut>
 #include <QKeySequence>
+#include <engine/actor_model/script_runtime.h>
 
 #include "GameObjectPropertiesWidget.h"
 
@@ -228,6 +229,46 @@ int main(int argc, char *argv[]) {
         mainWindow.setWindowTitle("Unnamed Level *");
 
     });
+
+    // Test vm here for now
+    ScriptRuntime runtime;
+    auto &ctx = runtime.create_script("player1.behavior");
+    auto bc = std::vector<uint8_t> {
+        4, 's','e','l','f',           // PUSH_STRING "self"
+        4, 'p','i','n','g',           // PUSH_STRING "ping"
+        static_cast<uint8_t>(OpCode::SEND),
+        4, 'p','i','n','g',           // SEND to func "ping"
+        0,                            // 0 args
+        static_cast<uint8_t>(OpCode::RETURN)
+    };
+
+    Function ping_fn;
+    ping_fn.entry_point = 0;
+    ping_fn.arg_count = 0;
+    runtime.set_function(ctx.id, "ping", ping_fn);
+    auto script_definition = ScriptDefinition{
+        .code =  bc,
+        .functions = std::unordered_map<std::string, Function>{{std::string("ping"), ping_fn}}
+    };
+
+
+
+
+
+    Function on_spawn_fn;
+    on_spawn_fn.entry_point = 0;
+    on_spawn_fn.arg_count = 0;
+    runtime.set_function(ctx.id, "on_spawn", on_spawn_fn);
+
+    runtime.send_message(ctx.id, Message{
+        .function_name = "on_spawn",
+        .args = {},
+        .sender = "engine"
+    });
+    runtime.tick_all_scripts();
+    runtime.tick_all_scripts();
+
+    // end vm test
 
     // Just block until the dash is closed.
     // If the user chose not to create or load a project,
