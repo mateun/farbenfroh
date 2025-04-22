@@ -26,6 +26,8 @@ blang::FactorNode* factor(const std::vector<blang::Token>& tokens,  int& index);
 blang::PrimaryNode* primary(const std::vector<blang::Token>& tokens,  int& index);
 blang::UnaryNode* unary(const std::vector<blang::Token>& tokens,  int& index);
 blang::FuncCallNode* funcCallStmt(const std::vector<blang::Token>& tokens, int& index);
+blang::StmtNode* stmt(const std::vector<blang::Token>& tokens, int& index);
+bool eat(const std::vector<blang::Token>& tokens, int& index, blang::TokenType referenceType);
 
 void matchWithExit(blang::Token token, blang::TokenType type) {
     if (token.type != type) {
@@ -201,6 +203,18 @@ blang::TermNode* term(const std::vector<blang::Token>& tokens,  int& index) {
 
 }
 
+blang::ReturnStatementNode* returnStatement(const std::vector<blang::Token>& tokens, int& index) {
+    auto token = tokens[index];
+    if (!match(tokens[index], blang::TokenType::RETURN)) {
+        return nullptr;
+    }
+    index++;
+    auto expr = expressionStmt(tokens, index);
+    auto rsn = new blang::ReturnStatementNode();
+    rsn->expr = expr;
+    return rsn;
+
+}
 
 
 blang::AssignmentNode* assignmentStmt(const std::vector<blang::Token>& tokens, int& index) {
@@ -226,7 +240,17 @@ blang::AssignmentNode* assignmentStmt(const std::vector<blang::Token>& tokens, i
 
 }
 
-blang::FuncCallNode* funcDeclStmt(const std::vector<blang::Token>& tokens, int& index) {
+bool eat(const std::vector<blang::Token>& tokens, int& index, blang::TokenType referenceType) {
+
+    auto token = tokens[index];
+    if (!match(token, referenceType)) {
+        return false;
+    }
+    index++;
+    return true;
+}
+
+blang::FunctionDeclNode* funcDeclStmt(const std::vector<blang::Token>& tokens, int& index) {
     auto token = tokens[index];
     if (!match(token, blang::TokenType::FUNC)) {
         return nullptr;
@@ -240,8 +264,63 @@ blang::FuncCallNode* funcDeclStmt(const std::vector<blang::Token>& tokens, int& 
     auto func_decl_node = new blang::FunctionDeclNode();
     func_decl_node->func_name = new blang::IdentPrimary(token.string_val);
 
-    // Function parameters
+    // Eat the openen bracket
+    index++;
+    token = tokens[index];
+    if (!match(token, blang::TokenType::BRAC_OPEN)) {
+        return nullptr;
+    }
 
+    // Function parameters
+    bool params_left =true;
+    do {
+        index++;
+        token = tokens[index];
+        if (!match(token, blang::TokenType::IDENT)) {
+            break;
+        }
+        func_decl_node->params.push_back(new blang::IdentPrimary(token.string_val));
+        index++;
+        if (!match(tokens[index], blang::TokenType::COMMA)) {
+            index--;
+            break;
+        }
+
+    } while (params_left);
+
+
+    index++;
+    token = tokens[index];
+    if (!match(token, blang::TokenType::BRAC_CLOSE)) {
+        return nullptr;
+    }
+
+    // Function body
+    index++;
+    token = tokens[index];
+    if (!match(token, blang::TokenType::CURL_BRAC_OPEN)) {
+        return nullptr;
+    }
+    index++;
+
+    // Body statements
+    bool stmts_left =true;
+    do {
+        auto stmtNode = stmt(tokens, index);
+        if (!stmtNode) {
+            break;
+        }
+
+        func_decl_node->body_stmts.push_back(stmtNode);
+    } while (stmts_left);
+
+    //index++;
+    token = tokens[index];
+    if (!match(token, blang::TokenType::CURL_BRAC_CLOSE)) {
+        return nullptr;
+    }
+
+    return func_decl_node;
 
 }
 
@@ -297,6 +376,9 @@ blang::StmtNode* stmt(const std::vector<blang::Token>& tokens, int& index) {
     auto indexOriginal = index;
     auto assignment = assignmentStmt(tokens, index);
     if (assignment) { return assignment; }
+
+    auto returnStmtNode = returnStatement(tokens, index);
+    if (returnStmtNode) return returnStmtNode;
 
     auto funcCall = funcCallStmt(tokens, indexOriginal);
     if (funcCall) { return funcCall; }

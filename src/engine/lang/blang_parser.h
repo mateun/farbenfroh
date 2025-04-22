@@ -196,6 +196,10 @@ namespace blang {
         ExpressionNode* expr_ = nullptr;
     };
 
+    struct ReturnStatementNode : StmtNode {
+        ExpressionNode* expr;
+    };
+
     struct FuncCallNode : PrimaryNode {
         IdentPrimary* func_name = nullptr;
         std::vector<ExpressionNode*> args;
@@ -203,6 +207,7 @@ namespace blang {
 
     struct FunctionDeclNode : StmtNode {
         IdentPrimary* func_name = nullptr;
+        std::vector<IdentPrimary*> params;
         std::vector<StmtNode*> body_stmts;
     };
 

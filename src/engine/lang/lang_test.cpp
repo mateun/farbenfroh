@@ -140,7 +140,7 @@ int main() {
 
   // Func call tests
   auto src = R"(
-    func foobar(b, b) {
+    func foobar(a, b) {
       return a + b
     }
     x = 28.0
@@ -152,7 +152,8 @@ int main() {
   auto ast = parse(tokens);
   auto progNode = dynamic_cast<blang::ProgNode*>(ast);
   assert(progNode != nullptr);
-  assert(progNode->stmtList.size() == 2);
+  // TODO debug and fix statement recognition, we only get 1 instead of 3 here
+  assert(progNode->stmtList.size() == 3);
   auto env = new blang::RuntimeEnv();
   blang::interpret(ast, env);
   assert(env->variables["x"].float_val == 28.0f);
