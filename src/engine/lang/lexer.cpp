@@ -2,7 +2,7 @@
 // Created by mgrus on 21.04.2025.
 //
 
-#include "lang_parser.h"
+#include "blang_parser.h"
 
 bool is_key_word(const std::string& word, blang::TokenType &out_keywordType) {
 

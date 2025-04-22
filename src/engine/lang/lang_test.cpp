@@ -2,7 +2,8 @@
 // Created by mgrus on 21.04.2025.
 //
 
-#include "lang_parser.h"
+#include "blang_parser.h"
+#include "blang_interpreter.h"
 #include <Windows.h>
 #include <cassert>
 #include <cstdio>
@@ -125,6 +126,9 @@ int main() {
   assert(termNode != nullptr);
   auto leftUnary = dynamic_cast<blang::PrimaryNode*>(termNode->left->left);
   assert(leftUnary != nullptr);
+
+  blang::interpret(rootNode);
+
 
 
 
