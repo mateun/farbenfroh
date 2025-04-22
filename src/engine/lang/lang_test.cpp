@@ -1,0 +1,133 @@
+//
+// Created by mgrus on 21.04.2025.
+//
+
+#include "lang_parser.h"
+#include <Windows.h>
+#include <cassert>
+#include <cstdio>
+#include <string>
+
+
+
+
+
+void writeGreen(const std::string& text) {
+  // Get the handle to the console
+  HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+  // Set the text color to green (FOREGROUND_GREEN)
+  SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
+
+  // Print the text in green
+  printf("%s", text.c_str());
+
+  // Reset to the default console color (white on black)
+  SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+
+
+}
+
+int main() {
+
+  // Assign int value
+  std::string src = R"(
+    a = 10
+  )";
+  auto tokens = blang::lex(src);
+  assert(tokens.size() == 3);
+  assert(tokens[0].type == blang::TokenType::IDENT);
+  assert(tokens[1].type == blang::TokenType::EQUALS);
+  assert(tokens[2].type == blang::TokenType::NUMBER);
+
+  // Assign float value
+  src = R"(
+    a = 12.0
+  )";
+  tokens = blang::lex(src);
+  assert(tokens.size() == 3);
+  assert(tokens[0].type == blang::TokenType::IDENT);
+  assert(tokens[1].type == blang::TokenType::EQUALS);
+  assert(tokens[2].type == blang::TokenType::NUMBER);
+  assert(tokens[2].float_val == 12.0f);
+
+  // Multiple assignments
+  src = R"(
+    a = 12.0
+    b = 28
+  )";
+  tokens = blang::lex(src);
+  assert(tokens.size() == 6);
+  assert(tokens[0].type == blang::TokenType::IDENT);
+  assert(tokens[1].type == blang::TokenType::EQUALS);
+  assert(tokens[2].type == blang::TokenType::NUMBER);
+  assert(tokens[2].float_val == 12.0f);
+  assert(tokens[5].type == blang::TokenType::NUMBER);
+  assert(tokens[5].float_val == 28);
+
+  // Expressions
+  src = R"(
+    a = 12.0
+    b = 28
+    c = a+   b
+    d = a -b
+    d = a *     b
+    d=a/b
+
+  )";
+  tokens = blang::lex(src);
+  assert(tokens.size() == 26);
+  assert(tokens[0].type == blang::TokenType::IDENT);
+  assert(tokens[1].type == blang::TokenType::EQUALS);
+  assert(tokens[2].type == blang::TokenType::NUMBER);
+  assert(tokens[2].float_val == 12.0f);
+  assert(tokens[5].type == blang::TokenType::NUMBER);
+  assert(tokens[5].float_val == 28);
+  assert(tokens[9].type == blang::TokenType::PLUS);
+  assert(tokens[14].type == blang::TokenType::MINUS);
+  assert(tokens[19].type == blang::TokenType::MUL);
+  assert(tokens[24].type == blang::TokenType::DIV);
+
+  // Bracket expressions
+  src = R"(
+    d = (x *3 / (k + 4)) * (e - 12) + 4 - {8*3}
+
+  )";
+  tokens = blang::lex(src);
+  assert(tokens.size() == 26);
+  assert(tokens[0].type == blang::TokenType::IDENT);
+  assert(tokens[1].type == blang::TokenType::EQUALS);
+  assert(tokens[2].type == blang::TokenType::BRAC_OPEN);
+  assert(tokens[3].type == blang::TokenType::IDENT);
+  assert(tokens[4].type == blang::TokenType::MUL);
+  assert(tokens[5].type == blang::TokenType::NUMBER);
+  assert(tokens[6].type == blang::TokenType::DIV);
+  assert(tokens[7].type == blang::TokenType::BRAC_OPEN);
+  assert(tokens[8].type == blang::TokenType::IDENT);
+  assert(tokens[9].type == blang::TokenType::PLUS);
+  assert(tokens[18].type == blang::TokenType::BRAC_CLOSE);
+  assert(tokens[22].type == blang::TokenType::CURL_BRAC_OPEN);
+  assert(tokens[25].type == blang::TokenType::CURL_BRAC_CLOSE);
+
+  //Parse tests
+  src = R"(
+    d = 12 + 8
+  )";
+  tokens = blang::lex(src);
+  assert(tokens.size() == 5);
+  auto rootNode = parse(tokens);
+  blang::ProgNode* progNode = dynamic_cast<blang::ProgNode*>(rootNode);
+  assert(progNode != nullptr);
+  assert(progNode->stmtList.size() == 1);
+  auto assignmentStatement = dynamic_cast<blang::AssignmentNode*>(progNode->stmtList[0]);
+  assert(assignmentStatement != nullptr);
+  auto termNode = dynamic_cast<blang::TermNode*>(assignmentStatement->expr_);
+  assert(termNode != nullptr);
+  auto leftUnary = dynamic_cast<blang::PrimaryNode*>(termNode->left->left);
+  assert(leftUnary != nullptr);
+
+
+
+  writeGreen("SUCCESS\n");
+  return 0;
+};

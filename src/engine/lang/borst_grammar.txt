@@ -1,0 +1,102 @@
+########################################
+# Lexical tokens (produced by the lexer)
+########################################
+IDENT      : /[A-Za-z_][A-Za-z0-9_]*/
+NUMBER     : /\d+(\.\d+)?/
+STRING     : /"(?:\\.|[^"])*"/
+COMMENT    : /--[^\n]*/
+WS         : /[ \t\r]+/          # ditto
+SYMBOL     : one‑char punctuation ();, etc.
+
+keywords   =  "if" "then" "elseif" "else" "end"
+           | "while" "do"
+           | "for" "function" "return"
+           | "and" "or" "not"
+           | "true" "false" "nil" ...
+
+########################################
+# Top‑level
+########################################
+Program        → StmtList EOF
+StmtList       → { Stmt }           # zero or more
+
+########################################
+# Statements
+########################################
+Stmt           → IfStmt
+               | WhileStmt
+               | ForStmt
+               | FuncDecl
+               | ReturnStmt
+               | SimpleStmt ";"
+               | ";"                # empty statement
+
+ReturnStmt     → "return" [ Expr ] ";"
+
+# ── Simple statements that begin with an identifier ────────────────
+SimpleStmt     → Assignment
+               | FuncCall
+
+Assignment     → VarList "=" ExprList
+VarList        → Var { "," Var }
+Var            → IDENT
+
+FuncCall       → IDENT "(" [ ArgList ] ")"
+ArgList        → Expr { "," Expr }
+
+########################################
+# Blocks
+########################################
+Block          → StmtList           # (kept separate for clarity)
+
+########################################
+# Control flow
+########################################
+IfStmt         → "if" Expr "then" Block
+                 { "elseif" Expr "then" Block }
+                 [ "else" Block ]
+                 "end"
+
+WhileStmt      → "while" Expr "do" Block "end"
+
+ForStmt        → "for" IDENT "=" Expr "," Expr [ "," Expr ] "do" Block "end"
+                 #          var      init   limit   [step]
+
+########################################
+# Functions
+########################################
+FuncDecl       → "function" IDENT FuncParams Block "end"
+
+FuncParams     → "(" [ ParamList ] ")"
+ParamList      → IDENT { "," IDENT }
+
+########################################
+# Expressions – operator precedence (lowest → highest)
+########################################
+Expr           → LogicOr
+
+LogicOr        → LogicAnd { "or"  LogicAnd }
+LogicAnd       → Equality { "and" Equality }
+
+Equality       → Comparison { ( "==" | "!=" ) Comparison }
+
+Comparison     → Term { ( "<" | ">" | "<=" | ">=" ) Term }
+
+Term           → Factor { ( "+" | "-" ) Factor }
+
+Factor         → Unary  { ( "*" | "/" | "%" ) Unary }
+
+Unary          → ( "-" | "not" ) Unary
+               | Primary
+
+Primary        → NUMBER
+               | STRING
+               | "true" | "false" | "nil"
+               | IDENT
+               | FuncCall
+               | "(" Expr ")"
+
+########################################
+# Expression lists (used by assignment, argument lists, etc.)
+########################################
+ExprList       → Expr { "," Expr }
