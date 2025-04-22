@@ -2,6 +2,9 @@
 // Created by mgrus on 21.04.2025.
 //
 
+#include <ios>
+
+#include "blang_interpreter.h"
 #include "blang_parser.h"
 
 bool is_key_word(const std::string& word, blang::TokenType &out_keywordType) {
@@ -27,10 +30,19 @@ static void word_ident_keyword_process(std::string& currentWord, blang::Token& c
 }
 
 static void finish_num_word(std::string& numberWord, blang::Token& currentToken, std::vector<blang::Token>& tokens) {
-    float num = atof(numberWord.c_str());
-    currentToken.type = blang::TokenType::NUMBER;
-    currentToken.float_val = num;
-    tokens.push_back(currentToken);
+    if (numberWord.contains('.')) {
+        float num = atof(numberWord.c_str());
+        currentToken.type = blang::TokenType::NUMBER_FLOAT;
+        currentToken.float_val = num;
+        tokens.push_back(currentToken);
+    }
+    else {
+        float num = atoi(numberWord.c_str());
+        currentToken.type = blang::TokenType::NUMBER_INT;
+        currentToken.int_val = num;
+        tokens.push_back(currentToken);
+    }
+
     numberWord.clear();
 }
 

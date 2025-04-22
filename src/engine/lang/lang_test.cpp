@@ -39,7 +39,7 @@ int main() {
   assert(tokens.size() == 3);
   assert(tokens[0].type == blang::TokenType::IDENT);
   assert(tokens[1].type == blang::TokenType::EQUALS);
-  assert(tokens[2].type == blang::TokenType::NUMBER);
+  assert(tokens[2].type == blang::TokenType::NUMBER_INT);
 
   // Assign float value
   src = R"(
@@ -49,7 +49,7 @@ int main() {
   assert(tokens.size() == 3);
   assert(tokens[0].type == blang::TokenType::IDENT);
   assert(tokens[1].type == blang::TokenType::EQUALS);
-  assert(tokens[2].type == blang::TokenType::NUMBER);
+  assert(tokens[2].type == blang::TokenType::NUMBER_FLOAT);
   assert(tokens[2].float_val == 12.0f);
 
   // Multiple assignments
@@ -61,10 +61,10 @@ int main() {
   assert(tokens.size() == 6);
   assert(tokens[0].type == blang::TokenType::IDENT);
   assert(tokens[1].type == blang::TokenType::EQUALS);
-  assert(tokens[2].type == blang::TokenType::NUMBER);
+  assert(tokens[2].type == blang::TokenType::NUMBER_FLOAT);
   assert(tokens[2].float_val == 12.0f);
-  assert(tokens[5].type == blang::TokenType::NUMBER);
-  assert(tokens[5].float_val == 28);
+  assert(tokens[5].type == blang::TokenType::NUMBER_INT);
+  assert(tokens[5].int_val == 28);
 
   // Expressions
   src = R"(
@@ -80,10 +80,10 @@ int main() {
   assert(tokens.size() == 26);
   assert(tokens[0].type == blang::TokenType::IDENT);
   assert(tokens[1].type == blang::TokenType::EQUALS);
-  assert(tokens[2].type == blang::TokenType::NUMBER);
+  assert(tokens[2].type == blang::TokenType::NUMBER_FLOAT);
   assert(tokens[2].float_val == 12.0f);
-  assert(tokens[5].type == blang::TokenType::NUMBER);
-  assert(tokens[5].float_val == 28);
+  assert(tokens[5].type == blang::TokenType::NUMBER_INT);
+  assert(tokens[5].int_val == 28);
   assert(tokens[9].type == blang::TokenType::PLUS);
   assert(tokens[14].type == blang::TokenType::MINUS);
   assert(tokens[19].type == blang::TokenType::MUL);
@@ -101,7 +101,7 @@ int main() {
   assert(tokens[2].type == blang::TokenType::BRAC_OPEN);
   assert(tokens[3].type == blang::TokenType::IDENT);
   assert(tokens[4].type == blang::TokenType::MUL);
-  assert(tokens[5].type == blang::TokenType::NUMBER);
+  assert(tokens[5].type == blang::TokenType::NUMBER_INT);
   assert(tokens[6].type == blang::TokenType::DIV);
   assert(tokens[7].type == blang::TokenType::BRAC_OPEN);
   assert(tokens[8].type == blang::TokenType::IDENT);
@@ -113,21 +113,28 @@ int main() {
   //Parse tests
   src = R"(
     d = 12 + 8
+    a = 1.0 + 2.0
   )";
   tokens = blang::lex(src);
-  assert(tokens.size() == 5);
+  assert(tokens.size() == 10);
   auto rootNode = parse(tokens);
   blang::ProgNode* progNode = dynamic_cast<blang::ProgNode*>(rootNode);
   assert(progNode != nullptr);
-  assert(progNode->stmtList.size() == 1);
+  assert(progNode->stmtList.size() == 2);
   auto assignmentStatement = dynamic_cast<blang::AssignmentNode*>(progNode->stmtList[0]);
   assert(assignmentStatement != nullptr);
   auto termNode = dynamic_cast<blang::TermNode*>(assignmentStatement->expr_);
   assert(termNode != nullptr);
-  auto leftUnary = dynamic_cast<blang::PrimaryNode*>(termNode->left->left);
-  assert(leftUnary != nullptr);
+  auto exprLhs = dynamic_cast<blang::IntNumPrimary*>(termNode->left->left->rhsUnary);
+  assert(exprLhs != nullptr);
+  auto exprRhs = (termNode->term_tails);
+  assert(exprRhs.size() == 1);
+  assert(exprRhs[0].op == blang::BinaryOp::Add);
 
-  blang::interpret(rootNode);
+  auto runtimeEnv = blang::RuntimeEnv();
+  blang::interpret(rootNode, &runtimeEnv);
+  assert(runtimeEnv.variables["d"].int_val == 20);
+  assert(runtimeEnv.variables["a"].float_val == 3.0f);
 
 
 

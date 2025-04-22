@@ -27,7 +27,17 @@ struct Value {
   std::string string_val;
   bool bool_val;
 
+  Value operator+(const Value& other) const;
+  Value operator-(const Value& other) const;
+  Value operator*(const Value& other) const;
+  Value operator/(const Value& other) const;
+
+  Value negate() const;
+  Value operatornot() const;
+
 };
+
+
 
 struct RuntimeEnv {
   std::map<std::string, Value> variables;

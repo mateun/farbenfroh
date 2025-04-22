@@ -10,9 +10,14 @@
 #include <string>
 
 namespace blang {
+    struct Value;
+}
+
+namespace blang {
     enum class TokenType {
         IDENT  ,
-        NUMBER ,
+        NUMBER_FLOAT ,
+        NUMBER_INT ,
         STRING ,
         LINE_COMMENT,
         BLOCK_COMMENT_START,
@@ -98,7 +103,7 @@ namespace blang {
     };
 
     struct ExpressionNode: StmtNode {
-
+        virtual Value reduce() = 0;
     };
 
     enum class BinaryOp {
@@ -117,6 +122,10 @@ namespace blang {
     struct TermNode: ExpressionNode {
         FactorNode* left;
         std::vector<TermTail> term_tails;
+
+        Value reduce() override;
+
+
     };
 
     struct UnaryNode;
@@ -130,15 +139,18 @@ namespace blang {
     struct FactorNode: TermNode {
         UnaryNode* left;
         std::vector<FactorTail> factor_tails;
+        Value reduce() override;
     };
 
     enum class UnaryType {
         unary_minus,
         unary_not,
+        none,
     };
     struct UnaryNode : FactorNode {
         UnaryType type;
-        UnaryNode* valueNode;
+        UnaryNode* rhsUnary;
+        Value reduce() override;
     };
 
     struct PrimaryNode : UnaryNode {
@@ -146,7 +158,17 @@ namespace blang {
     };
 
     struct NumPrimary : PrimaryNode {
+
+    };
+
+    struct FloatNumPrimary : NumPrimary {
+        Value reduce() override;
         float num;
+    };
+
+    struct IntNumPrimary : NumPrimary {
+        Value reduce() override;
+        int num;
     };
 
     struct StringPrimary : PrimaryNode {
@@ -163,18 +185,15 @@ namespace blang {
       std::string func_name;
       // TODO handle params
     };
-    struct BraceedPrimary : PrimaryNode {
+    struct BracedPrimary : PrimaryNode {
         ExpressionNode* expr;
     };
-
 
     struct AssignmentNode : StmtNode {
         AssignmentNode(IdentPrimary* id, ExpressionNode* expr);
         IdentPrimary* id_ = nullptr;
         ExpressionNode* expr_ = nullptr;
     };
-
-
 
     AstNode* parse(const std::vector<Token>& tokenStream);
 

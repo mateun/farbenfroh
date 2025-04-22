@@ -54,22 +54,31 @@ blang::ExpressionNode* expressionStmt(const std::vector<blang::Token>& tokens,  
 }
 
 blang::PrimaryNode* primary(const std::vector<blang::Token>& tokens,  int& index) {
-    if (match(tokens[index], blang::TokenType::NUMBER)) {
+    auto token = tokens[index++];
+    if (match(token, blang::TokenType::NUMBER_FLOAT)) {
+        auto fp = new blang::FloatNumPrimary();
+        fp->num = token.float_val;
+        return fp;
+    }
+    if (match(token, blang::TokenType::NUMBER_INT)) {
+        auto ip = new blang::IntNumPrimary();
+        ip->num = token.int_val;
+        return ip;
+    }
+
+    if (match(token, blang::TokenType::STRING)) {
         return new blang::PrimaryNode();
     }
-    if (match(tokens[index], blang::TokenType::STRING)) {
+    if (match(token, blang::TokenType::IDENT)) {
         return new blang::PrimaryNode();
     }
-    if (match(tokens[index], blang::TokenType::IDENT)) {
-        return new blang::PrimaryNode();
-    }
-    if (match(tokens[index], blang::TokenType::BRAC_OPEN)) {
+    if (match(token, blang::TokenType::BRAC_OPEN)) {
         auto expr = expressionStmt(tokens, index);
         if (!expr) {
             return nullptr;
         }
-        auto token = tokens[index];
-        if (!match(token, blang::TokenType::BRAC_CLOSE)) {
+        auto token2 = tokens[index++];
+        if (!match(token2, blang::TokenType::BRAC_CLOSE)) {
             return nullptr;
         }
             // TODO fill actual bracelete, expr data!
@@ -82,18 +91,19 @@ blang::PrimaryNode* primary(const std::vector<blang::Token>& tokens,  int& index
 
 
 blang::UnaryNode* unary(const std::vector<blang::Token>& tokens,  int& index) {
-    auto token = tokens[index];
+    auto unaryNode = new blang::UnaryNode();
+    auto token = tokens[index++];
     if (match(token, blang::TokenType::MINUS)) {
-        return new blang::UnaryNode();
-    }
-
-    if (!primary(tokens, index)) {
-        return nullptr;
+        unaryNode->type = blang::UnaryType::unary_minus;
+    } else if (match(token, blang::TokenType::NOT)) {
+        unaryNode->type = blang::UnaryType::unary_not;
     } else {
-        // TODO fill with data
-        return new blang::PrimaryNode();
-    }
+        unaryNode->type = blang::UnaryType::none;
+        index--;
+        unaryNode->rhsUnary = primary(tokens, index);
 
+    }
+    return unaryNode;
 }
 
 static blang::BinaryOp getBinOpForToken(const blang::Token& tok) {
@@ -116,6 +126,10 @@ blang::FactorNode* factor(const std::vector<blang::Token>& tokens,  int& index) 
     // Next we find tail operations (+ or -):
     bool break_tail = false;
     do {
+        if (index > tokens.size()-1) {
+            break_tail = true;
+            break;
+        }
         auto token = tokens[index++];
         if (match(token, blang::TokenType::MUL) || match(token, blang::TokenType::DIV)) {
             auto unaryRight = unary(tokens, index);
@@ -129,6 +143,8 @@ blang::FactorNode* factor(const std::vector<blang::Token>& tokens,  int& index) 
             factorNode->term_tails.push_back(tail);
 
         } else {
+            // backtrack
+            index--;
             break_tail = true;
         }
 
@@ -192,9 +208,9 @@ blang::AssignmentNode* assignmentStmt(const std::vector<blang::Token>& tokens, i
         return nullptr;
     }
     index++;
-    auto valueNode = expressionStmt(tokens, index);
-    if (valueNode) {
-        return new blang::AssignmentNode(identNode, valueNode);
+    auto expression_node = expressionStmt(tokens, index);
+    if (expression_node) {
+        return new blang::AssignmentNode(identNode, expression_node);
     }
 
     return nullptr;
@@ -203,7 +219,6 @@ blang::AssignmentNode* assignmentStmt(const std::vector<blang::Token>& tokens, i
 
 
 blang::StmtNode* stmt(const std::vector<blang::Token>& tokens, int& index) {
-    auto token = tokens[index];
     auto assignment = assignmentStmt(tokens, index);
     if (assignment != nullptr) { return assignment; }
 
@@ -224,6 +239,9 @@ void stmtList(blang::ProgNode& progNode, const std::vector<blang::Token>& tokens
         stmNode = stmt(tokens, tokenIndex);
         if (stmNode) {
             progNode.stmtList.push_back(stmNode);
+            // TODO this is a bit wonky? Why do we need to reduce here?
+            // Somewhere upstream the index is incremented 1 too many times?!
+            tokenIndex--;
         }
 
     } while (stmNode != nullptr);
