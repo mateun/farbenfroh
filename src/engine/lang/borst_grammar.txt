@@ -65,7 +65,7 @@ ForStmt        → "for" IDENT "=" Expr "," Expr [ "," Expr ] "do" Block "end"
 ########################################
 # Functions
 ########################################
-FuncDecl       → "function" IDENT FuncParams Block "end"
+FuncDecl       → "func" IDENT FuncParams Block "end"
 
 FuncParams     → "(" [ ParamList ] ")"
 ParamList      → IDENT { "," IDENT }

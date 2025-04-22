@@ -21,6 +21,8 @@ static void word_ident_keyword_process(std::string& currentWord, blang::Token& c
     blang::TokenType keywordType;
     if (is_key_word(currentWord, keywordType)) {
         currentToken.type = keywordType;
+        tokens.push_back(currentToken);
+        currentWord.clear();
     } else {
         currentToken.type = blang::TokenType::IDENT;
         currentToken.string_val = currentWord;
@@ -92,6 +94,17 @@ static void process_brackets(std::string& currentWord, blang::Token& currentToke
              tokens.push_back(currentToken);
              continue;
 
+         }
+         if (c == ',') {
+             if (!currentWord.empty()) {
+                 word_ident_keyword_process(currentWord, currentToken, tokens);
+             }
+             if (!numberWord.empty()) {
+                 finish_num_word(numberWord, currentToken, tokens);
+             }
+             currentToken.type = TokenType::COMMA;
+             tokens.push_back(currentToken);
+             continue;
          }
 
          if (c == '+') {

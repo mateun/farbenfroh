@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <stdexcept>
 
 #include "blang_parser.h"
 #include <vector>
@@ -11,6 +12,8 @@
 
 blang::IdentPrimary::IdentPrimary(const std::string &ident)  : ident(ident) {
 }
+
+
 
 blang::AssignmentNode::AssignmentNode(IdentPrimary *id, ExpressionNode *expr) : id_(std::move(id)), expr_(std::move(expr)) {
 
@@ -22,6 +25,7 @@ blang::TermNode* term(const std::vector<blang::Token>& tokens,  int& index);
 blang::FactorNode* factor(const std::vector<blang::Token>& tokens,  int& index);
 blang::PrimaryNode* primary(const std::vector<blang::Token>& tokens,  int& index);
 blang::UnaryNode* unary(const std::vector<blang::Token>& tokens,  int& index);
+blang::FuncCallNode* funcCallStmt(const std::vector<blang::Token>& tokens, int& index);
 
 void matchWithExit(blang::Token token, blang::TokenType type) {
     if (token.type != type) {
@@ -66,11 +70,15 @@ blang::PrimaryNode* primary(const std::vector<blang::Token>& tokens,  int& index
         return ip;
     }
 
-    if (match(token, blang::TokenType::STRING)) {
-        return new blang::PrimaryNode();
-    }
     if (match(token, blang::TokenType::IDENT)) {
-        return new blang::PrimaryNode();
+        // Try a funccall?!
+        index--;
+        auto func_call = funcCallStmt(tokens, index);
+        if (func_call) {
+            return func_call;
+        }
+        // We just leave it as a standalone identifier then:
+        return new blang::IdentPrimary(token.string_val);
     }
     if (match(token, blang::TokenType::BRAC_OPEN)) {
         auto expr = expressionStmt(tokens, index);
@@ -199,6 +207,7 @@ blang::AssignmentNode* assignmentStmt(const std::vector<blang::Token>& tokens, i
     auto token = tokens[index];
     if (!match(token, blang::TokenType::IDENT)) {
         return nullptr;
+
     }
     auto identNode = new blang::IdentPrimary(token.string_val);
     index++;
@@ -217,10 +226,83 @@ blang::AssignmentNode* assignmentStmt(const std::vector<blang::Token>& tokens, i
 
 }
 
+blang::FuncCallNode* funcDeclStmt(const std::vector<blang::Token>& tokens, int& index) {
+    auto token = tokens[index];
+    if (!match(token, blang::TokenType::FUNC)) {
+        return nullptr;
+    }
+    index++;
+    token = tokens[index];
+    if (!match(token, blang::TokenType::IDENT)) {
+        index--;
+        return nullptr;
+    }
+    auto func_decl_node = new blang::FunctionDeclNode();
+    func_decl_node->func_name = new blang::IdentPrimary(token.string_val);
+
+    // Function parameters
+
+
+}
+
+blang::FuncCallNode* funcCallStmt(const std::vector<blang::Token>& tokens, int& index) {
+
+    auto func_call_node = new blang::FuncCallNode();
+    auto token = tokens[index++];
+    if (!match(token, blang::TokenType::IDENT)) {
+        return nullptr;
+    }
+    func_call_node->func_name = new blang::IdentPrimary(token.string_val);
+
+    token = tokens[index++];
+    if (!match(token, blang::TokenType::BRAC_OPEN)) {
+        return nullptr;
+    }
+
+    bool args_left = true;
+    do {
+        auto expr = expressionStmt(tokens, index);
+        // Is this a parameterless function?
+        if (!expr) {
+            args_left = false;
+            break;
+        }
+        func_call_node->args.push_back(expr);
+        // Now either we consume a comma or we are done
+        index--;
+        token = tokens[index];
+        if (!match(token, blang::TokenType::COMMA)) {
+            args_left = false;
+            //index++;
+            break;
+        }
+        // Eat the comma in any case
+        index++;
+
+
+    } while (args_left);
+
+    token = tokens[index++];
+    if (!match(token, blang::TokenType::BRAC_CLOSE)) {
+        // TODO syntax error?
+        return nullptr;
+    }
+
+    return func_call_node;
+
+}
+
 
 blang::StmtNode* stmt(const std::vector<blang::Token>& tokens, int& index) {
+    auto indexOriginal = index;
     auto assignment = assignmentStmt(tokens, index);
-    if (assignment != nullptr) { return assignment; }
+    if (assignment) { return assignment; }
+
+    auto funcCall = funcCallStmt(tokens, indexOriginal);
+    if (funcCall) { return funcCall; }
+
+    auto funcDecl = funcDeclStmt(tokens, index);
+    if (funcDecl) { return funcDecl; }
 
     // TODO check for other types of statements
 

@@ -38,6 +38,7 @@ namespace blang {
         SQ_BRAC_CLOSE,
         CURL_BRAC_OPEN,
         CURL_BRAC_CLOSE,
+        COMMA,
 
     };
 
@@ -183,7 +184,7 @@ namespace blang {
     };
     struct FuncCallPrimary : PrimaryNode {
       std::string func_name;
-      // TODO handle params
+      Value reduce() override;
     };
     struct BracedPrimary : PrimaryNode {
         ExpressionNode* expr;
@@ -193,6 +194,16 @@ namespace blang {
         AssignmentNode(IdentPrimary* id, ExpressionNode* expr);
         IdentPrimary* id_ = nullptr;
         ExpressionNode* expr_ = nullptr;
+    };
+
+    struct FuncCallNode : PrimaryNode {
+        IdentPrimary* func_name = nullptr;
+        std::vector<ExpressionNode*> args;
+    };
+
+    struct FunctionDeclNode : StmtNode {
+        IdentPrimary* func_name = nullptr;
+        std::vector<StmtNode*> body_stmts;
     };
 
     AstNode* parse(const std::vector<Token>& tokenStream);

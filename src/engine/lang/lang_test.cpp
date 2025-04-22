@@ -31,6 +31,7 @@ void writeGreen(const std::string& text) {
 
 int main() {
 
+#ifdef BASIC_BLANG_TESTS
   // Assign int value
   std::string src = R"(
     a = 10
@@ -135,8 +136,27 @@ int main() {
   blang::interpret(rootNode, &runtimeEnv);
   assert(runtimeEnv.variables["d"].int_val == 20);
   assert(runtimeEnv.variables["a"].float_val == 3.0f);
+#endif
 
+  // Func call tests
+  auto src = R"(
+    func foobar(b, b) {
+      return a + b
+    }
+    x = 28.0
+    a = foobar(12.0, x)
+  )";
 
+  auto tokens = blang::lex(src);
+  assert(tokens.size() == 24);
+  auto ast = parse(tokens);
+  auto progNode = dynamic_cast<blang::ProgNode*>(ast);
+  assert(progNode != nullptr);
+  assert(progNode->stmtList.size() == 2);
+  auto env = new blang::RuntimeEnv();
+  blang::interpret(ast, env);
+  assert(env->variables["x"].float_val == 28.0f);
+  assert(env->variables["a"].float_val == 40.0f);
 
 
   writeGreen("SUCCESS\n");

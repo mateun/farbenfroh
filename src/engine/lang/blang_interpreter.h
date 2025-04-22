@@ -10,8 +10,9 @@
 #include <vector>
 
 namespace blang {
+  struct FunctionDeclNode;
 
-struct AstNode;
+  struct AstNode;
 
 enum class ValueType {
   FLOAT_VAL,
@@ -38,9 +39,9 @@ struct Value {
 };
 
 
-
 struct RuntimeEnv {
   std::map<std::string, Value> variables;
+  std::map<std::string, FunctionDeclNode*> function_impls;
 };
 
 void interpret(blang::AstNode* ast, RuntimeEnv* env);

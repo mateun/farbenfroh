@@ -19,6 +19,16 @@ static void processAssignment(blang::AssignmentNode* stmt, blang::RuntimeEnv* en
     // TODO runtime error!
     if (exp == nullptr) return;
 
+    auto opt_func_call = dynamic_cast<blang::FuncCallPrimary*>(exp);
+    if ( opt_func_call) {
+        // Do we know a function declaration with this name?
+        bool has_func = env->function_impls.contains(opt_func_call->func_name);
+        if (!has_func) {
+            throw std::runtime_error("Function " + opt_func_call->func_name + "does not exist");
+        }
+
+    };
+
     auto result = exp->reduce();
     env->variables[identLeft->ident] = result;
 
@@ -163,5 +173,12 @@ blang::Value blang::FloatNumPrimary::reduce() {
 
 blang::Value blang::IntNumPrimary::reduce() {
     return {ValueType::INT_VAL, 0.0f, num};
+}
+
+blang::Value blang::FuncCallPrimary::reduce() {
+    // TODO how to access env from here?
+    // We need to actually process the function decl (assuming it was already checked by the runtime,
+    // that it exists
+    return {};
 }
 
