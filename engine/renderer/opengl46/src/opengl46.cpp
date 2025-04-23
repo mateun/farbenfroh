@@ -5,6 +5,7 @@
 #include <Windows.h>
 #include <GL/glew.h>
 #include <GL/wglew.h>
+#include <glm/gtc/type_ptr.hpp>
 #include <cstdio>
 #include <stdexcept>
 #include <symbol_exports.h>
@@ -332,7 +333,6 @@ void initOpenGL46(HWND hwnd) {
 
 namespace renderer {
 
-
     void ENGINE_API present(HDC hdc) {
         SwapBuffers(hdc);
     }
@@ -497,5 +497,26 @@ namespace renderer {
         glClearColor(r, g, b, a);
     }
 
+    template<>
+    bool setShaderValue<float>(ProgramHandle program, const std::string& name, const float& value) {
+        auto prog = programMap[program.id].id;
+        glUseProgram(prog);
+        auto loc = glGetUniformLocation(prog, name.c_str());
+        glUniform1f(loc, value);
+        return (glGetError() == GL_NO_ERROR);
+    }
+
+    template<>
+    bool setShaderValue<glm::mat4>(ProgramHandle program, const std::string& name, const glm::mat4& value) {
+        auto prog = programMap[program.id].id;
+        glUseProgram(prog);
+        auto loc = glGetUniformLocation(prog, name.c_str());
+        glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(value));
+        auto err = glGetError();
+        return (err == GL_NO_ERROR) ;
+    }
+
+    template ENGINE_API bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
+    template ENGINE_API bool setShaderValue<float>(ProgramHandle, const std::string&, const float&);
 
 }

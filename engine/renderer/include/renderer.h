@@ -132,7 +132,13 @@ namespace renderer {
         virtual VertexShaderBuilder& position() = 0;
         virtual VertexShaderBuilder& normal() = 0;
         virtual VertexShaderBuilder& uv() = 0;
+        virtual VertexShaderBuilder& mvp() = 0;
+        virtual VertexShaderBuilder& worldMatrix() = 0;
+        virtual VertexShaderBuilder& projectionMatrix() = 0;
+        virtual VertexShaderBuilder& viewMatrix() = 0;
         virtual std::string build() const = 0;
+
+
     };
 
     class VertexBufferBuilder {
@@ -174,6 +180,10 @@ namespace renderer {
     ENGINE_API ProgramHandle linkShaderProgram(ShaderHandle vertexShader, ShaderHandle fragmentShader);
     ENGINE_API ProgramHandle  createShaderProgram(const char* vertexShader, const char* fragmentShader);
     ENGINE_API void bindShader(ShaderHandle shader);
+
+    template<typename T>
+    ENGINE_API bool setShaderValue(ProgramHandle program, const std::string& name, const T& value);
+
 
     // Texture
     ENGINE_API TextureHandle  createTexture(const char* texturePath);

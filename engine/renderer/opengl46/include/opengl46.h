@@ -66,6 +66,30 @@ public:
         return *this;
     }
 
+    VertexShaderBuilder &mvp() override {
+        hasMVPUniforms = true;
+        return *this;
+    }
+
+
+    VertexShaderBuilder &worldMatrix() override {
+        hasWorldMatrixUniform = true;
+        return *this;
+    }
+
+    VertexShaderBuilder &projectionMatrix() override {
+        hasWorldMatrixUniform = true;
+        return *this;
+    }
+
+    VertexShaderBuilder &viewMatrix() override {
+        hasWorldMatrixUniform = true;
+        return *this;
+    }
+
+
+
+
     GL46VertexShaderBuilder& normal() override {
         hasNormal = true;
         return *this;
@@ -75,6 +99,8 @@ public:
         hasUV = true;
         return *this;
     }
+
+
 
     [[nodiscard]] std::string build() const override {
         std::string src = "#version 460 core\n";
@@ -86,10 +112,44 @@ public:
         if (hasUV)
             src += "layout(location = 2) in vec2 aUV;\n";
 
+        if (hasMVPUniforms) {
+            src += "uniform mat4 mvpMatrix;\n";
+        }
+
+        if (hasWorldMatrixUniform) {
+            src += "uniform mat4 world_mat;\n";
+        }
+
+        if (hasProjectionMatrixUniform) {
+            src += "uniform mat4 proj_mat;\n";
+        }
+
+        if (hasViewMatrixUniform) {
+            src += "uniform mat4 view_mat;\n";
+        }
+
+        std::string mvpPart = "";
+        if (hasMVPUniforms) {
+            mvpPart += "mvpMatrix *";
+        }
+        if (hasWorldMatrixUniform) {
+            mvpPart += "world_mat *";
+        }
+
+        if (hasProjectionMatrixUniform) {
+            mvpPart += "proj_mat *";
+        }
+
+        if (hasViewMatrixUniform) {
+            mvpPart += "view_mat *";
+        }
+
         src += "void main() {\n";
 
-        if (hasPosition)
-            src += "    gl_Position = vec4(aPosition, 1.0);\n";
+        if (hasPosition) {
+            src += "\tgl_Position = " + mvpPart + " vec4(aPosition, 1.0);\n";
+        }
+
         else
             src += "    gl_Position = vec4(0.0);\n";
 
@@ -102,6 +162,10 @@ private:
     bool hasPosition = false;
     bool hasNormal = false;
     bool hasUV = false;
+    bool hasMVPUniforms = false;
+    bool hasWorldMatrixUniform;
+    bool hasProjectionMatrixUniform;
+    bool hasViewMatrixUniform;
 };
 
 
