@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <glm/glm.hpp>
 
 namespace renderer {
 
@@ -57,12 +58,32 @@ namespace renderer {
         // more formats as needed (short, byte, normalized, etc.)
     };
 
+    template<typename T>
+    struct VertexFormatFor;
+
+    template<> struct VertexFormatFor<float>        { static constexpr auto value = VertexAttributeFormat::Float; };
+    template<> struct VertexFormatFor<glm::vec2>    { static constexpr auto value = VertexAttributeFormat::Float2; };
+    template<> struct VertexFormatFor<glm::vec3>    { static constexpr auto value = VertexAttributeFormat::Float3; };
+    template<> struct VertexFormatFor<glm::vec4>    { static constexpr auto value = VertexAttributeFormat::Float4; };
+
+    template<typename T>
+    struct ComponentsFor;
+
+    template<> struct ComponentsFor<float> { static constexpr auto value = 1; };
+    template<> struct ComponentsFor<glm::vec2> { static constexpr auto value = 2; };
+    template<> struct ComponentsFor<glm::vec3> { static constexpr auto value = 3; };
+    template<> struct ComponentsFor<glm::vec4> { static constexpr auto value = 4; };
+
 
     struct VertexAttribute {
         VertexAttributeSemantic semantic;  // What it represents (Position, UV, etc.)
         VertexAttributeFormat format;      // Data format (float3, uint4, etc.)
         uint32_t location;                 // Shader binding location (e.g., layout(location = 0))
         uint32_t offset;                   // Byte offset within vertex
+        size_t components;                  // how many components (e.g. 3 for glm::vec3)
+        size_t stride;                      // byte stride between vertices
+
+
     };
 
     struct VertexLayout {
@@ -82,6 +103,7 @@ namespace renderer {
         VertexLayout layout;
         size_t index_count;
         PrimitiveTopology primitive_topology;
+        uint32_t id;
 
     };
 
@@ -115,10 +137,17 @@ namespace renderer {
 
     class VertexBufferBuilder {
     public:
-        template<typename T>
-        virtual VertexBufferBuilder& attribute(VertexAttributeSemantic semantic, const std::vector<T>& data) = 0;
 
+        virtual VertexBufferBuilder& attributeVec3(VertexAttributeSemantic semantic, const std::vector<glm::vec3>& data) = 0;
+        virtual VertexBufferBuilder& attributeVec2(VertexAttributeSemantic semantic, const std::vector<glm::vec2>& data) = 0;
+        virtual VertexBufferHandle build() const = 0;
 
+    };
+
+    struct VertexBufferCreateInfo  {
+        std::vector<float> data;
+        size_t element_size = 0;
+        size_t stride = 0;
     };
 
     ENGINE_API void  beginFrame();
@@ -131,7 +160,11 @@ namespace renderer {
     ENGINE_API void  setViewport(int x, int y, int width, int height);
 
     // Geometry
-    ENGINE_API VertexBufferHandle createVertexBuffer();
+    ENGINE_API std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder();
+    ENGINE_API VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo create_info);
+    ENGINE_API IndexBufferHandle createIndexBuffer(std::vector<uint32_t> data);
+    ENGINE_API Mesh createMesh(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
+
 
     // Shader
     ENGINE_API std::unique_ptr<VertexShaderBuilder>  vertexShaderBuilder();
@@ -146,7 +179,9 @@ namespace renderer {
     ENGINE_API TextureHandle  createTexture(const char* texturePath);
     ENGINE_API void bindTexture(TextureHandle texture);
 
-
+    // Drawing
+    ENGINE_API void drawMesh(Mesh m);
+    ENGINE_API void bindProgram(ProgramHandle myprog);
 }
 
 #endif //RENDERER_H

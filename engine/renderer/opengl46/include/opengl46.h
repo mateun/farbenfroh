@@ -40,6 +40,25 @@ private:
     bool useColor = false;
 };
 
+class GL46VertexBufferBuilder : public renderer::VertexBufferBuilder {
+public:
+    VertexBufferBuilder &attributeVec3(renderer::VertexAttributeSemantic semantic, const std::vector<glm::vec3> &data) override;
+    VertexBufferBuilder &attributeVec2(renderer::VertexAttributeSemantic semantic, const std::vector<glm::vec2> &data) override;
+    renderer::VertexBufferHandle build() const override;
+
+private:
+
+    template<typename T>
+    VertexBufferBuilder &attributeT(renderer::VertexAttributeSemantic semantic, const std::vector<T> &data) ;
+
+    std::vector<renderer::VertexAttribute> attributes_;
+    std::vector<float> raw_data_;
+    size_t current_stride_ = 0;
+
+    size_t element_size_ = 0;
+    size_t element_count_ = 0;
+};
+
 class GL46VertexShaderBuilder : public renderer::VertexShaderBuilder {
 public:
     GL46VertexShaderBuilder& position() override {

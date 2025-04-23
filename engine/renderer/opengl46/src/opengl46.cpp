@@ -49,7 +49,87 @@ std::string GL46FramgentShaderBuilder::build() const {
 
 }
 
-void ENGINE_API initOpenGL46(HWND hwnd) {
+
+
+
+template<typename T>
+renderer::VertexBufferBuilder & GL46VertexBufferBuilder::attributeT(renderer::VertexAttributeSemantic semantic,
+    const std::vector<T> &data) {
+    size_t offset = current_stride_;
+    current_stride_ += sizeof(glm::vec3);
+
+    auto attr = renderer::VertexAttribute();
+    attr.semantic = semantic;
+    attr.offset = static_cast<uint32_t>(offset);
+    attr.format = renderer::VertexFormatFor<T>::value;
+    attr.stride = sizeof(T);
+    attr.location = attributes_.size();
+    attr.components = renderer::ComponentsFor<T>::value;
+
+    attributes_.push_back({attr});
+    raw_data_.insert(raw_data_.end(), reinterpret_cast<const float*>(data.data()),
+        reinterpret_cast<const float*>(data.data()) + data.size()*3);
+    element_size_ = sizeof(glm::vec3); // maybe verify consistency?
+    element_count_ = data.size();
+    return *this;
+}
+
+
+renderer::VertexBufferBuilder & GL46VertexBufferBuilder::attributeVec3(renderer::VertexAttributeSemantic semantic,
+    const std::vector<glm::vec3> &data) {
+    return attributeT(semantic, data);
+}
+
+renderer::VertexBufferBuilder & GL46VertexBufferBuilder::attributeVec2(renderer::VertexAttributeSemantic semantic,
+    const std::vector<glm::vec2> &data) {
+    return attributeT(semantic, data);
+}
+
+renderer::VertexBufferHandle GL46VertexBufferBuilder::build() const {
+    //std::vector<float> interleavedData(element_count_ * current_stride_);
+
+    // for (size_t i = 0; i < element_count_; ++i) {
+    //     for (size_t j = 0; j < raw_data_.size(); ++j) {
+    //         const float* src = &raw_data_[j] + i *  element_size_;
+    //         void* dst = interleavedData.data() + i * current_stride_ + attributes_[j].offset;
+    //         std::memcpy(dst, src, element_size_);
+    //     }
+    // }
+
+
+
+    renderer::VertexBufferCreateInfo info = {
+        .data = raw_data_,
+        .stride = current_stride_
+    };
+
+    return createVertexBuffer(info);
+}
+
+renderer::IndexBufferHandle renderer::createIndexBuffer(std::vector<uint32_t> data) {
+    GLuint ibo;
+    glCreateBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(uint32_t), data.data(), GL_STATIC_DRAW);
+    auto handleId = nextHandleId++;
+    vbufferMap[handleId] = GLVbo{ibo};
+    return renderer::IndexBufferHandle{handleId};
+}
+
+
+
+renderer::VertexBufferHandle renderer::createVertexBuffer(renderer::VertexBufferCreateInfo create_info) {
+    GLuint vbo;
+    glCreateBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, create_info.data.size() * sizeof(float), create_info.data.data(), GL_STATIC_DRAW);
+    auto handleId = nextHandleId++;
+    vbufferMap[handleId] = GLVbo{vbo};
+    return renderer::VertexBufferHandle{handleId};
+
+}
+
+void initOpenGL46(HWND hwnd) {
 
     PIXELFORMATDESCRIPTOR pfd =
     {
@@ -251,12 +331,18 @@ void ENGINE_API initOpenGL46(HWND hwnd) {
 }
 
 namespace renderer {
+
+
     void ENGINE_API present(HDC hdc) {
         SwapBuffers(hdc);
     }
 
     void ENGINE_API clear() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+    std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder() {
+        return std::make_unique<GL46VertexBufferBuilder>();
     }
 
     ProgramHandle createShaderProgram(const char *vertexShader, const char *fragmentShader) {
@@ -273,6 +359,46 @@ namespace renderer {
         nextHandleId++;
         return ProgramHandle{id};
 
+    }
+
+    void drawMesh(Mesh m) {
+        glBindVertexArray(m.id);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbufferMap[m.index_buffer.id].id);
+        glDrawElements(GL_TRIANGLES, m.index_count, GL_UNSIGNED_INT, 0);
+    }
+
+    void bindProgram(ProgramHandle myprog) {
+        glUseProgram(programMap[myprog.id].id);
+    }
+
+
+    Mesh renderer::createMesh(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes, size_t index_count) {
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        for (auto attribute : attributes) {
+            glEnableVertexAttribArray(attribute.location);
+            glVertexAttribPointer(
+                attribute.location,               // attribute location
+                attribute.components,               // components (vec3)
+                GL_FLOAT,        // type
+                GL_FALSE,        // normalize?
+                attribute.stride,
+                (void*)attribute.offset                // relative offset in vertex
+            );
+
+        }
+        glBindVertexArray(0);
+
+        Mesh mesh;
+        mesh.id = vao;
+        mesh.index_count = index_count;
+        mesh.index_buffer = ibo;
+        mesh.vertex_buffer = vbo;
+        mesh.layout = VertexLayout{attributes};
+        mesh.primitive_topology = PrimitiveTopology::Triangle_List;
+        return mesh;
     }
 
      std::unique_ptr<VertexShaderBuilder>  vertexShaderBuilder() {
