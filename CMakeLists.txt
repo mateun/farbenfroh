@@ -12,6 +12,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})  # .exe, .dll (runtime)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR})  # .dll (if treated as library)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR})  # .lib, .a (static libs)
 
+include_directories(${CMAKE_SOURCE_DIR}/engine/include)
+
 
 add_subdirectory(engine)
 add_subdirectory(games)

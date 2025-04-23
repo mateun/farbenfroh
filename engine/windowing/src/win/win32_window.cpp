@@ -3,7 +3,6 @@
 //
 
 #include <engine.h>
-#include <windowing/win32_window.h>
 
 static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 
@@ -133,15 +132,17 @@ HWND ENGINE_API create_window(int w, int h, bool fullscreen, HINSTANCE hInstance
 
 }
 
-void ENGINE_API poll_window(HWND window) {
+bool ENGINE_API poll_window(HWND window) {
 
     MSG msg;
     while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) > 0) {
         if (msg.message == WM_QUIT) {
-            //TODO
+            return false;
         }
 
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    return true;
 }
