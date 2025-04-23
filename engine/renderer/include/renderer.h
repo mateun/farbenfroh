@@ -85,6 +85,10 @@ namespace renderer {
 
     };
 
+    /**
+     * Allows to compose a modular fragment shader and
+     * retrieve its source code for reuse.
+     */
     class FragmentShaderBuilder {
         public:
         virtual ~FragmentShaderBuilder() = default;
@@ -109,6 +113,14 @@ namespace renderer {
         virtual std::string build() const = 0;
     };
 
+    class VertexBufferBuilder {
+    public:
+        template<typename T>
+        virtual VertexBufferBuilder& attribute(VertexAttributeSemantic semantic, const std::vector<T>& data) = 0;
+
+
+    };
+
     ENGINE_API void  beginFrame();
     ENGINE_API void  endFrame();
     ENGINE_API void  present(HDC hdc);
@@ -117,6 +129,9 @@ namespace renderer {
     ENGINE_API void  clear();
 
     ENGINE_API void  setViewport(int x, int y, int width, int height);
+
+    // Geometry
+    ENGINE_API VertexBufferHandle createVertexBuffer();
 
     // Shader
     ENGINE_API std::unique_ptr<VertexShaderBuilder>  vertexShaderBuilder();

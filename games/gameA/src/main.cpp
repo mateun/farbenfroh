@@ -15,7 +15,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
     auto fsrc = renderer::fragmentShaderBuilder()->color().build();
     auto vertexShader = renderer::compileVertexShader(vsrc);
     auto fragmentShader = renderer::compileFragmentShader(fsrc);
-
+    auto myprog = renderer::linkShaderProgram(vertexShader, fragmentShader);
 
     bool run = true;
     while (run) {

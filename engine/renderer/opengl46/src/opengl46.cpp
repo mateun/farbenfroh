@@ -309,6 +309,34 @@ namespace renderer {
         return handle;
     }
 
+    ProgramHandle linkShaderProgram(ShaderHandle vshader, ShaderHandle fshader) {
+        GLuint p = glCreateProgram();
+        glAttachShader(p, shaderMap[vshader.id].id);
+        glAttachShader(p, shaderMap[fshader.id].id);
+        glLinkProgram(p);
+
+        GLint linkStatus;
+        glGetProgramiv(p, GL_LINK_STATUS, &linkStatus);
+
+        if (GL_FALSE == linkStatus) {
+            std::cerr << "Error during shader linking" << std::endl;
+            GLint maxLength = 0;
+            glGetProgramiv(p, GL_INFO_LOG_LENGTH, &maxLength);
+            std::vector<GLchar> infoLog(maxLength);
+            glGetProgramInfoLog(p, maxLength, &maxLength, &infoLog[0]);
+            std::cerr << infoLog.data() << std::endl;
+            printf("shader linking error: %s", infoLog.data());
+            glDeleteProgram(p);
+        }
+
+        auto glProg = GLProgram{p};
+        ProgramHandle handle = ProgramHandle {nextHandleId};
+        programMap[nextHandleId] = glProg ;
+        nextHandleId++;
+        return handle;
+
+    }
+
     ShaderHandle compileVertexShader(const std::string &source) {
         auto vshader = glCreateShader(GL_VERTEX_SHADER);
         const GLchar* vssource_char = source.c_str();
