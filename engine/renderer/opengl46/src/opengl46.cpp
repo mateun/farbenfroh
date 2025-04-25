@@ -128,6 +128,11 @@ renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::diffuseTexture(uint
     return *this;
 }
 
+renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::textRender() {
+    useTextRender = true;
+    return *this;
+}
+
 std::string GL46FramgentShaderBuilder::build() const {
     std::string src = "#version 460 core\n";
 
@@ -135,7 +140,7 @@ std::string GL46FramgentShaderBuilder::build() const {
     if (useColor) {
         src += "uniform vec4 color = vec4(1, 1, 1, 1);\n";
     }
-    if (useDiffuseTexture) {
+    if (useDiffuseTexture || useTextRender) {
         src += "layout(binding = " + std::to_string(diffuseTextureUnit) + ") uniform sampler2D diffuseTexture;\n\n";
         src += "in vec2 fs_uvs;\n";
     }
@@ -146,12 +151,22 @@ std::string GL46FramgentShaderBuilder::build() const {
     if (useColor) {
         src += "    final_color = color;\n";
     }
-    else if (useDiffuseTexture) {
+    else if (useDiffuseTexture ) {
         src += "    final_color = texture(diffuseTexture, fs_uvs);\n";
     }
     else {
         src += "    final_color = vec4(1, 0,1, 1);\n";
     }
+
+     if (useTextRender) {
+         src += "   float r =  texture(diffuseTexture, fs_uvs).r;\n";
+         // TODO allow setting of textcolor
+         src += "   final_color = vec4(1, 1 , 1, r);\n";
+
+     }
+
+
+
 
     src += "}\n";
     return src;
@@ -609,7 +624,7 @@ namespace renderer {
         }
 
         auto glShader = GLShader{fshader};
-        ShaderHandle handle = ShaderHandle {nextHandleId};
+        auto handle = ShaderHandle {nextHandleId};
         shaderMap[nextHandleId] = glShader ;
         nextHandleId++;
         return handle;

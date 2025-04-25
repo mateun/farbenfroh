@@ -125,6 +125,7 @@ namespace renderer {
         public:
             virtual ~FragmentShaderBuilder() = default;
             virtual FragmentShaderBuilder& color() = 0;
+            virtual FragmentShaderBuilder& textRender() = 0;
             virtual FragmentShaderBuilder& diffuseTexture(uint8_t textureUnit = 0) = 0;
             virtual std::string build() const = 0;
     };

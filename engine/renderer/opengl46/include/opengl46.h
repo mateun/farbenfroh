@@ -62,12 +62,15 @@ class GL46FramgentShaderBuilder : public renderer::FragmentShaderBuilder {
 public:
     FragmentShaderBuilder &color() override;
     FragmentShaderBuilder &diffuseTexture(uint8_t textureUnit) override;
+    FragmentShaderBuilder &textRender() override;
     std::string build() const override;
 
 private:
+    bool useTextRender = false;
     bool useColor = false;
-    bool useDiffuseTexture;
+    bool useDiffuseTexture = false;
     uint8_t diffuseTextureUnit = 0;
+
 };
 
 /**

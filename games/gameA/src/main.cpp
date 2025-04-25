@@ -45,7 +45,16 @@ renderer::ProgramHandle createTextureShader() {
     auto fsrc = renderer::fragmentShaderBuilder()->diffuseTexture(0).build();
     auto vertexShader = renderer::compileVertexShader(vsrc);
     auto fragmentShader = renderer::compileFragmentShader(fsrc);
-    auto myprog = renderer::linkShaderProgram(vertexShader, fragmentShader);
+    auto myprog = linkShaderProgram(vertexShader, fragmentShader);
+    return myprog;
+}
+
+renderer::ProgramHandle createTextShader() {
+    auto vsrc = renderer::vertexShaderBuilder()->position(0).uv(1).mvp().build();
+    auto fsrc = renderer::fragmentShaderBuilder()->diffuseTexture(0).textRender().build();
+    auto vertexShader = renderer::compileVertexShader(vsrc);
+    auto fragmentShader = renderer::compileFragmentShader(fsrc);
+    auto myprog = linkShaderProgram(vertexShader, fragmentShader);
     return myprog;
 }
 
@@ -59,6 +68,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
     auto colorShader = createColorShader();
     auto textureShader = createTextureShader();
+    auto textShader = createTextShader();
 
     auto worldMat = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0));
     auto projMat = glm::ortho<float>(0, 800, 0, 600.0f, 0.1f, 100.0f);
@@ -101,7 +111,8 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
     // Font
     auto font = renderer::createFontFromFile("../../v2025/assets/consola.ttf", 14.0f);
-    auto quadText = renderer::drawTextIntoQuad(font, "hello");
+    auto quadText = renderer::drawTextIntoQuad(font, "hello Is this looking correct now, or not?!:;");
+    auto quadTextCapital = renderer::drawTextIntoQuad(font, "HELLO!g");
 
     // Postprocessing
     // Create our fullscreen render-target
@@ -110,36 +121,44 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
     bool run = true;
     while (run) {
+        using namespace renderer;
         run = poll_window(win);
-        renderer::setClearColor(0.5, 0.5, 0, 1);
-        renderer::clear();
-        renderer::bindRenderTarget(fullScreenRT);
-        renderer::setClearColor(0, 0.5, 0, 1);
-        renderer::clear();
+        setClearColor(0.5, 0.5, 0, 1);
+        clear();
+        bindRenderTarget(fullScreenRT);
+        setClearColor(0, 0.5, 0, 1);
+        clear();
 
-        renderer::bindProgram(colorShader);
-        renderer::drawMesh(quadMesh);
+        bindProgram(colorShader);
+        drawMesh(quadMesh);
 
-        renderer::bindProgram(textureShader);
+        bindProgram(textureShader);
         auto scaleMat = glm::scale(glm::mat4(1), glm::vec3(64, 64, 1));
         worldMat = glm::translate(worldMat, glm::vec3(100, 200, -0.1));
-        result = renderer::setShaderValue(textureShader, "mvpMatrix", projMat * worldMat * scaleMat);
-        renderer::bindTexture(porkImageTexture);
-        renderer::drawMesh(quadMesh);
+        setShaderValue(textureShader, "mvpMatrix", projMat * worldMat * scaleMat);
+        bindTexture(porkImageTexture);
+        drawMesh(quadMesh);
 
-        //scaleMat = glm::scale(glm::mat4(1), glm::vec3(120, 20, 1));
+
         worldMat = glm::translate(glm::mat4(1), glm::vec3(400, 300, -0.1));
-        result = renderer::setShaderValue(textureShader, "mvpMatrix", projMat * worldMat);
-        renderer::bindTexture(font.atlasTexture);
-        renderer::drawMesh(quadText);
+        setShaderValue(textShader, "mvpMatrix", projMat * worldMat);
+        bindTexture(font.atlasTexture);
+        drawMesh(quadText);
 
-        renderer::bindDefaultRenderTarget();
-        renderer::bindTexture(fullScreenRT.colorTex);
-        scaleMat = glm::scale(glm::mat4(1), glm::vec3(800, 600, 1));
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(480, 400, -0.1));
+        setShaderValue(textShader, "mvpMatrix", projMat * worldMat);
+        bindTexture(font.atlasTexture);
+        drawMesh(quadTextCapital);
+
+
+
+        bindDefaultRenderTarget();
+        bindTexture(fullScreenRT.colorTex);
+        scaleMat = scale(glm::mat4(1), glm::vec3(800, 600, 1));
         auto translateMat = glm::translate(glm::mat4(1), glm::vec3(400, 300, -0.1));
-        result = renderer::setShaderValue(textureShader, "mvpMatrix", projMat * translateMat * scaleMat);
-        renderer::drawMesh(quadMesh);
-        renderer::present(hdc);
+        setShaderValue(textureShader, "mvpMatrix", projMat * translateMat * scaleMat);
+        drawMesh(quadMesh);
+        present(hdc);
 
 
     }
