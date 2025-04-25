@@ -3,6 +3,7 @@
 //
 
 #include <engine.h>
+#include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
 std::vector<glm::vec3> getPositionData() {
@@ -60,7 +61,8 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
     auto textureShader = createTextureShader();
 
     auto worldMat = glm::translate(glm::mat4(1), glm::vec3(-1, 0, 0));
-    auto result = renderer::setShaderValue(colorShader, "mvpMatrix", worldMat);
+    auto projMat = glm::ortho<float>(0, 800, 0, 600.0f, 0.1f, 100.0f);
+    auto result = renderer::setShaderValue(colorShader, "mvpMatrix", projMat * worldMat);
 
     auto vbo = renderer::vertexBufferBuilder()->
             attributeVec3(renderer::VertexAttributeSemantic::Position, getPositionData()).
@@ -97,9 +99,14 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
     auto mainBackground = renderer::createImageFromFile("../../games/gameA/assets/captain_pork.png");
     auto porkImageTexture = renderer::createTexture(mainBackground);
 
+    // Font
+    auto font = renderer::createFontFromFile("../../v2025/assets/consola.ttf", 14.0f);
+    auto quadText = renderer::drawTextIntoQuad(font, "hello");
+
     // Postprocessing
     // Create our fullscreen render-target
     auto fullScreenRT = renderer::renderTargetBuilder()->size(800, 600).color().depth().build();
+
 
     bool run = true;
     while (run) {
@@ -114,18 +121,24 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
         renderer::drawMesh(quadMesh);
 
         renderer::bindProgram(textureShader);
-        worldMat = glm::translate(glm::mat4(1), glm::vec3(1, 0.25, 0));
-        result = renderer::setShaderValue(textureShader, "mvpMatrix", worldMat);
+        auto scaleMat = glm::scale(glm::mat4(1), glm::vec3(64, 64, 1));
+        worldMat = glm::translate(worldMat, glm::vec3(100, 200, -0.1));
+        result = renderer::setShaderValue(textureShader, "mvpMatrix", projMat * worldMat * scaleMat);
         renderer::bindTexture(porkImageTexture);
         renderer::drawMesh(quadMesh);
 
+        //scaleMat = glm::scale(glm::mat4(1), glm::vec3(120, 20, 1));
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(400, 300, -0.1));
+        result = renderer::setShaderValue(textureShader, "mvpMatrix", projMat * worldMat);
+        renderer::bindTexture(font.atlasTexture);
+        renderer::drawMesh(quadText);
+
         renderer::bindDefaultRenderTarget();
         renderer::bindTexture(fullScreenRT.colorTex);
-        auto scaleMat = glm::scale(glm::mat4(1), glm::vec3(2, 2, 1));
-        auto translateMat = glm::translate(glm::mat4(1), glm::vec3(0, 0, -0.1));
-        result = renderer::setShaderValue(textureShader, "mvpMatrix", translateMat * scaleMat);
+        scaleMat = glm::scale(glm::mat4(1), glm::vec3(800, 600, 1));
+        auto translateMat = glm::translate(glm::mat4(1), glm::vec3(400, 300, -0.1));
+        result = renderer::setShaderValue(textureShader, "mvpMatrix", projMat * translateMat * scaleMat);
         renderer::drawMesh(quadMesh);
-
         renderer::present(hdc);
 
 

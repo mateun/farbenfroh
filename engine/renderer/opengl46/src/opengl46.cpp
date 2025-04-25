@@ -17,16 +17,25 @@
 
 #include "../renderer/include/renderer.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+
+
 
 // Handle system
 uint32_t nextHandleId = 1; // start at 1 to reserve 0 as "invalid"
 static std::unordered_map<uint32_t, GLTexture> textureMap;
 static std::unordered_map<uint32_t, GLShader> shaderMap;
+
 static std::unordered_map<uint32_t, GLProgram> programMap;
 static std::unordered_map<uint32_t, GLVao> vaoMap;
 static std::unordered_map<uint32_t, GLVbo> vbufferMap;
+
+namespace renderer {
+    static TextureHandle createTextureGL46(const Image& image, TextureFormat format);
+    static std::unique_ptr<VertexBufferBuilder> vertexBufferBuilderGL46();
+    static IndexBufferHandle createIndexBufferGL46(std::vector<uint32_t> data);
+    static Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
+}
+
 
 renderer::RenderTargetBuilder & GL46RenderTargetBuilder::size(int w, int h) {
     width = w;
@@ -212,15 +221,6 @@ renderer::VertexBufferHandle GL46VertexBufferBuilder::build() const {
     return createVertexBuffer(info);
 }
 
-renderer::IndexBufferHandle renderer::createIndexBuffer(std::vector<uint32_t> data) {
-    GLuint ibo;
-    glCreateBuffers(1, &ibo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(uint32_t), data.data(), GL_STATIC_DRAW);
-    auto handleId = nextHandleId++;
-    vbufferMap[handleId] = GLVbo{ibo};
-    return renderer::IndexBufferHandle{handleId};
-}
 
 
 
@@ -443,6 +443,12 @@ void initOpenGL46(HWND hwnd, bool useSRGB, int msaaSampleCount) {
     glGetIntegerv(GL_SAMPLE_BUFFERS, &sampleBuffers);
     printf("MSAA: %d sample buffers, %d samples\n", sampleBuffers, samples);
 
+    registerCreateTexture(&renderer::createTextureGL46);
+    registerVertexBufferBuilder(&renderer::vertexBufferBuilderGL46);
+    registerCreateIndexBuffer(&renderer::createIndexBufferGL46);
+    renderer::registerCreateMesh(&renderer::createMeshGL46);
+
+
 }
 
 namespace renderer {
@@ -456,7 +462,7 @@ namespace renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder() {
+    std::unique_ptr<VertexBufferBuilder> vertexBufferBuilderGL46() {
         return std::make_unique<GL46VertexBufferBuilder>();
     }
 
@@ -476,22 +482,28 @@ namespace renderer {
 
     }
 
-    Image createImageFromFile(const std::string &filename) {
-        Image image;
-        auto pixels = stbi_load(filename.c_str(), &image.width, &image.height,
-                &image.channels,
-                4);
-        image.pixels = pixels;
-        return image;
+
+
+    static GLint toInternalGLFormat(TextureFormat format) {
+        switch (format) {
+            case TextureFormat::SRGBA8: return GL_SRGB8_ALPHA8;
+            case TextureFormat::RGBA8: return GL_RGBA8;
+            case TextureFormat::R8 : return GL_R8;
+            default: return GL_RGBA8;
+        }
     }
 
-    TextureHandle createTexture(const Image& image, TextureFormat format) {
-        // GL texture format mappings
-        /*RGBA8	GL_RGBA8
-        SRGBA8	GL_SRGB8_ALPHA8
-        RGBA16F	GL_RGBA16F
-        Depth24Stencil8	GL_DEPTH24_STENCIL8
-        */
+    static GLenum toGLFormat(TextureFormat format) {
+        switch (format) {
+            case TextureFormat::RGBA8: return GL_RGBA;
+            case TextureFormat::R8: return GL_RED;
+            case TextureFormat::SRGBA8: return GL_RGBA;
+            default: return GL_RGBA;
+        }
+    }
+
+    TextureHandle createTextureGL46(const Image& image, TextureFormat format) {
+
         GLuint handle;
         glGenTextures(1, &handle);
         glBindTexture(GL_TEXTURE_2D, handle);
@@ -501,11 +513,11 @@ namespace renderer {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexImage2D(GL_TEXTURE_2D,
                      0,
-                     GL_SRGB8_ALPHA8,
+                     toInternalGLFormat(format),
                      image.width,
                      image.height,
                      0,
-                     GL_RGBA,
+                     toGLFormat(format),
                      GL_UNSIGNED_BYTE,
                      image.pixels);
 
@@ -548,39 +560,12 @@ namespace renderer {
         glDrawElements(GL_TRIANGLES, m.index_count, GL_UNSIGNED_INT, 0);
     }
 
+
+
     void bindProgram(ProgramHandle myprog) {
         glUseProgram(programMap[myprog.id].id);
     }
 
-
-    Mesh renderer::createMesh(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes, size_t index_count) {
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
-        for (auto attribute : attributes) {
-            glEnableVertexAttribArray(attribute.location);
-            glVertexAttribPointer(
-                attribute.location,               // attribute location
-                attribute.components,               // components
-                GL_FLOAT,        // type
-                GL_FALSE,        // normalize?
-                attribute.stride,
-                (void*)attribute.offset                // relative offset in vertex
-            );
-
-        }
-        glBindVertexArray(0);
-
-        Mesh mesh;
-        mesh.id = vao;
-        mesh.index_count = index_count;
-        mesh.index_buffer = ibo;
-        mesh.vertex_buffer = vbo;
-        mesh.layout = VertexLayout{attributes};
-        mesh.primitive_topology = PrimitiveTopology::Triangle_List;
-        return mesh;
-    }
 
      std::unique_ptr<VertexShaderBuilder>  vertexShaderBuilder() {
         return std::make_unique<GL46VertexShaderBuilder>();
@@ -601,6 +586,8 @@ namespace renderer {
     void bindDefaultRenderTarget() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
+
+
 
     ShaderHandle compileFragmentShader(const std::string &source) {
         GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -708,6 +695,48 @@ namespace renderer {
         auto err = glGetError();
         return (err == GL_NO_ERROR) ;
     }
+
+    IndexBufferHandle createIndexBufferGL46(std::vector<uint32_t> data) {
+        GLuint ibo;
+        glCreateBuffers(1, &ibo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(uint32_t), data.data(), GL_STATIC_DRAW);
+        auto handleId = nextHandleId++;
+        vbufferMap[handleId] = GLVbo{ibo};
+        return renderer::IndexBufferHandle{handleId};
+    }
+
+
+    Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes, size_t index_count) {
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        for (auto attribute : attributes) {
+            glEnableVertexAttribArray(attribute.location);
+            glVertexAttribPointer(
+                attribute.location,               // attribute location
+                attribute.components,               // components
+                GL_FLOAT,        // type
+                GL_FALSE,        // normalize?
+                attribute.stride,
+                (void*)attribute.offset                // relative offset in vertex
+            );
+
+        }
+        glBindVertexArray(0);
+
+        Mesh mesh;
+        mesh.id = vao;
+        mesh.index_count = index_count;
+        mesh.index_buffer = ibo;
+        mesh.vertex_buffer = vbo;
+        mesh.layout = VertexLayout{attributes};
+        mesh.primitive_topology = PrimitiveTopology::Triangle_List;
+        return mesh;
+    }
+
+
 
     template ENGINE_API bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
     template ENGINE_API bool setShaderValue<float>(ProgramHandle, const std::string&, const float&);

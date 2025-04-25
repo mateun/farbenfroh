@@ -5,11 +5,13 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <Windows.h>
 #include <symbol_exports.h>
 #include <vector>
 #include <string>
 #include <memory>
 #include <glm/glm.hpp>
+
 
 namespace renderer {
 
@@ -106,6 +108,14 @@ namespace renderer {
         uint32_t id;
 
     };
+
+    struct FontHandle {
+        uint32_t id;
+        TextureHandle atlasTexture;
+    };
+
+
+
 
     /**
      * Allows to compose a modular fragment shader and
@@ -234,9 +244,17 @@ namespace renderer {
     ENGINE_API void  setViewport(int x, int y, int width, int height);
 
     // Geometry
+    typedef std::unique_ptr<VertexBufferBuilder> (*VertexBufferBuilderFn)(void);
+    ENGINE_API void registerVertexBufferBuilder(VertexBufferBuilderFn fn);
     ENGINE_API std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder();
     ENGINE_API VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo create_info);
+
+    typedef IndexBufferHandle (*CreateIndexBufferFn)(std::vector<uint32_t> data);
+    ENGINE_API void registerCreateIndexBuffer(CreateIndexBufferFn fn);
     ENGINE_API IndexBufferHandle createIndexBuffer(std::vector<uint32_t> data);
+
+    typedef Mesh (*CreateMeshFn)(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
+    ENGINE_API void registerCreateMesh(CreateMeshFn fn);
     ENGINE_API Mesh createMesh(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
 
 
@@ -248,6 +266,7 @@ namespace renderer {
     ENGINE_API ProgramHandle linkShaderProgram(ShaderHandle vertexShader, ShaderHandle fragmentShader);
     ENGINE_API ProgramHandle  createShaderProgram(const char* vertexShader, const char* fragmentShader);
     ENGINE_API void bindShader(ShaderHandle shader);
+    ENGINE_API void bindProgram(ProgramHandle prog);
 
     template<typename T>
     ENGINE_API bool setShaderValue(ProgramHandle program, const std::string& name, const T& value);
@@ -255,7 +274,9 @@ namespace renderer {
 
     // Texture
     ENGINE_API Image createImageFromFile(const std::string& filename);
-    ENGINE_API TextureHandle createTexture(const Image& image, TextureFormat format = TextureFormat::RGBA8);
+    typedef TextureHandle (*CreateTextureFn)(const Image&, TextureFormat);
+    ENGINE_API void registerCreateTexture(CreateTextureFn fn);
+    ENGINE_API TextureHandle createTexture(const Image& image, TextureFormat format = TextureFormat::SRGBA8);
     ENGINE_API void bindTexture(TextureHandle texture);
 
     // Rendertargets
@@ -263,9 +284,14 @@ namespace renderer {
     ENGINE_API void bindRenderTarget(const RenderTarget& renderTarget);
     ENGINE_API void bindDefaultRenderTarget();
 
-    // Drawing
+    // Font
+    ENGINE_API FontHandle createFontFromFile(const std::string& fileToTTF, float fontSize);
+
+    // Drawing geometry
     ENGINE_API void drawMesh(Mesh m);
-    ENGINE_API void bindProgram(ProgramHandle myprog);
+    ENGINE_API Mesh drawTextIntoQuad(FontHandle font, const std::string& text);
+
+
 }
 
 #endif //RENDERER_H

@@ -6,10 +6,13 @@
 #define OPENGL46_H
 
 #include <symbol_exports.h>
-//#include <GL/glew.h>
+
 #include "../renderer/include/renderer.h"
 #include <gl/gl.h>
 #include <cinttypes>
+
+
+
 
 struct GLTexture {
     GLuint id;
@@ -202,6 +205,8 @@ public:
         // Assign other outputs:
         if (hasUV) {
             src += "    fs_uvs = aUV;\n";
+            // TODO handle uv flipping
+            //src += "    fs_uvs.y = 1 - fs_uvs.y;\n";
         }
 
         src += "}\n";
@@ -221,6 +226,10 @@ private:
     bool hasProjectionMatrixUniform;
     bool hasViewMatrixUniform;
 };
+
+
+
+
 
 
 extern "C" ENGINE_API void initOpenGL46(HWND, bool useSRGB = false, int msaaSampleCount = 0);
