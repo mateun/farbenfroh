@@ -33,13 +33,43 @@ struct GLVbo {
     GLuint id;
 };
 
-class GL46FramgentShaderBuilder : public renderer::FragmentShaderBuilder {
-    FragmentShaderBuilder &color() override;
-    std::string build() const override;
+/**
+ * Implemetns the RenderTargetBuilder interface for OpenGL 4.6.
+ */
+class GL46RenderTargetBuilder: public renderer::RenderTargetBuilder {
+public:
+    RenderTargetBuilder &size(int w, int h) override;
+    RenderTargetBuilder &color() override;
+    RenderTargetBuilder &depth() override;
+    RenderTargetBuilder &stencil() override;
+    renderer::RenderTarget build() override;
+
 private:
-    bool useColor = false;
+    int width = 1024;
+    int height = 1024;
+    bool useDepth = false;
+    bool useStencil = false;
+    bool usesColor = false;
 };
 
+/**
+ * Implemetns the FramgementShaderBuilder interface for OpenGL 4.6.
+ */
+class GL46FramgentShaderBuilder : public renderer::FragmentShaderBuilder {
+public:
+    FragmentShaderBuilder &color() override;
+    FragmentShaderBuilder &diffuseTexture(uint8_t textureUnit) override;
+    std::string build() const override;
+
+private:
+    bool useColor = false;
+    bool useDiffuseTexture;
+    uint8_t diffuseTextureUnit = 0;
+};
+
+/**
+ * Implemetns the VertexBufferBuilder interface for OpenGL 4.6.
+ */
 class GL46VertexBufferBuilder : public renderer::VertexBufferBuilder {
 public:
     VertexBufferBuilder &attributeVec3(renderer::VertexAttributeSemantic semantic, const std::vector<glm::vec3> &data) override;
@@ -59,10 +89,26 @@ private:
     size_t element_count_ = 0;
 };
 
+/**
+ * Implements the VertexSahderBuilder interface for OpenGL 4.6.
+ */
 class GL46VertexShaderBuilder : public renderer::VertexShaderBuilder {
 public:
-    GL46VertexShaderBuilder& position() override {
+    GL46VertexShaderBuilder& position(uint8_t slot) override {
         hasPosition = true;
+        positionSlot = slot;
+        return *this;
+    }
+
+    GL46VertexShaderBuilder& normal(uint8_t slot) override {
+        hasNormal = true;
+        normalSlot = slot;
+        return *this;
+    }
+
+    GL46VertexShaderBuilder& uv(uint8_t slot) override {
+        hasUV = true;
+        uvSlot = slot;
         return *this;
     }
 
@@ -90,28 +136,22 @@ public:
 
 
 
-    GL46VertexShaderBuilder& normal() override {
-        hasNormal = true;
-        return *this;
-    }
 
-    GL46VertexShaderBuilder& uv() override {
-        hasUV = true;
-        return *this;
-    }
 
 
 
     [[nodiscard]] std::string build() const override {
         std::string src = "#version 460 core\n";
 
+        // Declare vertex attributes:
         if (hasPosition)
-            src += "layout(location = 0) in vec3 aPosition;\n";
+            src += "layout(location = " + std::to_string(positionSlot) + ") in vec3 aPosition;\n";
         if (hasNormal)
-            src += "layout(location = 1) in vec3 aNormal;\n";
+            src += "layout(location = " + std::to_string(normalSlot) + ") in vec3 aNormal;\n";
         if (hasUV)
-            src += "layout(location = 2) in vec2 aUV;\n";
+            src += "layout(location = " + std::to_string(uvSlot) +") in vec2 aUV;\n";
 
+        // Declare uniforms:
         if (hasMVPUniforms) {
             src += "uniform mat4 mvpMatrix;\n";
         }
@@ -144,14 +184,25 @@ public:
             mvpPart += "view_mat *";
         }
 
+        // Declare outputs:
+        if (hasUV) {
+            src += "out vec2 fs_uvs;\n";
+        }
+
         src += "void main() {\n";
 
+        // Calculate clip-space position:
         if (hasPosition) {
             src += "\tgl_Position = " + mvpPart + " vec4(aPosition, 1.0);\n";
         }
-
-        else
+        else {
             src += "    gl_Position = vec4(0.0);\n";
+        }
+
+        // Assign other outputs:
+        if (hasUV) {
+            src += "    fs_uvs = aUV;\n";
+        }
 
         src += "}\n";
 
@@ -162,6 +213,9 @@ private:
     bool hasPosition = false;
     bool hasNormal = false;
     bool hasUV = false;
+    uint8_t positionSlot = 0;
+    uint8_t normalSlot = 0;
+    uint8_t uvSlot = 0;
     bool hasMVPUniforms = false;
     bool hasWorldMatrixUniform;
     bool hasProjectionMatrixUniform;
@@ -169,7 +223,7 @@ private:
 };
 
 
-extern "C" ENGINE_API void initOpenGL46(HWND);
+extern "C" ENGINE_API void initOpenGL46(HWND, bool useSRGB = false, int msaaSampleCount = 0);
 
 
 

@@ -11,10 +11,14 @@
 #include <symbol_exports.h>
 #include "../include/opengl46.h"
 
+#include <complex>
 #include <iostream>
 #include <unordered_map>
 
 #include "../renderer/include/renderer.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 // Handle system
 uint32_t nextHandleId = 1; // start at 1 to reserve 0 as "invalid"
@@ -24,28 +28,123 @@ static std::unordered_map<uint32_t, GLProgram> programMap;
 static std::unordered_map<uint32_t, GLVao> vaoMap;
 static std::unordered_map<uint32_t, GLVbo> vbufferMap;
 
+renderer::RenderTargetBuilder & GL46RenderTargetBuilder::size(int w, int h) {
+    width = w;
+    height = h;
+    return *this;
+}
+
+renderer::RenderTargetBuilder & GL46RenderTargetBuilder::color() {
+    usesColor = true;
+    return *this;
+}
+
+renderer::RenderTargetBuilder & GL46RenderTargetBuilder::depth() {
+    useDepth = true;
+    return *this;
+}
+
+renderer::RenderTargetBuilder & GL46RenderTargetBuilder::stencil() {
+    useStencil = true;
+    return *this;
+}
+
+renderer::RenderTarget GL46RenderTargetBuilder::build() {
+    GLuint fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    renderer::RenderTarget renderTarget;
+    renderTarget.id = fbo;
+    renderTarget.width = width;
+    renderTarget.height = height;
+
+    if (usesColor) {
+        GLuint colorTexture;
+        glGenTextures(1, &colorTexture);
+        glBindTexture(GL_TEXTURE_2D, colorTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
+        GLTexture glTex;
+        glTex.id = colorTexture;
+        glTex.width = width;
+        glTex.height = height;
+        auto textureHandle = renderer::TextureHandle {nextHandleId};
+        textureMap[textureHandle.id] = glTex;
+        nextHandleId++;
+        renderTarget.colorTex = textureHandle;
+    }
+
+    if (useDepth) {
+        GLuint depthRbo;
+        glGenRenderbuffers(1, &depthRbo);
+        glBindRenderbuffer(GL_RENDERBUFFER, depthRbo);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRbo);
+        renderTarget.depthRbo = depthRbo;
+    }
+
+    if (useStencil) {
+        GLuint stencilRbo;
+        glGenRenderbuffers(1, &stencilRbo);
+        glBindRenderbuffer(GL_RENDERBUFFER, stencilRbo);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, width, height);
+        glFramebufferRenderbuffer(GL_RENDERBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, stencilRbo);
+        renderTarget.stencilRbo = stencilRbo;
+    }
+
+    // Check completeness
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        // log error!
+    }
+
+    // Unbind:
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+    return renderTarget;
+
+}
+
 renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::color() {
     useColor = true;
+    return *this;
+}
+
+renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::diffuseTexture(uint8_t textureUnit) {
+    useDiffuseTexture = true;
+    diffuseTextureUnit = textureUnit;
     return *this;
 }
 
 std::string GL46FramgentShaderBuilder::build() const {
     std::string src = "#version 460 core\n";
 
-    if (useColor)
+    // Declare inputs:
+    if (useColor) {
         src += "uniform vec4 color = vec4(1, 1, 1, 1);\n";
+    }
+    if (useDiffuseTexture) {
+        src += "layout(binding = " + std::to_string(diffuseTextureUnit) + ") uniform sampler2D diffuseTexture;\n\n";
+        src += "in vec2 fs_uvs;\n";
+    }
 
     src += "out vec4 final_color;\n";
-
     src += "void main() {\n";
 
-    if (useColor)
+    if (useColor) {
         src += "    final_color = color;\n";
-    else
+    }
+    else if (useDiffuseTexture) {
+        src += "    final_color = texture(diffuseTexture, fs_uvs);\n";
+    }
+    else {
         src += "    final_color = vec4(1, 0,1, 1);\n";
+    }
 
     src += "}\n";
-
     return src;
 
 }
@@ -57,21 +156,20 @@ template<typename T>
 renderer::VertexBufferBuilder & GL46VertexBufferBuilder::attributeT(renderer::VertexAttributeSemantic semantic,
     const std::vector<T> &data) {
     size_t offset = current_stride_;
-    current_stride_ += sizeof(glm::vec3);
+    current_stride_ += sizeof(T);
 
     auto attr = renderer::VertexAttribute();
     attr.semantic = semantic;
     attr.offset = static_cast<uint32_t>(offset);
     attr.format = renderer::VertexFormatFor<T>::value;
-    attr.stride = sizeof(T);
+    attr.stride = current_stride_;
     attr.location = attributes_.size();
     attr.components = renderer::ComponentsFor<T>::value;
 
     attributes_.push_back({attr});
-    raw_data_.insert(raw_data_.end(), reinterpret_cast<const float*>(data.data()),
-        reinterpret_cast<const float*>(data.data()) + data.size()*3);
-    element_size_ = sizeof(glm::vec3); // maybe verify consistency?
-    element_count_ = data.size();
+    const float* float_data = reinterpret_cast<const float*>(data.data());
+    raw_data_.insert(raw_data_.end(), float_data, float_data + data.size() * T::length());
+    element_count_ = data.size(); // how many elements (e.g. positions) do we have here?
     return *this;
 }
 
@@ -87,20 +185,27 @@ renderer::VertexBufferBuilder & GL46VertexBufferBuilder::attributeVec2(renderer:
 }
 
 renderer::VertexBufferHandle GL46VertexBufferBuilder::build() const {
-    //std::vector<float> interleavedData(element_count_ * current_stride_);
+    std::vector<float> interleavedData(element_count_ * (current_stride_ / sizeof(float)));
 
-    // for (size_t i = 0; i < element_count_; ++i) {
-    //     for (size_t j = 0; j < raw_data_.size(); ++j) {
-    //         const float* src = &raw_data_[j] + i *  element_size_;
-    //         void* dst = interleavedData.data() + i * current_stride_ + attributes_[j].offset;
-    //         std::memcpy(dst, src, element_size_);
-    //     }
-    // }
+    for (size_t i = 0; i < element_count_; ++i) {
+        size_t attrOffsetFloats = 0;
+        size_t attrDataOffset = 0;
 
+        for (size_t j = 0; j < attributes_.size(); ++j) {
+            const auto& attr = attributes_[j];
+
+            size_t attrSizeFloats = attr.components;
+            size_t dstOffset = i * (current_stride_ / sizeof(float)) + (attr.offset / sizeof(float));
+            size_t srcOffset = i * attrSizeFloats + attrDataOffset;
+
+            std::memcpy(&interleavedData[dstOffset], &raw_data_[srcOffset], attrSizeFloats * sizeof(float));
+            attrDataOffset += element_count_ * attrSizeFloats; // shift to next attribute's chunk
+        }
+    }
 
 
     renderer::VertexBufferCreateInfo info = {
-        .data = raw_data_,
+        .data = interleavedData,
         .stride = current_stride_
     };
 
@@ -130,7 +235,7 @@ renderer::VertexBufferHandle renderer::createVertexBuffer(renderer::VertexBuffer
 
 }
 
-void initOpenGL46(HWND hwnd) {
+void initOpenGL46(HWND hwnd, bool useSRGB, int msaaSampleCount) {
 
     PIXELFORMATDESCRIPTOR pfd =
     {
@@ -217,8 +322,8 @@ void initOpenGL46(HWND hwnd) {
         WGL_DEPTH_BITS_ARB,     24,
         WGL_STENCIL_BITS_ARB,   8,
         WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, GL_TRUE, // <--- Enable sRGB framebuffer
-        WGL_SAMPLE_BUFFERS_ARB, 1,      // <-- Enable multi-sample buffer
-        WGL_SAMPLES_ARB,        4,      // <-- # of samples
+        WGL_SAMPLE_BUFFERS_ARB, msaaSampleCount > 0 ? 1 : 0,      // <-- Enable multi-sample buffer
+        WGL_SAMPLES_ARB,        msaaSampleCount,      // <-- # of samples
         0                       // End
     };
 
@@ -311,11 +416,20 @@ void initOpenGL46(HWND hwnd) {
     glFrontFace(GL_CCW);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
-    glEnable(GL_MULTISAMPLE);
-    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST );
-    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST );
-    glEnable(GL_LINE_SMOOTH);
-    glEnable(GL_FRAMEBUFFER_SRGB);
+
+
+    if (msaaSampleCount > 0) {
+        glEnable(GL_MULTISAMPLE);
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST );
+        glEnable(GL_LINE_SMOOTH);
+    }
+
+
+
+    if (useSRGB) {
+        glEnable(GL_FRAMEBUFFER_SRGB);
+    }
+
     //glEnable(GL_POLYGON_SMOOTH);
     //glViewport(0, 0, w, h);
 
@@ -332,6 +446,7 @@ void initOpenGL46(HWND hwnd) {
 }
 
 namespace renderer {
+
 
     void ENGINE_API present(HDC hdc) {
         SwapBuffers(hdc);
@@ -361,6 +476,72 @@ namespace renderer {
 
     }
 
+    Image createImageFromFile(const std::string &filename) {
+        Image image;
+        auto pixels = stbi_load(filename.c_str(), &image.width, &image.height,
+                &image.channels,
+                4);
+        image.pixels = pixels;
+        return image;
+    }
+
+    TextureHandle createTexture(const Image& image, TextureFormat format) {
+        // GL texture format mappings
+        /*RGBA8	GL_RGBA8
+        SRGBA8	GL_SRGB8_ALPHA8
+        RGBA16F	GL_RGBA16F
+        Depth24Stencil8	GL_DEPTH24_STENCIL8
+        */
+        GLuint handle;
+        glGenTextures(1, &handle);
+        glBindTexture(GL_TEXTURE_2D, handle);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexImage2D(GL_TEXTURE_2D,
+                     0,
+                     GL_SRGB8_ALPHA8,
+                     image.width,
+                     image.height,
+                     0,
+                     GL_RGBA,
+                     GL_UNSIGNED_BYTE,
+                     image.pixels);
+
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        GLTexture glTex;
+        glTex.id = handle;
+        glTex.width = image.width;
+        glTex.height = image.height;
+        //glTex.format = textureFormat;
+        auto textureHandle = TextureHandle {nextHandleId};
+        textureMap[textureHandle.id] = glTex;
+        nextHandleId++;
+        return textureHandle;
+
+        // // Set aniso filtering
+        // {
+        //     if (!glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
+        //         throw std::runtime_error("Anisotropic filtering not supported!");
+        //     }
+        //
+        //     GLfloat maxAniso = 0.0f;
+        //     glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
+        //     printf("maxAniso: %f\n", maxAniso);
+        //     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
+        //
+        // }
+
+    }
+
+    void bindTexture(TextureHandle texture) {
+        // TODO logic for the correct texture unit
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, textureMap[texture.id].id);
+    }
+
     void drawMesh(Mesh m) {
         glBindVertexArray(m.id);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbufferMap[m.index_buffer.id].id);
@@ -381,7 +562,7 @@ namespace renderer {
             glEnableVertexAttribArray(attribute.location);
             glVertexAttribPointer(
                 attribute.location,               // attribute location
-                attribute.components,               // components (vec3)
+                attribute.components,               // components
                 GL_FLOAT,        // type
                 GL_FALSE,        // normalize?
                 attribute.stride,
@@ -407,6 +588,18 @@ namespace renderer {
 
     std::unique_ptr<FragmentShaderBuilder> fragmentShaderBuilder() {
         return std::make_unique<GL46FramgentShaderBuilder>();
+    }
+
+    std::unique_ptr<RenderTargetBuilder> renderTargetBuilder() {
+        return std::make_unique<GL46RenderTargetBuilder>();
+    }
+
+    void bindRenderTarget(const RenderTarget &renderTarget) {
+        glBindFramebuffer(GL_FRAMEBUFFER, renderTarget.id);
+    }
+
+    void bindDefaultRenderTarget() {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     ShaderHandle compileFragmentShader(const std::string &source) {

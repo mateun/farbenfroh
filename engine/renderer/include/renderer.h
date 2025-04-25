@@ -113,9 +113,10 @@ namespace renderer {
      */
     class FragmentShaderBuilder {
         public:
-        virtual ~FragmentShaderBuilder() = default;
-        virtual FragmentShaderBuilder& color() = 0;
-        virtual std::string build() const = 0;
+            virtual ~FragmentShaderBuilder() = default;
+            virtual FragmentShaderBuilder& color() = 0;
+            virtual FragmentShaderBuilder& diffuseTexture(uint8_t textureUnit = 0) = 0;
+            virtual std::string build() const = 0;
     };
 
     /**
@@ -129,9 +130,9 @@ namespace renderer {
     public:
         virtual ~VertexShaderBuilder() = default;
 
-        virtual VertexShaderBuilder& position() = 0;
-        virtual VertexShaderBuilder& normal() = 0;
-        virtual VertexShaderBuilder& uv() = 0;
+        virtual VertexShaderBuilder& position(uint8_t slot) = 0;
+        virtual VertexShaderBuilder& normal(uint8_t slot) = 0;
+        virtual VertexShaderBuilder& uv(uint8_t slot) = 0;
         virtual VertexShaderBuilder& mvp() = 0;
         virtual VertexShaderBuilder& worldMatrix() = 0;
         virtual VertexShaderBuilder& projectionMatrix() = 0;
@@ -156,6 +157,73 @@ namespace renderer {
         size_t stride = 0;
     };
 
+    struct RenderTarget {
+        uint32_t id;
+        TextureHandle colorTex;
+        uint32_t depthRbo;
+        uint32_t stencilRbo;
+        int width, height;
+
+    };
+
+    class RenderTargetBuilder {
+    public:
+        virtual RenderTargetBuilder& size(int w, int h) = 0;
+        virtual RenderTargetBuilder& color() = 0;
+        virtual RenderTargetBuilder& depth() = 0;
+        virtual RenderTargetBuilder& stencil() = 0;
+        virtual RenderTarget build() = 0;
+    };
+
+    struct Image {
+        uint8_t* pixels = nullptr;
+        int width = 0;
+        int height = 0;
+        int channels = 4; // RGBA by default
+
+        size_t sizeInBytes() const {
+            return width * height * channels;
+        }
+    };
+
+    enum class TextureFormat {
+        // Color formats
+        R8,         // 8-bit Red
+        RG8,        // 8-bit Red + Green
+        RGB8,       // 8-bit RGB
+        RGBA8,      // 8-bit RGBA
+
+        // sRGB formats (gamma-corrected color)
+        SRGB8,      // sRGB RGB
+        SRGBA8,     // sRGB RGBA
+
+        // High precision float formats
+        R16F,
+        RG16F,
+        RGB16F,
+        RGBA16F,
+
+        R32F,
+        RG32F,
+        RGB32F,
+        RGBA32F,
+
+        // Depth / stencil formats
+        Depth16,
+        Depth24,
+        Depth32F,
+        Depth24Stencil8,
+        Depth32FStencil8,
+
+        // Integer formats (rare)
+        R32I,
+        RG32I,
+        RGBA32I,
+
+        Unknown, // fallback
+    };
+
+
     ENGINE_API void  beginFrame();
     ENGINE_API void  endFrame();
     ENGINE_API void  present(HDC hdc);
@@ -173,8 +241,8 @@ namespace renderer {
 
 
     // Shader
-    ENGINE_API std::unique_ptr<VertexShaderBuilder>  vertexShaderBuilder();
-    ENGINE_API std::unique_ptr<FragmentShaderBuilder>  fragmentShaderBuilder();
+    ENGINE_API std::unique_ptr<VertexShaderBuilder> vertexShaderBuilder();
+    ENGINE_API std::unique_ptr<FragmentShaderBuilder> fragmentShaderBuilder();
     ENGINE_API ShaderHandle compileVertexShader(const std::string& source);
     ENGINE_API ShaderHandle compileFragmentShader(const std::string& source);
     ENGINE_API ProgramHandle linkShaderProgram(ShaderHandle vertexShader, ShaderHandle fragmentShader);
@@ -186,8 +254,14 @@ namespace renderer {
 
 
     // Texture
-    ENGINE_API TextureHandle  createTexture(const char* texturePath);
+    ENGINE_API Image createImageFromFile(const std::string& filename);
+    ENGINE_API TextureHandle createTexture(const Image& image, TextureFormat format = TextureFormat::RGBA8);
     ENGINE_API void bindTexture(TextureHandle texture);
+
+    // Rendertargets
+    ENGINE_API std::unique_ptr<RenderTargetBuilder> renderTargetBuilder();
+    ENGINE_API void bindRenderTarget(const RenderTarget& renderTarget);
+    ENGINE_API void bindDefaultRenderTarget();
 
     // Drawing
     ENGINE_API void drawMesh(Mesh m);
