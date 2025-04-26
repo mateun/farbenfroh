@@ -175,7 +175,7 @@ namespace renderer {
             float pixel_aligned_y1 = std::floor(q.y1 + 0.5f);
 
             q.x0 = pixel_aligned_x0;
-            q.y0 = pixel_aligned_y0;
+            //q.y0 = pixel_aligned_y0;
             q.x1 = pixel_aligned_x1;
             q.y1 = pixel_aligned_y1;
 

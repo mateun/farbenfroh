@@ -111,8 +111,8 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
     // Font
     auto font = renderer::createFontFromFile("../../v2025/assets/consola.ttf", 14.0f);
-    auto quadText = renderer::drawTextIntoQuad(font, "hello Is this looking correct now, or not?!:;");
-    auto quadTextCapital = renderer::drawTextIntoQuad(font, "HELLO!g");
+    auto quadText = renderer::drawTextIntoQuad(font, "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz?!:;");
+    auto quadTextCapital = renderer::drawTextIntoQuad(font, "ALL CAPS!:/");
 
     // Postprocessing
     // Create our fullscreen render-target
