@@ -9,6 +9,8 @@
 
 #include <unordered_map>
 
+#include "../../../../v2025/extlibs/glew-2.2.0/include/GL/glew.h"
+
 struct Font {
     uint32_t id;
     renderer::TextureHandle fontAtlas;
@@ -149,14 +151,13 @@ namespace renderer {
         return image;
     }
 
-    Mesh drawTextIntoQuad(FontHandle fontHandle, const std::string& text) {
+    static void drawTextIntoQuadGeometry(FontHandle fontHandle, const std::string& text,
+        std::vector<glm::vec3>& outPositions, std::vector<glm::vec2>& outUVs, std::vector<uint32_t>& outIndices) {
 
         auto font = fontMap[fontHandle.id];
 
 
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec2> uvs;
-        std::vector<uint32_t> indices;
+
 
         float penX = 0, penY = 0;
         float minX =  std::numeric_limits<float>::max();
@@ -175,24 +176,35 @@ namespace renderer {
             float pixel_aligned_y1 = std::floor(q.y1 + 0.5f);
 
             q.x0 = pixel_aligned_x0;
-            //q.y0 = pixel_aligned_y0;
+            q.y0 = pixel_aligned_y0;
             q.x1 = pixel_aligned_x1;
             q.y1 = pixel_aligned_y1;
 
-            positions.push_back(glm::vec3(q.x0, q.y0, 0));
-            positions.push_back(glm::vec3(q.x1, q.y0, 0));
-            positions.push_back(glm::vec3(q.x1, q.y1, 0));
-            positions.push_back(glm::vec3(q.x0, q.y1, 0));
+            outPositions.push_back(glm::vec3(q.x0, q.y0, 0));
+            outPositions.push_back(glm::vec3(q.x1, q.y0, 0));
+            outPositions.push_back(glm::vec3(q.x1, q.y1, 0));
+            outPositions.push_back(glm::vec3(q.x0, q.y1, 0));
 
-            uvs.push_back({q.s0, q.t0});
-            uvs.push_back({q.s1, q.t0});
-            uvs.push_back({q.s1, q.t1});
-            uvs.push_back({q.s0, q.t1});
+
+            outUVs.push_back({q.s0, q.t0});
+            outUVs.push_back({q.s1, q.t0});
+            outUVs.push_back({q.s1, q.t1});
+            outUVs.push_back({q.s0, q.t1});
+
+            // Flip vertical uv coordinates
+            // uvs.push_back({q.s0, q.t1});
+            // uvs.push_back({q.s1, q.t1});
+            // uvs.push_back({q.s1, q.t0});
+            // uvs.push_back({q.s0, q.t0});
 
 
             int offset = charCounter * 4;
-            indices.push_back(0 + offset);indices.push_back(1 + offset);indices.push_back(2 + offset);
-            indices.push_back(3 + offset);indices.push_back(0 + offset);indices.push_back(2 + offset);
+            outIndices.push_back(2 + offset);outIndices.push_back(1 + offset);outIndices.push_back(0 + offset);
+            outIndices.push_back(2 + offset);outIndices.push_back(0 + offset);outIndices.push_back(3 + offset);
+
+            // Flipped
+            // indices.push_back(0 + offset);indices.push_back(1 + offset);indices.push_back(2 + offset);
+            // indices.push_back(3 + offset);indices.push_back(0 + offset);indices.push_back(2 + offset);
             charCounter++;
 
            // Track min/max for bounding box
@@ -206,6 +218,15 @@ namespace renderer {
             maxY = std::max(maxY, q.y0); // highest part (ascenders)
             maxY = std::max(maxY, q.y1);
         }
+
+    }
+
+    Mesh drawTextIntoQuad(FontHandle fontHandle, const std::string& text) {
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec2> uvs;
+        std::vector<uint32_t> indices;
+
+        drawTextIntoQuadGeometry(fontHandle, text, positions, uvs, indices);
 
         auto vbo = vertexBufferBuilder()->attributeVec3(VertexAttributeSemantic::Position, positions)
             .attributeVec2(VertexAttributeSemantic::UV0, uvs).build();
@@ -232,6 +253,15 @@ namespace renderer {
         };
         auto quadMesh = createMesh(vbo, ibo, vertexAttributes, indices.size());
         return quadMesh;
+    }
+
+    void updateText(Mesh mesh, FontHandle fontHandle, const std::string& newText) {
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec2> uvs;
+        std::vector<uint32_t> indices;
+        drawTextIntoQuadGeometry(fontHandle, newText, positions, uvs, indices);
+        updateMesh(mesh, positions, uvs, indices);
+
     }
 
 }

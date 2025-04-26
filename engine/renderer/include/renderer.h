@@ -126,7 +126,7 @@ namespace renderer {
             virtual ~FragmentShaderBuilder() = default;
             virtual FragmentShaderBuilder& color() = 0;
             virtual FragmentShaderBuilder& textRender() = 0;
-            virtual FragmentShaderBuilder& diffuseTexture(uint8_t textureUnit = 0) = 0;
+            virtual FragmentShaderBuilder& diffuseTexture(uint8_t textureUnit = 0, bool flipUVs = false) = 0;
             virtual std::string build() const = 0;
     };
 
@@ -166,6 +166,13 @@ namespace renderer {
         std::vector<float> data;
         size_t element_size = 0;
         size_t stride = 0;
+    };
+
+    struct VertexBufferUpdateInfo {
+        std::vector<float> data;
+        size_t element_size = 0;
+        size_t stride = 0;
+        VertexBufferHandle oldVBO;
     };
 
     struct RenderTarget {
@@ -249,6 +256,7 @@ namespace renderer {
     ENGINE_API void registerVertexBufferBuilder(VertexBufferBuilderFn fn);
     ENGINE_API std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder();
     ENGINE_API VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo create_info);
+    ENGINE_API void renderer::updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo);
 
     typedef IndexBufferHandle (*CreateIndexBufferFn)(std::vector<uint32_t> data);
     ENGINE_API void registerCreateIndexBuffer(CreateIndexBufferFn fn);
@@ -291,6 +299,7 @@ namespace renderer {
     // Drawing geometry
     ENGINE_API void drawMesh(Mesh m);
     ENGINE_API Mesh drawTextIntoQuad(FontHandle font, const std::string& text);
+    ENGINE_API void updateText(Mesh mesh, FontHandle font, const std::string& newText);
 
 
 }

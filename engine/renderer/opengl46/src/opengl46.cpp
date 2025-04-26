@@ -122,9 +122,10 @@ renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::color() {
     return *this;
 }
 
-renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::diffuseTexture(uint8_t textureUnit) {
+renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::diffuseTexture(uint8_t textureUnit, bool flipUVs) {
     useDiffuseTexture = true;
     diffuseTextureUnit = textureUnit;
+    this->flipUVs = flipUVs;
     return *this;
 }
 
@@ -141,9 +142,13 @@ std::string GL46FramgentShaderBuilder::build() const {
         src += "uniform vec4 color = vec4(1, 1, 1, 1);\n";
     }
     if (useDiffuseTexture || useTextRender) {
+
+
         src += "layout(binding = " + std::to_string(diffuseTextureUnit) + ") uniform sampler2D diffuseTexture;\n\n";
         src += "in vec2 fs_uvs;\n";
     }
+
+
 
     src += "out vec4 final_color;\n";
     src += "void main() {\n";
@@ -152,14 +157,22 @@ std::string GL46FramgentShaderBuilder::build() const {
         src += "    final_color = color;\n";
     }
     else if (useDiffuseTexture ) {
-        src += "    final_color = texture(diffuseTexture, fs_uvs);\n";
+        // Move the uv into a local variable so we can modify it:
+        src += "vec2 uv = fs_uvs;\n";
+
+        // Account for uv-flipping:
+        if (flipUVs) {
+            src += "uv.y = 1.0- uv.y;\n";
+        }
+
+        src += "    final_color = texture(diffuseTexture, uv);\n";
     }
     else {
         src += "    final_color = vec4(1, 0,1, 1);\n";
     }
 
      if (useTextRender) {
-         src += "   float r =  texture(diffuseTexture, fs_uvs).r;\n";
+         src += "   float r =  texture(diffuseTexture, uv).r;\n";
          // TODO allow setting of textcolor
          src += "   final_color = vec4(1, 1 , 1, r);\n";
 
@@ -236,6 +249,11 @@ renderer::VertexBufferHandle GL46VertexBufferBuilder::build() const {
     return createVertexBuffer(info);
 }
 
+void renderer::updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo) {
+    GLuint vbo = vbufferMap[updateInfo.oldVBO.id].id;
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, updateInfo.data.size() * sizeof(float), updateInfo.data.data(), GL_DYNAMIC_DRAW);
+}
 
 
 
@@ -243,7 +261,7 @@ renderer::VertexBufferHandle renderer::createVertexBuffer(renderer::VertexBuffer
     GLuint vbo;
     glCreateBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, create_info.data.size() * sizeof(float), create_info.data.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, create_info.data.size() * sizeof(float), create_info.data.data(), GL_DYNAMIC_DRAW);
     auto handleId = nextHandleId++;
     vbufferMap[handleId] = GLVbo{vbo};
     return renderer::VertexBufferHandle{handleId};
@@ -446,7 +464,9 @@ void initOpenGL46(HWND hwnd, bool useSRGB, int msaaSampleCount) {
     }
 
     //glEnable(GL_POLYGON_SMOOTH);
-    //glViewport(0, 0, w, h);
+    RECT r;
+    GetClientRect(hwnd, &r);
+    glViewport(0, 0, r.right-r.left, r.bottom-r.top);
 
     auto enableVsync = [](bool enable) {
         ((BOOL(WINAPI*)(int))wglGetProcAddress("wglSwapIntervalEXT"))(enable);
@@ -720,6 +740,7 @@ namespace renderer {
         vbufferMap[handleId] = GLVbo{ibo};
         return renderer::IndexBufferHandle{handleId};
     }
+
 
 
     Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes, size_t index_count) {
