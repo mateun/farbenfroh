@@ -33,6 +33,7 @@ namespace renderer {
     // register themselves as "providers" of the respective functionality.
     static CreateTextureFn g_createTexture = nullptr;
     static CreateIndexBufferFn g_createIndexBuffer = nullptr;
+    static UpdateIndexBufferFn g_updateIndexBuffer = nullptr;
     static VertexBufferBuilderFn g_vertexBufferBuilder = nullptr;
     static CreateMeshFn g_createMesh = nullptr;
 
@@ -46,6 +47,10 @@ namespace renderer {
 
     void registerCreateIndexBuffer(CreateIndexBufferFn fn) {
         g_createIndexBuffer = fn;
+    }
+
+    void registerUpdateIndexBuffer(UpdateIndexBufferFn fn) {
+        g_updateIndexBuffer = fn;
     }
 
     void registerCreateMesh(CreateMeshFn fn) {
@@ -71,6 +76,13 @@ namespace renderer {
             return {};
         }
         return g_vertexBufferBuilder();
+    }
+
+    void updateIndexBuffer(IndexBufferHandle iboHandle, std::vector<uint32_t> data) {
+        if (!g_updateIndexBuffer) {
+            return;
+        }
+        g_updateIndexBuffer(iboHandle, data);
     }
 
     Mesh createMesh(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count) {
@@ -255,12 +267,15 @@ namespace renderer {
         return quadMesh;
     }
 
-    void updateText(Mesh mesh, FontHandle fontHandle, const std::string& newText) {
+    void updateText(Mesh& mesh, FontHandle fontHandle, const std::string& newText) {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec2> uvs;
         std::vector<uint32_t> indices;
         drawTextIntoQuadGeometry(fontHandle, newText, positions, uvs, indices);
-        updateMesh(mesh, positions, uvs, indices);
+        g_vertexBufferBuilder()->attributeVec3(VertexAttributeSemantic::Position, positions)
+            .attributeVec2(VertexAttributeSemantic::UV0, uvs).update(mesh.vertex_buffer);
+        updateIndexBuffer(mesh.index_buffer, indices);
+        mesh.index_count = indices.size();
 
     }
 

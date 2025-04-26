@@ -81,11 +81,14 @@ public:
     VertexBufferBuilder &attributeVec3(renderer::VertexAttributeSemantic semantic, const std::vector<glm::vec3> &data) override;
     VertexBufferBuilder &attributeVec2(renderer::VertexAttributeSemantic semantic, const std::vector<glm::vec2> &data) override;
     renderer::VertexBufferHandle build() const override;
+    void update(renderer::VertexBufferHandle existingVBO) const override;
 
 private:
 
     template<typename T>
     VertexBufferBuilder &attributeT(renderer::VertexAttributeSemantic semantic, const std::vector<T> &data) ;
+
+    renderer::VertexBufferCreateInfo commonUpdateBuild() const;
 
     std::vector<renderer::VertexAttribute> attributes_;
     std::vector<float> raw_data_;

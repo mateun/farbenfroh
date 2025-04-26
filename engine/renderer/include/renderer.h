@@ -159,6 +159,7 @@ namespace renderer {
         virtual VertexBufferBuilder& attributeVec3(VertexAttributeSemantic semantic, const std::vector<glm::vec3>& data) = 0;
         virtual VertexBufferBuilder& attributeVec2(VertexAttributeSemantic semantic, const std::vector<glm::vec2>& data) = 0;
         virtual VertexBufferHandle build() const = 0;
+        virtual void update(VertexBufferHandle existingVBO) const = 0;
 
     };
 
@@ -256,11 +257,15 @@ namespace renderer {
     ENGINE_API void registerVertexBufferBuilder(VertexBufferBuilderFn fn);
     ENGINE_API std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder();
     ENGINE_API VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo create_info);
-    ENGINE_API void renderer::updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo);
+    ENGINE_API void updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo);
 
     typedef IndexBufferHandle (*CreateIndexBufferFn)(std::vector<uint32_t> data);
     ENGINE_API void registerCreateIndexBuffer(CreateIndexBufferFn fn);
     ENGINE_API IndexBufferHandle createIndexBuffer(std::vector<uint32_t> data);
+
+    typedef void (*UpdateIndexBufferFn)(IndexBufferHandle iboHandle, std::vector<uint32_t> data);
+    ENGINE_API void registerUpdateIndexBuffer(UpdateIndexBufferFn fn);
+    ENGINE_API void updateIndexBuffer(IndexBufferHandle iboHandle, std::vector<uint32_t> data);
 
     typedef Mesh (*CreateMeshFn)(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
     ENGINE_API void registerCreateMesh(CreateMeshFn fn);
@@ -299,7 +304,7 @@ namespace renderer {
     // Drawing geometry
     ENGINE_API void drawMesh(Mesh m);
     ENGINE_API Mesh drawTextIntoQuad(FontHandle font, const std::string& text);
-    ENGINE_API void updateText(Mesh mesh, FontHandle font, const std::string& newText);
+    ENGINE_API void updateText(Mesh& mesh, FontHandle font, const std::string& newText);
 
 
 }

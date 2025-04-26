@@ -81,7 +81,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
     auto win = create_window(800, 600, false, GetModuleHandle(NULL));
 
-    initOpenGL46(win, false, 4);
+    initOpenGL46(win, true, 0);
     HDC hdc = GetDC(win);
     renderer::setClearColor(0.5, 0, 0, 1);
 
@@ -124,13 +124,19 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
     auto quadMesh = renderer::createMesh(vbo, ibo, vertexAttributes, getIndexData().size());
 
     // Texturing
-    auto mainBackground = renderer::createImageFromFile("../../games/gameA/assets/captain_pork.png");
-    auto porkImageTexture = renderer::createTexture(mainBackground);
+    auto mainBackground = renderer::createImageFromFile("../../games/gameA/assets/captain_pork2.png");
+    auto porkImageTexture = createTexture(mainBackground);
+    auto mainTitleImage = renderer::createImageFromFile("../../games/gameA/assets/title_text3.png");
+    auto mainTitleTexture = createTexture(mainTitleImage);
+    auto btnPlayImage = renderer::createImageFromFile("../../games/gameA/assets/btn_play_normal.png");
+    auto btnPlayTexture = renderer::createTexture(btnPlayImage);
+    auto btnExitImage = renderer::createImageFromFile("../../games/gameA/assets/btn_exit_normal.png");
+    auto btnExitTexture = renderer::createTexture(btnExitImage);
 
     // Font
     auto font = renderer::createFontFromFile("../../v2025/assets/consola.ttf", 14.0f);
     auto quadText = renderer::drawTextIntoQuad(font, "A!aBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz?!:;");
-    auto quadTextCapital = renderer::drawTextIntoQuad(font, "FPS: ");
+    auto quadTextCapital = renderer::drawTextIntoQuad(font, "FPS:");
 
     // Postprocessing
     // Create our fullscreen render-target
@@ -141,10 +147,10 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
     while (run) {
         using namespace renderer;
         run = poll_window(win);
-        setClearColor(0.5, 0.5, 0, 1);
+        setClearColor(0.0, 0.0, 0, 1);
         clear();
         bindRenderTarget(fullScreenRT);
-        setClearColor(0, 0.5, 0, 1);
+        setClearColor(0.02, 0.01, 0.01, 1);
         clear();
 
         // Draw the single colored quad
@@ -154,26 +160,53 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
         auto viewMat = glm::lookAt<float>(glm::vec3{0,0,5}, {0, 0, -3}, {0, 1, 0});
         auto projMat = glm::ortho<float>(0, 800, 600, 0.0f, .1f, 100.0f);
         setShaderValue(colorShader, "mvpMatrix", projMat * viewMat * worldMat * scaleMat);
-        drawMesh(quadMesh);
+        //drawMesh(quadMesh);
 
-        // Draw the sprite
+        // Title sprite
         bindProgram(textureShader);
-        scaleMat = glm::scale(glm::mat4(1), glm::vec3(64, 64, 1));
-        worldMat = glm::translate(glm::mat4(1), glm::vec3(5, 44, 0));
+        scaleMat = glm::scale(glm::mat4(1), glm::vec3(mainBackground.width/3, mainBackground.height/3, 1));
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(400 - (mainBackground.width/3/2), 0, -2));
         setShaderValue(textureShader, "mvpMatrix", projMat * viewMat * worldMat * scaleMat);
         bindTexture(porkImageTexture);
         drawMesh(quadMesh);
+
+        // Title Image
+        bindProgram(textureShader);
+        scaleMat = glm::scale(glm::mat4(1), glm::vec3(mainTitleImage.width / 1.25, mainTitleImage.height / 1.25, 1));
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(800 * 0.125, 10, -1));
+        setShaderValue(textureShader, "mvpMatrix", projMat * viewMat * worldMat * scaleMat);
+        bindTexture(mainTitleTexture);
+        drawMesh(quadMesh);
+
+        // Button play
+        bindProgram(textureShader);
+        scaleMat = glm::scale(glm::mat4(1), glm::vec3(btnPlayImage.width/2, btnPlayImage.height/3, 1));
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(400 - (btnPlayImage.width/4), 460, -1));
+        setShaderValue(textureShader, "mvpMatrix", projMat * viewMat * worldMat * scaleMat);
+        bindTexture(btnPlayTexture);
+        drawMesh(quadMesh);
+
+        // Button exit
+        bindProgram(textureShader);
+        scaleMat = glm::scale(glm::mat4(1), glm::vec3(btnPlayImage.width/2, btnPlayImage.height/3, 1));
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(400 - (btnPlayImage.width/4), 510, -1));
+        setShaderValue(textureShader, "mvpMatrix", projMat * viewMat * worldMat * scaleMat);
+        bindTexture(btnExitTexture);
+        drawMesh(quadMesh);
+
 
 
         worldMat = glm::translate(glm::mat4(1), glm::vec3(5, 300, -0.1));
         setShaderValue(textShader, "mvpMatrix", projMat * worldMat);
         bindTexture(font.atlasTexture);
-        drawMesh(quadText);
+        //drawMesh(quadText);
 
         worldMat = glm::translate(glm::mat4(1), glm::vec3(5, 600 - 8, -0.1));
         setShaderValue(textShader, "mvpMatrix", projMat * worldMat);
         bindTexture(font.atlasTexture);
-        updateText(quadTextCapital, font, "new Text!!");
+        static int frame = 0;
+        frame++;
+        updateText(quadTextCapital, font, "Frame: " + std::to_string(frame));
         drawMesh(quadTextCapital);
 
 

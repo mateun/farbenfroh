@@ -13,6 +13,7 @@
 
 #include <complex>
 #include <iostream>
+#include <ranges>
 #include <unordered_map>
 
 #include "../renderer/include/renderer.h"
@@ -33,6 +34,7 @@ namespace renderer {
     static TextureHandle createTextureGL46(const Image& image, TextureFormat format);
     static std::unique_ptr<VertexBufferBuilder> vertexBufferBuilderGL46();
     static IndexBufferHandle createIndexBufferGL46(std::vector<uint32_t> data);
+    static void updateIndexBufferGL46(IndexBufferHandle iboHandle, std::vector<uint32_t> data);
     static Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
 }
 
@@ -221,7 +223,7 @@ renderer::VertexBufferBuilder & GL46VertexBufferBuilder::attributeVec2(renderer:
     return attributeT(semantic, data);
 }
 
-renderer::VertexBufferHandle GL46VertexBufferBuilder::build() const {
+renderer::VertexBufferCreateInfo GL46VertexBufferBuilder::commonUpdateBuild() const {
     std::vector<float> interleavedData(element_count_ * (current_stride_ / sizeof(float)));
 
     for (size_t i = 0; i < element_count_; ++i) {
@@ -246,7 +248,22 @@ renderer::VertexBufferHandle GL46VertexBufferBuilder::build() const {
         .stride = current_stride_
     };
 
+    return info;
+}
+
+renderer::VertexBufferHandle GL46VertexBufferBuilder::build() const {
+    auto info = commonUpdateBuild();
     return createVertexBuffer(info);
+}
+
+void GL46VertexBufferBuilder::update(renderer::VertexBufferHandle oldVbo) const {
+    auto createInfo  = commonUpdateBuild();
+    renderer::VertexBufferUpdateInfo updateInfo = {
+        .data = createInfo.data,
+        .stride = createInfo.stride,
+        .oldVBO = oldVbo
+    };
+    updateVertexBuffer(updateInfo);
 }
 
 void renderer::updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo) {
@@ -481,7 +498,8 @@ void initOpenGL46(HWND hwnd, bool useSRGB, int msaaSampleCount) {
     registerCreateTexture(&renderer::createTextureGL46);
     registerVertexBufferBuilder(&renderer::vertexBufferBuilderGL46);
     registerCreateIndexBuffer(&renderer::createIndexBufferGL46);
-    renderer::registerCreateMesh(&renderer::createMeshGL46);
+    registerCreateMesh(&renderer::createMeshGL46);
+    renderer::registerUpdateIndexBuffer(&renderer::updateIndexBufferGL46);
 
 
 }
@@ -740,6 +758,13 @@ namespace renderer {
         vbufferMap[handleId] = GLVbo{ibo};
         return renderer::IndexBufferHandle{handleId};
     }
+
+    void updateIndexBufferGL46(IndexBufferHandle iboHandle, std::vector<uint32_t> data) {
+        GLuint ibo = vbufferMap[iboHandle.id].id;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(uint32_t), data.data(), GL_DYNAMIC_DRAW);
+    }
+
 
 
 
