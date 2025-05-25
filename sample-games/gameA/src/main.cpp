@@ -87,7 +87,7 @@ renderer::ProgramHandle createTextShader() {
 // This lua file has some top level elements for entities, ui etc.
 // For each of these, a parser function exists:
 void load_level(const std::string& filename) {
-    std::string baseDir = "../../games/gameA/levels";
+    std::string baseDir = "../../sample-games/gameA/levels";
     auto fileName = baseDir + "/level1.lua";
 
     lua_State* L = luaL_newstate();
@@ -161,13 +161,13 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
     auto quadMesh = renderer::createMesh(vbo, ibo, vertexAttributes, getIndexData().size());
 
     // Texturing
-    auto mainBackground = renderer::createImageFromFile("../../games/gameA/assets/captain_pork2.png");
+    auto mainBackground = renderer::createImageFromFile("../../sample-games/gameA/assets/captain_pork2.png");
     auto porkImageTexture = createTexture(mainBackground);
-    auto mainTitleImage = renderer::createImageFromFile("../../games/gameA/assets/title_text3.png");
+    auto mainTitleImage = renderer::createImageFromFile("../../sample-games/gameA/assets/title_text3.png");
     auto mainTitleTexture = createTexture(mainTitleImage);
-    auto btnPlayImage = renderer::createImageFromFile("../../games/gameA/assets/btn_play_normal.png");
+    auto btnPlayImage = renderer::createImageFromFile("../../sample-games/gameA/assets/btn_play_normal.png");
     auto btnPlayTexture = renderer::createTexture(btnPlayImage);
-    auto btnExitImage = renderer::createImageFromFile("../../games/gameA/assets/btn_exit_normal.png");
+    auto btnExitImage = renderer::createImageFromFile("../../sample-games/gameA/assets/btn_exit_normal.png");
     auto btnExitTexture = renderer::createTexture(btnExitImage);
 
     // Font
@@ -182,7 +182,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
     // Load our level with lua
     // load level
-    load_level("../../games/gameA/levels/level1.lua");
+    load_level("../../sample-games/gameA/levels/level1.lua");
 
 
     bool run = true;
