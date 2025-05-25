@@ -3,8 +3,14 @@
 //
 
 #include <engine.h>
+#include <iostream>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <lua_parser.h>
+#include <lua.hpp>
+
+#include "../../../v2025/extlibs/lua547/src/lauxlib.h"
+
 
 std::vector<glm::vec3> getPositionData() {
     return std::vector<glm::vec3> {
@@ -77,6 +83,37 @@ renderer::ProgramHandle createTextShader() {
     return myprog;
 }
 
+// To load a level, we parse a .lua file.
+// This lua file has some top level elements for entities, ui etc.
+// For each of these, a parser function exists:
+void load_level(const std::string& filename) {
+    std::string baseDir = "../../games/gameA/levels";
+    auto fileName = baseDir + "/level1.lua";
+
+    lua_State* L = luaL_newstate();
+    luaL_openlibs(L);
+
+    auto entities = load_entities(L, fileName.c_str());
+    for (auto& e : entities) {
+        std::cout << "id: " << e.id << std::endl;
+        for (auto s : e.scripts) {
+            std::cout << "\tscript: " << s << std::endl;
+            execute_lua_file(L, baseDir + "/" + s);
+        }
+
+    }
+
+    auto ui = load_ui(L, fileName.c_str());
+
+    for (const auto& e : ui) {
+        std::cout << "UI Element: " << e.id << ", Type: " << e.type
+                  << ", Text: '" << e.text << "', Pos: (" << e.position[0]
+                  << ", " << e.position[1] << ")" << std::endl;
+    }
+
+
+}
+
 int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
     auto win = create_window(800, 600, false, GetModuleHandle(NULL));
@@ -141,6 +178,11 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
     // Postprocessing
     // Create our fullscreen render-target
     auto fullScreenRT = renderer::renderTargetBuilder()->size(800, 600).color().depth().build();
+
+
+    // Load our level with lua
+    // load level
+    load_level("../../games/gameA/levels/level1.lua");
 
 
     bool run = true;

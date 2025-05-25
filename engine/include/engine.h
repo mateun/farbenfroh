@@ -9,6 +9,7 @@
 #include "../windowing/include/win32_window.h"
 #include "../renderer/opengl46/include/opengl46.h"
 #include "../renderer/include/renderer.h"
+#include "../gamestate/include/gamestate.h"
 
 
 #endif //ENGINE_H
