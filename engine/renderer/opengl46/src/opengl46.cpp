@@ -16,13 +16,10 @@
 #include <ranges>
 #include <unordered_map>
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+#include <nljson.h>
 
 #include "../renderer/include/renderer.h"
-
-
+#include "base64.h"
 
 
 // Handle system
@@ -772,10 +769,325 @@ namespace renderer {
     }
 
 
+    /**
+ * We only accept scenes with 1 mesh for now.
+ * @param gltfJson the parsed json of the gltf
+ * @return A Pointer to a newly created mesh object.
+ */
+ static std::unique_ptr<Mesh> parseGLTF(const std::string& filename) {
+     using json = nlohmann::json;
+     std::ifstream file(filename);
+     if (!file.is_open()) {
+         exit(99988877);
+     }
+
+    // Parse JSON
+    json gltf;
+    try {
+        file >> gltf;
+    } catch (std::exception& e) {
+        std::cerr << "Error parsing glTF: " << e.what() << "\n";
+        exit(989898);
+    }
+
+        // This is the embedded binary data, a base64 encoded string.
+        auto dataBufferObj = gltf["/buffers/0"_json_pointer];
+        //auto dataBufferObj = queryJson(gltfJson, "/buffers[0]");
+        auto dataUri = dataBufferObj["uri"].get<std::string>();
+        std::string uriDataString;
+        std::stringstream ss(dataUri);
+        // Use while loop to extract the last partial string after the delimiter.
+        // In our case we expect only one part, the actual data.
+        while (getline(ss, uriDataString, ',')) {}
+
+        std:: string dec = base64::from_base64(uriDataString);
+        std::vector<uint8_t> dataBinary;
+        for (auto c: dec) {
+            dataBinary.push_back(c);
+        }
+
+
+        // Armature data for skeletal mesh.
+        // If we find a skin within the mesh object.
+        // Otherwise we assume a static mesh.
+        Skeleton* skeleton = nullptr;
+        const auto nodesNode = queryJson(gltfJson, "/nodes");
+        int skinIndex = -1;
+        for (auto n : nodesNode->value->arrayValue->elements) {
+            if (n->value->valueType == JsonValueType::Object) {
+                auto potentialSkinMember = findByMemberName(n->value->objectValue, "skin");
+                if (potentialSkinMember) {
+                    skinIndex = potentialSkinMember->intValue;
+                    break;
+                }
+            }
+        }
+
+        if (skinIndex > -1) {
+            skeleton = new Skeleton();
+            auto skinNode = queryJson(gltfJson, "/skins[" + std::to_string(skinIndex) + "]");
+            int inverseBindMatricesIndex = (int) findByMemberName(skinNode->value->objectValue, "inverseBindMatrices")->floatValue;
+            auto inverseBindAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(inverseBindMatricesIndex) + "]");
+            auto inverseBindViewIndex = (int) findByMemberName(inverseBindAccessor->value->objectValue, "bufferView")->floatValue;
+            auto inverseBindBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(inverseBindViewIndex) + "]");
+            auto inverseBindBufferIndex = (int) findByMemberName(inverseBindBufferView->value->objectValue, "buffer")->floatValue;
+            auto inverseBindBufferLen = findByMemberName(inverseBindBufferView->value->objectValue, "byteLength")->floatValue;
+            auto inverseBindBufferByteOffset = (int) findByMemberName(inverseBindBufferView->value->objectValue, "byteOffset")->floatValue;
+
+            auto invBindMatricesOffset = dataBinary.data() + inverseBindBufferByteOffset;
+            int count = 1;
+            // One matrix is 16 values, each 4 values form a column.
+            std::vector<glm::mat4> invBindMatrices;
+            std::vector<float> vals;
+            std::vector<glm::vec4> vecs;
+            for ( int i = 0; i < inverseBindBufferLen; i+=4) {
+                auto val= (float*)(invBindMatricesOffset + i);
+                printf("val: %f\n", *val);
+                vals.push_back(*val);
+                if (count % 4 == 0) {
+                    //printf("col------------\n");
+                    vecs.push_back({vals[0], vals[1], vals[2], vals[3]});
+                    vals.clear();
+                }
+                if (count % 16 == 0) {
+                    //printf("matrix ----------\n");
+                    invBindMatrices.push_back(glm::mat4(vecs[0], vecs[1], vecs[2], vecs[3]));
+                    vecs.clear();
+                }
+                count++;
+            }
+            // We search for a node called "Armature"
+            for (auto n : nodesNode->value->arrayValue->elements) {
+                auto obj = n->value->objectValue;
+                auto name = findByMemberName(obj, "name")->stringValue;
+                if (strContains(name, "Armature")) {
+                    auto children = findByMemberName(obj, "children")->arrayValue;
+                    collectJoints(children, skeleton->joints, nodesNode->value->arrayValue, nullptr);
+                }
+            }
+            // Now we can associate the joints with the respective inverse bind matrix
+            for (int i =0; i < skeleton->joints.size(); i++) {
+                auto j = skeleton->joints[i];
+                auto invBindMat = invBindMatrices[i];
+                j->inverseBindMatrix = invBindMat;
+            }
+
+            // Now for the animations
+            // Every animation has a number of references to so-called channel samplers.
+            // Each sampler describes a specific joint and its translation, scale or rotation.
+            // The sampler index points to the samplers array.
+            // Each sampler maps a time point to an animation. (input -> output).
+            // The indices within the sampler are accessor indices.
+            // Reading out the animations:
+            // For now just 1 animation.
+            auto animationsNode = queryJson(gltfJson, "/animations");
+            if (!animationsNode && !animationsNode->value->arrayValue->elements.empty()) {
+                auto animNode = queryJson(gltfJson, "/animations[0]");
+                auto samplersNode = findByMemberName(animNode->value->objectValue, "samplers");
+                auto animName = findByMemberName(animNode->value->objectValue, "name");
+                auto channelsNode = findByMemberName(animNode->value->objectValue, "channels");
+                auto accessors = queryJson(gltfJson, "/accessors")->value->arrayValue->elements;
+                auto bufferViews = queryJson(gltfJson, "/bufferViews")->value->arrayValue->elements;
+                for (auto ch : channelsNode->arrayValue->elements) {
+                    int samplerIndex = (int) findByMemberName(ch->value->objectValue, "sampler")->floatValue;
+                    auto targetNode = findByMemberName(ch->value->objectValue, "target");
+                    auto targetPath = findByMemberName(targetNode->objectValue, "path")->stringValue;
+                    int targetJointIndex = (int) findByMemberName(targetNode->objectValue, "node")->floatValue;
+                    auto jointNode = nodesNode->value->arrayValue->elements[targetJointIndex];
+                    auto jointName = findByMemberName(jointNode->value->objectValue, "name")->stringValue;
+                    printf("joint channel:%s %s\n", jointName.c_str(), targetPath.c_str());
+                    auto samplerNode = samplersNode->arrayValue->elements[samplerIndex]->value->objectValue;
+                    auto samplerInput = (int)findByMemberName(samplerNode, "input")->floatValue;
+                    auto samplerOutput = (int) findByMemberName(samplerNode, "output")->floatValue;
+                    auto samplerInterpolation = findByMemberName(samplerNode, "interpolation")->stringValue;
+                    // Now lookup the accessors for input and output
+                    auto inputAccessor = accessors[samplerInput]->value->objectValue;
+                    auto outputAccessor = accessors[samplerOutput]->value->objectValue;
+                    auto inputCount = (int) findByMemberName(inputAccessor, "count")->floatValue;
+                    auto inputType = findByMemberName(inputAccessor, "type")->stringValue;
+                    auto outputType = findByMemberName(outputAccessor, "type")->stringValue;
+                    auto outputCount = (int) findByMemberName(outputAccessor, "count")->floatValue;
+                    auto inputBufferViewIndex = (int) findByMemberName(inputAccessor, "bufferView")->floatValue;
+                    auto outputBufferViewIndex = (int) findByMemberName(outputAccessor, "bufferView")->floatValue;
+                    auto inputBufferView = bufferViews[inputBufferViewIndex]->value->objectValue;
+                    auto outputBufferView = bufferViews[outputBufferViewIndex]->value->objectValue;
+                    auto inputBufferOffset = (int) findByMemberName(inputBufferView, "byteOffset")->floatValue;
+                    auto inputBufferLength = (int) findByMemberName(inputBufferView, "byteLength")->floatValue;
+                    auto outputBufferOffset = (int) findByMemberName(outputBufferView, "byteOffset")->floatValue;
+                    auto outputBufferLength = (int) findByMemberName(outputBufferView, "byteLength")->floatValue;
+                    auto inputDataPtr = dataBinary.data() + inputBufferOffset;
+                    std::vector<float> timeValues;
+                    for ( int i = 0; i < inputBufferLength; i+=4) {
+                        auto val= (float*)(inputDataPtr + i);
+                        timeValues.push_back(*val);
+                    }
+                    auto outputDataPtr = dataBinary.data() + outputBufferOffset;
+                    if (outputType == "VEC3") {
+                        std::vector<glm::vec3> outputValues;
+                        std::vector<float> fvals;
+                        count = 1;
+                        for ( int i = 0; i < outputBufferLength; i+=4) {
+                            auto val= (float*)(outputDataPtr + i);
+                            fvals.push_back(*val);
+                            if (count % 3 == 0) {
+                                outputValues.push_back(glm::vec3{fvals[0], fvals[1], fvals[2]});
+                                fvals.clear();
+                            }
+                            count++;
+                        }
+                        for (int i=0; i<timeValues.size(); i++) {
+                            printf("time val: %f -> %f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
+                                   outputValues[i].z);
+                        }
+
+                    } else if (outputType == "VEC4") {
+                        std::vector<glm::vec4> outputValues;
+                        std::vector<float> fvals;
+                        count = 1;
+                        for ( int i = 0; i < outputBufferLength; i+=4) {
+                            auto val= (float*)(outputDataPtr + i);
+                            fvals.push_back(*val);
+                            if (count % 4 == 0) {
+                                outputValues.push_back(glm::vec4{fvals[0], fvals[1], fvals[2], fvals[3]});
+
+                                glm::quat quat = {fvals[3], fvals[0], fvals[1], fvals[2]};
+                                glm::mat4 rotMat = glm::toMat4(quat);
+                                printf("rotmat: %f/%f/%f/%f\n",
+                                       glm::column(rotMat, 0).x,
+                                       glm::column(rotMat, 1).x,
+                                       glm::column(rotMat, 2).x,
+                                       glm::column(rotMat, 3).x);
+                                printf("rotmat: %f/%f/%f/%f\n",
+                                       glm::column(rotMat, 0).y,
+                                       glm::column(rotMat, 1).y,
+                                       glm::column(rotMat, 2).y,
+                                       glm::column(rotMat, 3).y);
+                                printf("rotmat: %f/%f/%f/%f\n",
+                                       glm::column(rotMat, 0).z,
+                                       glm::column(rotMat, 1).z,
+                                       glm::column(rotMat, 2).z,
+                                       glm::column(rotMat, 3).z);
+                                printf("rotmat: %f/%f/%f/%f\n",
+                                       glm::column(rotMat, 0).w,
+                                       glm::column(rotMat, 1).w,
+                                       glm::column(rotMat, 2).w,
+                                       glm::column(rotMat, 3).w);
+                                fvals.clear();
+                            }
+                            count++;
+                        }
+                        for (int i=0; i<timeValues.size(); i++) {
+                            printf("time val: %f -> %f/%f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
+                                   outputValues[i].z, outputValues[i].w);
+                        }
+                    } else if (outputType == "SCALAR") {
+                        // TODO scalar
+                    }
+                }
+            }
+        }
+
+        // Mesh data
+        auto primitivesNode = queryJson(gltfJson, "/meshes[0]/primitives[0]");
+        auto attrObj = findByMemberName(primitivesNode->value->objectValue, "attributes");
+        int posIndex = (int) findByMemberName(attrObj->objectValue, "POSITION")->floatValue;
+        auto uvIndex = (int) findByMemberName(attrObj->objectValue, "TEXCOORD_0")->floatValue;
+        auto normalIndex =(int) findByMemberName(attrObj->objectValue, "NORMAL")->floatValue;
+        auto indicesIndex = (int) findByMemberName(primitivesNode->value->objectValue, "indices")->floatValue;
+
+        auto posAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(posIndex) + "]");
+        auto uvAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(uvIndex) + "]");
+        auto normalAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(normalIndex) + "]");
+        auto indicesAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(indicesIndex) + "]");
+
+        auto posBufferViewIndex = (int) findByMemberName(posAccessor->value->objectValue, "bufferView")->floatValue;
+        auto posBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(posBufferViewIndex) + "]");
+        auto posBufferIndex = (int) findByMemberName(posBufferView->value->objectValue, "buffer")->floatValue;
+        auto posBufferLen = findByMemberName(posBufferView->value->objectValue, "byteLength")->floatValue;
+        auto posBufferByteOffset = (int) findByMemberName(posBufferView->value->objectValue, "byteOffset")->floatValue;
+        auto posGlTargetType = (int) findByMemberName(posBufferView->value->objectValue, "target")->floatValue;
+
+        auto uvBufferViewIndex = (int) findByMemberName(uvAccessor->value->objectValue, "bufferView")->floatValue;
+        auto uvBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(uvBufferViewIndex) + "]");
+        auto uvBufferIndex = (int) findByMemberName(uvBufferView->value->objectValue, "buffer")->floatValue;
+        auto uvBufferLen = findByMemberName(uvBufferView->value->objectValue, "byteLength")->floatValue;
+        auto uvBufferByteOffset = (int) findByMemberName(uvBufferView->value->objectValue, "byteOffset")->floatValue;
+        auto uvGlTargetType = (int) findByMemberName(uvBufferView->value->objectValue, "target")->floatValue;
+
+        auto normalBufferViewIndex = (int) findByMemberName(normalAccessor->value->objectValue, "bufferView")->floatValue;
+        auto normalBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(normalBufferViewIndex) + "]");
+        auto normalBufferIndex = (int) findByMemberName(normalBufferView->value->objectValue, "buffer")->floatValue;
+        auto normalBufferLen = findByMemberName(normalBufferView->value->objectValue, "byteLength")->floatValue;
+        auto normalBufferByteOffset = (int) findByMemberName(normalBufferView->value->objectValue, "byteOffset")->floatValue;
+        auto normalGlTargetType = (int) findByMemberName(normalBufferView->value->objectValue, "target")->floatValue;
+
+        auto indicesBufferViewIndex = (int) findByMemberName(indicesAccessor->value->objectValue, "bufferView")->floatValue;
+        auto indicesBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(indicesBufferViewIndex) + "]");
+        auto indicesBufferIndex = (int) findByMemberName(indicesBufferView->value->objectValue, "buffer")->floatValue;
+        auto indicesBufferLen = findByMemberName(indicesBufferView->value->objectValue, "byteLength")->floatValue;
+        auto indicesBufferByteOffset = (int) findByMemberName(indicesBufferView->value->objectValue, "byteOffset")->floatValue;
+        auto indicesGlTargetType = (int) findByMemberName(indicesBufferView->value->objectValue, "target")->floatValue;
+        auto indexCount = (int) findByMemberName(indicesAccessor->value->objectValue, "count")->floatValue;
+        auto indexComponentType = (GLenum) findByMemberName(indicesAccessor->value->objectValue, "componentType")->floatValue;
+
+
+
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+        GLuint posBuffer;
+        glGenBuffers(1, &posBuffer);
+        glBindBuffer(posGlTargetType, posBuffer);
+        glBufferData(posGlTargetType, posBufferLen, dataBinary.data() + posBufferByteOffset, GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
+
+        GLuint uvBuffer;
+        glGenBuffers(1, &uvBuffer);
+        glBindBuffer(uvGlTargetType, uvBuffer);
+        glBufferData(uvGlTargetType, uvBufferLen, dataBinary.data() + uvBufferByteOffset , GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(1);
+
+        GLuint normalBuffer;
+        glGenBuffers(1, &normalBuffer);
+        glBindBuffer(normalGlTargetType, normalBuffer);
+        glBufferData(normalGlTargetType, normalBufferLen, dataBinary.data() + normalBufferByteOffset, GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(2);
+
+        std::vector<float> instanceOffsets = {0, 0};
+        unsigned int instanceVBO;
+        glGenBuffers(1, &instanceVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * 1, instanceOffsets.data(), GL_STATIC_DRAW);
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glVertexAttribDivisor(3, 1);
+
+        GLuint indexBuffer;
+        glGenBuffers(1, &indexBuffer);
+        glBindBuffer(indicesGlTargetType, indexBuffer);
+        glBufferData(indicesGlTargetType, indicesBufferLen, dataBinary.data() + indicesBufferByteOffset, GL_STATIC_DRAW);
+
+        auto mesh = std::make_unique<Mesh>();
+        mesh->skeleton = skeleton;
+        mesh->vao = vao;
+        mesh->instanceOffsetVBO = instanceVBO;
+        mesh->numberOfIndices = indexCount;
+        mesh->indexDataType = indexComponentType;
+        glBindVertexArray(0);
+
+        return mesh;
+
+
+    }
+
 
     Mesh importMeshGL46(const std::string& filename) {
         Assimp::Importer importer;
-        auto scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights | aiProcess_CalcTangentSpace);
+        auto scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
+                                                 aiProcess_LimitBoneWeights | aiProcess_CalcTangentSpace);
         if (!scene) {
             throw new std::runtime_error("error during assimp scene load. ");
         }
@@ -800,10 +1112,10 @@ namespace renderer {
 
             if (mesh->mTangents) {
                 tangentMasterList.push_back({
-                    mesh->mTangents[i].x,
-                    mesh->mTangents[i].y,
-                    mesh->mTangents[i].z,
-                });
+                                                    mesh->mTangents[i].x,
+                                                    mesh->mTangents[i].y,
+                                                    mesh->mTangents[i].z,
+                                            });
             }
 
             if (mesh->HasNormals()) {
@@ -819,37 +1131,39 @@ namespace renderer {
                 uvMasterList.push_back({0.0f,
                                         0.0f});
             }
-    }
-
-    Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes, size_t index_count) {
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
-        for (auto attribute : attributes) {
-            glEnableVertexAttribArray(attribute.location);
-            glVertexAttribPointer(
-                attribute.location,               // attribute location
-                attribute.components,               // components
-                GL_FLOAT,        // type
-                GL_FALSE,        // normalize?
-                attribute.stride,
-                (void*)attribute.offset                // relative offset in vertex
-            );
-
         }
-        glBindVertexArray(0);
 
-        Mesh mesh;
-        mesh.id = vao;
-        mesh.index_count = index_count;
-        mesh.index_buffer = ibo;
-        mesh.vertex_buffer = vbo;
-        mesh.layout = VertexLayout{attributes};
-        mesh.primitive_topology = PrimitiveTopology::Triangle_List;
-        return mesh;
+        Mesh
+        createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes,
+                       size_t index_count) {
+            GLuint vao;
+            glGenVertexArrays(1, &vao);
+            glBindVertexArray(vao);
+
+            for (auto attribute: attributes) {
+                glEnableVertexAttribArray(attribute.location);
+                glVertexAttribPointer(
+                        attribute.location,               // attribute location
+                        attribute.components,               // components
+                        GL_FLOAT,        // type
+                        GL_FALSE,        // normalize?
+                        attribute.stride,
+                        (void *) attribute.offset                // relative offset in vertex
+                );
+
+            }
+            glBindVertexArray(0);
+
+            Mesh mesh;
+            mesh.id = vao;
+            mesh.index_count = index_count;
+            mesh.index_buffer = ibo;
+            mesh.vertex_buffer = vbo;
+            mesh.layout = VertexLayout{attributes};
+            mesh.primitive_topology = PrimitiveTopology::Triangle_List;
+            return mesh;
+        }
     }
-
 
 
     template ENGINE_API bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
