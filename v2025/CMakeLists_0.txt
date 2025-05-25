@@ -8,7 +8,9 @@ set(CMAKE_SYSTEM_VERSION 10.0.22621.0)
 add_subdirectory(extlibs/ozz extlibs/ozz/out/)
 
 include_directories(src extlibs/glm-0.9.9.8/glm extlibs/ $ENV{VULKAN_SDK}/Include
-                    extlibs/Recast/Include extlibs/Detour/Include extlibs/assimp/Include extlibs/lua547/src
+                    extlibs/Recast/Include extlibs/Detour/Include
+                    extlibs/assimp/Include
+                    extlibs/lua547/src
         extlibs/glew-2.2.0/include extlibs)
 
 link_directories(extlibs/jolt/Lib/Debug $ENV{VULKAN_SDK}/Lib extlibs/assimp/Lib extlibs/glew-2.2.0/lib)

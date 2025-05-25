@@ -16,6 +16,10 @@
 #include <ranges>
 #include <unordered_map>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 #include "../renderer/include/renderer.h"
 
 
@@ -36,6 +40,7 @@ namespace renderer {
     static IndexBufferHandle createIndexBufferGL46(std::vector<uint32_t> data);
     static void updateIndexBufferGL46(IndexBufferHandle iboHandle, std::vector<uint32_t> data);
     static Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
+    static Mesh importMeshGL46(const std::string& filename);
 }
 
 
@@ -499,6 +504,7 @@ void initOpenGL46(HWND hwnd, bool useSRGB, int msaaSampleCount) {
     registerVertexBufferBuilder(&renderer::vertexBufferBuilderGL46);
     registerCreateIndexBuffer(&renderer::createIndexBufferGL46);
     registerCreateMesh(&renderer::createMeshGL46);
+    registerImportMesh(&renderer::importMeshGL46);
     renderer::registerUpdateIndexBuffer(&renderer::updateIndexBufferGL46);
 
 
@@ -767,6 +773,53 @@ namespace renderer {
 
 
 
+    Mesh importMeshGL46(const std::string& filename) {
+        Assimp::Importer importer;
+        auto scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights | aiProcess_CalcTangentSpace);
+        if (!scene) {
+            throw new std::runtime_error("error during assimp scene load. ");
+        }
+
+        auto ozzAnimations = importOzzAnimations();
+
+        if (scene->mNumMeshes == 0) {
+            return nullptr;
+        }
+
+        auto mesh = scene->mMeshes[0];
+        std::vector<glm::vec3> posMasterList;
+        std::vector<glm::vec3> posIndexSortedMasterList;
+        std::vector<glm::vec2> uvMasterList;
+        std::vector<glm::vec3> tangentMasterList;
+        std::vector<glm::vec3> normalMasterList;
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+
+            posMasterList.push_back({mesh->mVertices[i].x,
+                                     mesh->mVertices[i].y,
+                                     mesh->mVertices[i].z});
+
+            if (mesh->mTangents) {
+                tangentMasterList.push_back({
+                    mesh->mTangents[i].x,
+                    mesh->mTangents[i].y,
+                    mesh->mTangents[i].z,
+                });
+            }
+
+            if (mesh->HasNormals()) {
+                normalMasterList.push_back({mesh->mNormals[i].x,
+                                            mesh->mNormals[i].y,
+                                            mesh->mNormals[i].z});
+            }
+
+            if (mesh->mTextureCoords[0]) {
+                uvMasterList.push_back({mesh->mTextureCoords[0][i].x,
+                                        mesh->mTextureCoords[0][i].y});
+            } else {
+                uvMasterList.push_back({0.0f,
+                                        0.0f});
+            }
+    }
 
     Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes, size_t index_count) {
         GLuint vao;

@@ -36,6 +36,7 @@ namespace renderer {
     static UpdateIndexBufferFn g_updateIndexBuffer = nullptr;
     static VertexBufferBuilderFn g_vertexBufferBuilder = nullptr;
     static CreateMeshFn g_createMesh = nullptr;
+    static ImportMeshFn g_importMesh = nullptr;
 
     void registerCreateTexture(CreateTextureFn fn) {
         g_createTexture = fn;
@@ -55,6 +56,10 @@ namespace renderer {
 
     void registerCreateMesh(CreateMeshFn fn) {
         g_createMesh = fn;
+    }
+
+    void registerImportMesh(ImportMeshFn fn) {
+        g_importMesh = fn;
     }
 
     TextureHandle createTexture(const Image& image, TextureFormat format) {
@@ -84,6 +89,13 @@ namespace renderer {
         }
         g_updateIndexBuffer(iboHandle, data);
     }
+
+    Mesh importMesh(const std::string& filename) {
+        if (!g_importMesh) {
+            return {};
+        }
+        return g_importMesh(filename);
+    };
 
     Mesh createMesh(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count) {
         if (!g_createMesh) {

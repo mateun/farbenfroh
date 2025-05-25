@@ -271,6 +271,9 @@ namespace renderer {
     ENGINE_API void registerCreateMesh(CreateMeshFn fn);
     ENGINE_API Mesh createMesh(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
 
+    typedef Mesh(*ImportMeshFn)(const std::string& filename);
+    ENGINE_API void registerImportMesh(ImportMeshFn fn);
+    ENGINE_API Mesh importMesh(const std::string& filename);
 
     // Shader
     ENGINE_API std::unique_ptr<VertexShaderBuilder> vertexShaderBuilder();
