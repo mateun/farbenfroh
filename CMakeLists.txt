@@ -16,4 +16,4 @@ include_directories(${CMAKE_SOURCE_DIR}/engine/include v2025/extlibs/glm-0.9.9.8
 
 
 add_subdirectory(engine)
-add_subdirectory(games)
+add_subdirectory(sample-games)
