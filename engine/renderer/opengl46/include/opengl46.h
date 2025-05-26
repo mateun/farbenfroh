@@ -34,6 +34,7 @@ struct GLVao {
 };
 struct GLVbo {
     GLuint id;
+    GLenum format;
 };
 
 /**

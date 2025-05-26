@@ -39,7 +39,7 @@ static std::unordered_map<uint32_t, GLVbo> vbufferMap;
 namespace renderer {
     static TextureHandle createTextureGL46(const Image& image, TextureFormat format);
     static std::unique_ptr<VertexBufferBuilder> vertexBufferBuilderGL46();
-    static IndexBufferHandle createIndexBufferGL46(std::vector<uint32_t> data);
+    static IndexBufferHandle createIndexBufferGL46(const IndexBufferDesc&);
     static void updateIndexBufferGL46(IndexBufferHandle iboHandle, std::vector<uint32_t> data);
     static Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
     static Mesh importMeshGL46(const std::string& filename);
@@ -285,7 +285,8 @@ renderer::VertexBufferHandle renderer::createVertexBuffer(renderer::VertexBuffer
     GLuint vbo;
     glCreateBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, create_info.data.size() * sizeof(float), create_info.data.data(), GL_DYNAMIC_DRAW);
+    auto size =create_info.data.size() * sizeof(float);
+    glBufferData(GL_ARRAY_BUFFER, size , create_info.data.data(), GL_DYNAMIC_DRAW);
     auto handleId = nextHandleId++;
     vbufferMap[handleId] = GLVbo{vbo};
     return renderer::VertexBufferHandle{handleId};
@@ -615,10 +616,17 @@ namespace renderer {
         glBindTexture(GL_TEXTURE_2D, textureMap[texture.id].id);
     }
 
-    void drawMesh(Mesh m) {
+    void drawMesh(Mesh m, const std::string& debugInfo) {
+        if (!debugInfo.empty()) {
+            glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, debugInfo.c_str());
+        }
         glBindVertexArray(m.id);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbufferMap[m.index_buffer.id].id);
-        glDrawElements(GL_TRIANGLES, m.index_count, GL_UNSIGNED_INT, 0);
+        auto index_buffer = vbufferMap[m.index_buffer.id];
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer.id);
+        glDrawElements(GL_TRIANGLES, m.index_count, index_buffer.format, 0);
+        if (!debugInfo.empty()) {
+            glPopDebugGroup();
+        }
     }
 
 
@@ -757,15 +765,17 @@ namespace renderer {
         return (err == GL_NO_ERROR) ;
     }
 
-    IndexBufferHandle createIndexBufferGL46(std::vector<uint32_t> data) {
+    IndexBufferHandle createIndexBufferGL46(const IndexBufferDesc& desc) {
         GLuint ibo;
         glCreateBuffers(1, &ibo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(uint32_t), data.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, desc.byteSize, desc.data, GL_STATIC_DRAW);
         auto handleId = nextHandleId++;
-        vbufferMap[handleId] = GLVbo{ibo};
+        vbufferMap[handleId] = GLVbo{ibo, desc.format};
         return renderer::IndexBufferHandle{handleId};
     }
+
+
 
     void updateIndexBufferGL46(IndexBufferHandle iboHandle, std::vector<uint32_t> data) {
         GLuint ibo = vbufferMap[iboHandle.id].id;
@@ -800,43 +810,62 @@ namespace renderer {
         return false;
     }
 
+    struct GlbChunk {
+        uint32_t chunkLength;
+        uint32_t chunkType;   // 0x4E4F534A = "JSON", 0x004E4942 = "BIN"
+        std::vector<uint8_t>  chunkData;
+    };
+
+
 
         /**
      * We only accept scenes with 1 mesh for now.
      * @param gltfJson the parsed json of the gltf
      * @return A Pointer to a newly created mesh object.
      */
-     static std::unique_ptr<Mesh> parseGLTF(const std::string& filename) {
-        using json = nlohmann::json;
-        std::ifstream file(filename);
-        if (!file.is_open()) {
-            exit(99988877);
+     static Mesh parseGLTF(const std::string& filename) {
+
+        std::ifstream file(filename, std::ios::binary);
+        if (!file) {
+         throw std::runtime_error("Failed to open GLB file.");
         }
+
+        // Seek to end to get size
+        file.seekg(0, std::ios::end);
+        size_t fileSize = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        // Read all data
+        std::vector<uint8_t> glbData(fileSize);
+        file.read(reinterpret_cast<char*>(glbData.data()), fileSize);
+
+        // -- Parse header
+        uint32_t magic = *reinterpret_cast<uint32_t*>(&glbData[0]);
+        uint32_t version = *reinterpret_cast<uint32_t*>(&glbData[4]);
+        uint32_t length = *reinterpret_cast<uint32_t*>(&glbData[8]);
+
+        assert(magic == 0x46546C67);  // "glTF"
+        assert(version == 2);
+
+        // -- First chunk: JSON
+        uint32_t jsonChunkLength = *reinterpret_cast<uint32_t*>(&glbData[12]);
+        uint32_t jsonChunkType = *reinterpret_cast<uint32_t*>(&glbData[16]);
+        assert(jsonChunkType == 0x4E4F534A);  // "JSON"
+
+        std::string jsonText(reinterpret_cast<const char*>(&glbData[20]), jsonChunkLength);
 
         // Parse JSON
-        json gltf;
-        try {
-            file >> gltf;
-        } catch (std::exception& e) {
-            std::cerr << "Error parsing glTF: " << e.what() << "\n";
-            exit(989898);
-        }
+        using json = nlohmann::json;
+        json gltf = json::parse(jsonText);
 
-        // This is the embedded binary data, a base64 encoded string.
-        auto dataBufferObj = gltf["/buffers/0"_json_pointer];
-        //auto dataBufferObj = queryJson(gltfJson, "/buffers[0]");
-        auto dataUri = dataBufferObj["uri"].get<std::string>();
-        std::string uriDataString;
-        std::stringstream ss(dataUri);
-        // Use while loop to extract the last partial string after the delimiter.
-        // In our case we expect only one part, the actual data.
-        while (getline(ss, uriDataString, ',')) {}
+        // -- Second chunk: BIN
+        size_t binChunkStart = 20 + jsonChunkLength;
+        uint32_t binChunkLength = *reinterpret_cast<uint32_t*>(&glbData[binChunkStart]);
+        uint32_t binChunkType = *reinterpret_cast<uint32_t*>(&glbData[binChunkStart + 4]);
+        assert(binChunkType == 0x004E4942); // "BIN"
 
-        std:: string dec = base64::from_base64(uriDataString);
-        std::vector<uint8_t> dataBinary;
-        for (auto c: dec) {
-            dataBinary.push_back(c);
-        }
+        const uint8_t* binaryBuffer = &glbData[binChunkStart + 8];
+        std::vector<uint8_t> dataBinary(binaryBuffer, binaryBuffer + binChunkLength);
 
 
         // Armature data for skeletal mesh.
@@ -1032,182 +1061,161 @@ namespace renderer {
         }
 
         // Mesh data
+        auto meshesNode = gltf["/meshes"_json_pointer];
+        int mesh_index = 0;
+        for (auto m : meshesNode) {
+            auto prim_node = m["primitives"];
+            for (auto p : prim_node) {
+                auto att = p["attributes"];
+                std::cout << att["POSITION"].dump(2) << std::endl;
+            }
+        }
         auto primitivesNode = gltf["/meshes/0/primitives/0"_json_pointer];
-            auto attrObj = primitivesNode["attributes"_json_pointer];
-            int posIndex = attrObj["POSITION"];
-            auto uvIndex = attrObj["TEXCOORD_0"].get<int>();
-            auto normalIndex =attrObj["NORMAL"].get<int>();
-            auto indicesIndex = primitivesNode["indices"].get<int>();
+        auto attrObj = primitivesNode["attributes"];
 
-            auto posAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(posIndex))];
-            auto uvAccessor =gltf[json::json_pointer("/accessors/" + std::to_string(uvIndex))];
-            auto normalAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(normalIndex))];
-            auto indicesAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(indicesIndex))];
+        int posIndex = attrObj["POSITION"].get<int>();
+        auto uvIndex = attrObj["TEXCOORD_0"].get<int>();
+        auto normalIndex =attrObj["NORMAL"].get<int>();
+        auto indicesIndex = primitivesNode["indices"].get<int>();
 
-            auto posBufferViewIndex = posAccessor["bufferView"].get<int>();
-            auto posBufferView = gltf[json::json_pointer("/bufferViews" + std::to_string(posBufferViewIndex))];
-            auto posBufferIndex = posBufferView["buffer"].get<int>();
-            auto posBufferLen = posBufferView["byteLength"].get<float>();
-            auto posBufferByteOffset = posBufferView["byteOffset"].get<int>();
-            auto posGlTargetType = posBufferView["target"].get<int>();
+        auto posAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(posIndex))];
+        auto uvAccessor =gltf[json::json_pointer("/accessors/" + std::to_string(uvIndex))];
+        auto normalAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(normalIndex))];
+        auto indicesAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(indicesIndex))];
 
-            auto uvBufferViewIndex = uvAccessor["bufferView"].get<int>();
-            auto uvBufferView =gltf[json::json_pointer("/bufferViews/" + std::to_string(uvBufferViewIndex))];
-            auto uvBufferIndex = uvBufferView["buffer"].get<int>();
-            auto uvBufferLen = uvBufferView["byteLength"].get<float>();
-            auto uvBufferByteOffset = uvBufferView["byteOffset"].get<int>();
-            auto uvGlTargetType = uvBufferView["target"].get<int>();
+        auto posBufferViewIndex = posAccessor["bufferView"].get<int>();
+        auto posBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(posBufferViewIndex))];
+        auto posBufferIndex = posBufferView["buffer"].get<int>();
+        auto posBufferLen = posBufferView["byteLength"].get<float>();
+        auto posBufferByteOffset = posBufferView["byteOffset"].get<int>();
+        auto posGlTargetType = posBufferView["target"].get<int>();
 
-            auto normalBufferViewIndex = normalAccessor["bufferView"].get<int>();
-            auto normalBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(normalBufferViewIndex))];
-            auto normalBufferIndex = normalBufferView["buffer"].get<int>();
-            auto normalBufferLen = normalBufferView["byteLength"].get<int>();
-            auto normalBufferByteOffset = normalBufferView["byteOffset"].get<int>();
-            auto normalGlTargetType = normalBufferView["target"].get<int>();
+        auto uvBufferViewIndex = uvAccessor["bufferView"].get<int>();
+        auto uvBufferView =gltf[json::json_pointer("/bufferViews/" + std::to_string(uvBufferViewIndex))];
+        auto uvBufferIndex = uvBufferView["buffer"].get<int>();
+        auto uvBufferLen = uvBufferView["byteLength"].get<float>();
+        auto uvBufferByteOffset = uvBufferView["byteOffset"].get<int>();
+        auto uvGlTargetType = uvBufferView["target"].get<int>();
 
-            auto indicesBufferViewIndex = indicesAccessor["bufferView"].get<int>();
-            auto indicesBufferView = gltf[json::json_pointer("/bufferViews[" + std::to_string(indicesBufferViewIndex))];
-            auto indicesBufferIndex = indicesBufferView["buffer"].get<int>();
-            auto indicesBufferLen = indicesBufferView["byteLength"].get<int>();
-            auto indicesBufferByteOffset = indicesBufferView["byteOffset"].get<int>();
-            auto indicesGlTargetType = indicesBufferView["target"].get<int>();
-            auto indexCount = indicesAccessor["count"].get<int>();
-            auto indexComponentType = indicesAccessor["componentType"].get<int>();
+        auto normalBufferViewIndex = normalAccessor["bufferView"].get<int>();
+        auto normalBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(normalBufferViewIndex))];
+        auto normalBufferIndex = normalBufferView["buffer"].get<int>();
+        auto normalBufferLen = normalBufferView["byteLength"].get<int>();
+        auto normalBufferByteOffset = normalBufferView["byteOffset"].get<int>();
+        auto normalGlTargetType = normalBufferView["target"].get<int>();
 
+        auto indicesBufferViewIndex = indicesAccessor["bufferView"].get<int>();
+        auto indicesBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(indicesBufferViewIndex))];
+        auto indicesBufferIndex = indicesBufferView["buffer"].get<int>();
+        auto indicesBufferLen = indicesBufferView["byteLength"].get<int>();
+        auto indicesBufferByteOffset = indicesBufferView["byteOffset"].get<int>();
+        auto indicesGlTargetType = indicesBufferView["target"].get<int>();
+        auto indexCount = indicesAccessor["count"].get<int>();
+        auto indexComponentType = indicesAccessor["componentType"].get<int>();
 
+        /*
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+        GLuint posBuffer;
+        glGenBuffers(1, &posBuffer);
+        glBindBuffer(posGlTargetType, posBuffer);
+        glBufferData(posGlTargetType, posBufferLen, dataBinary.data() + posBufferByteOffset, GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
 
-            GLuint vao;
-            glGenVertexArrays(1, &vao);
-            glBindVertexArray(vao);
-            GLuint posBuffer;
-            glGenBuffers(1, &posBuffer);
-            glBindBuffer(posGlTargetType, posBuffer);
-            glBufferData(posGlTargetType, posBufferLen, dataBinary.data() + posBufferByteOffset, GL_STATIC_DRAW);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-            glEnableVertexAttribArray(0);
+        GLuint uvBuffer;
+        glGenBuffers(1, &uvBuffer);
+        glBindBuffer(uvGlTargetType, uvBuffer);
+        glBufferData(uvGlTargetType, uvBufferLen, dataBinary.data() + uvBufferByteOffset , GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(1);
 
-            GLuint uvBuffer;
-            glGenBuffers(1, &uvBuffer);
-            glBindBuffer(uvGlTargetType, uvBuffer);
-            glBufferData(uvGlTargetType, uvBufferLen, dataBinary.data() + uvBufferByteOffset , GL_STATIC_DRAW);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-            glEnableVertexAttribArray(1);
+        GLuint normalBuffer;
+        glGenBuffers(1, &normalBuffer);
+        glBindBuffer(normalGlTargetType, normalBuffer);
+        glBufferData(normalGlTargetType, normalBufferLen, dataBinary.data() + normalBufferByteOffset, GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(2);
 
-            GLuint normalBuffer;
-            glGenBuffers(1, &normalBuffer);
-            glBindBuffer(normalGlTargetType, normalBuffer);
-            glBufferData(normalGlTargetType, normalBufferLen, dataBinary.data() + normalBufferByteOffset, GL_STATIC_DRAW);
-            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-            glEnableVertexAttribArray(2);
+        std::vector<float> instanceOffsets = {0, 0};
+        unsigned int instanceVBO;
+        glGenBuffers(1, &instanceVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * 1, instanceOffsets.data(), GL_STATIC_DRAW);
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glVertexAttribDivisor(3, 1);
 
-            std::vector<float> instanceOffsets = {0, 0};
-            unsigned int instanceVBO;
-            glGenBuffers(1, &instanceVBO);
-            glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * 1, instanceOffsets.data(), GL_STATIC_DRAW);
-            glEnableVertexAttribArray(3);
-            glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-            glVertexAttribDivisor(3, 1);
+        GLuint indexBuffer;
+        glGenBuffers(1, &indexBuffer);
+        glBindBuffer(indicesGlTargetType, indexBuffer);
+        glBufferData(indicesGlTargetType, indicesBufferLen, dataBinary.data() + indicesBufferByteOffset, GL_STATIC_DRAW);
+        */
 
-            GLuint indexBuffer;
-            glGenBuffers(1, &indexBuffer);
-            glBindBuffer(indicesGlTargetType, indexBuffer);
-            glBufferData(indicesGlTargetType, indicesBufferLen, dataBinary.data() + indicesBufferByteOffset, GL_STATIC_DRAW);
+        VertexBufferCreateInfo ci;
+        const uint8_t* base = dataBinary.data() + posBufferByteOffset;
+        const float* floatData = reinterpret_cast<const float*>(base);
+        size_t totalFloats = posAccessor["count"].get<int>() * 3;
+        ci.data =  std::vector(floatData, floatData + totalFloats);
+        ci.stride = 0;
+        auto vbo = createVertexBuffer(ci);
 
-            auto mesh = std::make_unique<Mesh>();
-            mesh->skeleton = skeleton;
-            mesh->vao = vao;
-            mesh->instanceOffsetVBO = instanceVBO;
-            mesh->numberOfIndices = indexCount;
-            mesh->indexDataType = indexComponentType;
-            glBindVertexArray(0);
+        const uint8_t* indices = dataBinary.data() + indicesBufferByteOffset;
 
-            return mesh;
+        IndexBufferDesc ibd;
+        ibd.byteSize = indicesBufferLen;
+        ibd.format = indexComponentType;
+        ibd.data = indices;
+        IndexBufferHandle ibo = createIndexBufferGL46(ibd);
 
+        VertexAttribute posAttribute;
+        posAttribute.location = 0;
+        posAttribute.stride = 0;
+        posAttribute.components = 3;
+        posAttribute.format = VertexAttributeFormat::Float3;
+        posAttribute.offset = 0;
+        posAttribute.semantic = VertexAttributeSemantic::Position;
+        auto mesh = createMeshGL46(vbo, ibo, {posAttribute}, indexCount);
+        return mesh;
 
     }
 
 
     Mesh importMeshGL46(const std::string& filename) {
-        Assimp::Importer importer;
-        auto scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
-                                                 aiProcess_LimitBoneWeights | aiProcess_CalcTangentSpace);
-        if (!scene) {
-            throw new std::runtime_error("error during assimp scene load. ");
-        }
-
-        auto ozzAnimations = importOzzAnimations();
-
-        if (scene->mNumMeshes == 0) {
-            return nullptr;
-        }
-
-        auto mesh = scene->mMeshes[0];
-        std::vector<glm::vec3> posMasterList;
-        std::vector<glm::vec3> posIndexSortedMasterList;
-        std::vector<glm::vec2> uvMasterList;
-        std::vector<glm::vec3> tangentMasterList;
-        std::vector<glm::vec3> normalMasterList;
-        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-
-            posMasterList.push_back({mesh->mVertices[i].x,
-                                     mesh->mVertices[i].y,
-                                     mesh->mVertices[i].z});
-
-            if (mesh->mTangents) {
-                tangentMasterList.push_back({
-                                                    mesh->mTangents[i].x,
-                                                    mesh->mTangents[i].y,
-                                                    mesh->mTangents[i].z,
-                                            });
-            }
-
-            if (mesh->HasNormals()) {
-                normalMasterList.push_back({mesh->mNormals[i].x,
-                                            mesh->mNormals[i].y,
-                                            mesh->mNormals[i].z});
-            }
-
-            if (mesh->mTextureCoords[0]) {
-                uvMasterList.push_back({mesh->mTextureCoords[0][i].x,
-                                        mesh->mTextureCoords[0][i].y});
-            } else {
-                uvMasterList.push_back({0.0f,
-                                        0.0f});
-            }
-        }
-
-        Mesh
-        createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes,
-                       size_t index_count) {
-            GLuint vao;
-            glGenVertexArrays(1, &vao);
-            glBindVertexArray(vao);
-
-            for (auto attribute: attributes) {
-                glEnableVertexAttribArray(attribute.location);
-                glVertexAttribPointer(
-                        attribute.location,               // attribute location
-                        attribute.components,               // components
-                        GL_FLOAT,        // type
-                        GL_FALSE,        // normalize?
-                        attribute.stride,
-                        (void *) attribute.offset                // relative offset in vertex
-                );
-
-            }
-            glBindVertexArray(0);
-
-            Mesh mesh;
-            mesh.id = vao;
-            mesh.index_count = index_count;
-            mesh.index_buffer = ibo;
-            mesh.vertex_buffer = vbo;
-            mesh.layout = VertexLayout{attributes};
-            mesh.primitive_topology = PrimitiveTopology::Triangle_List;
-            return mesh;
-        }
+        return parseGLTF(filename);
     }
+
+    Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes,
+                       size_t index_count) {
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        for (auto attribute: attributes) {
+            glEnableVertexAttribArray(attribute.location);
+            glVertexAttribPointer(
+                    attribute.location,               // attribute location
+                    attribute.components,               // components
+                    GL_FLOAT,        // type
+                    GL_FALSE,        // normalize?
+                    attribute.stride,
+                    (void *) attribute.offset                // relative offset in vertex
+            );
+
+        }
+        glBindVertexArray(0);
+
+        Mesh mesh;
+        mesh.id = vao;
+        mesh.index_count = index_count;
+        mesh.index_buffer = ibo;
+        mesh.vertex_buffer = vbo;
+        mesh.layout = VertexLayout{attributes};
+        mesh.primitive_topology = PrimitiveTopology::Triangle_List;
+        return mesh;
+    }
+
 
 
     template ENGINE_API bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);

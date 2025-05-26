@@ -38,13 +38,11 @@ std::vector<glm::vec2> getUVData() {
     };
 }
 
-std::vector<uint32_t> getIndexData() {
-    return std::vector<uint32_t> {
-        0, 1, 2,
-        0, 2, 3,
-        // 2, 1, 0,
-        // 3, 2, 0
-    };
+renderer::IndexBufferDesc getIndexData() {
+    renderer::IndexBufferDesc ibd;
+    ibd.format = GL_UNSIGNED_INT;
+    ibd.byteSize = 6 * sizeof(uint32_t);
+    return ibd;
 }
 
 renderer::ProgramHandle createColorShader() {
@@ -157,8 +155,19 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
         }
 
     };
-    auto ibo = renderer::createIndexBuffer(getIndexData());
-    auto quadMesh = renderer::createMesh(vbo, ibo, vertexAttributes, getIndexData().size());
+    renderer::IndexBufferDesc ibd = getIndexData();
+    auto quad_indices = std::vector<uint32_t> {
+        0, 1, 2,
+        0, 2, 3,
+        // 2, 1, 0,
+        // 3, 2, 0
+    };
+    ibd.data = quad_indices.data();
+    auto ibo = renderer::createIndexBuffer(ibd);
+    auto quadMesh = renderer::createMesh(vbo, ibo, vertexAttributes, 6);
+
+    // Mesh loading
+    auto loaded_mesh = renderer::importMesh("../../sample-games/gameA/assets/simple-geo.glb");
 
     // Texturing
     auto mainBackground = renderer::createImageFromFile("../../sample-games/gameA/assets/captain_pork2.png");
@@ -202,7 +211,14 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
         auto viewMat = glm::lookAt<float>(glm::vec3{0,0,5}, {0, 0, -3}, {0, 1, 0});
         auto projMat = glm::ortho<float>(0, 800, 600, 0.0f, .1f, 100.0f);
         setShaderValue(colorShader, "mvpMatrix", projMat * viewMat * worldMat * scaleMat);
-        //drawMesh(quadMesh);
+        drawMesh(quadMesh, "singleColorQuad");
+
+        scaleMat = glm::scale(glm::mat4(1), glm::vec3(1, 1, 1));
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(0, 1, -2));
+        auto viewMatM = glm::lookAt<float>(glm::vec3{0,4,5}, {0, 0, -3}, {0, 1, 0});
+        auto projMatPersp = glm::perspective<float>(glm::radians(40.0f), 16.0f/9.0f, 0.1, 500.0f);
+        setShaderValue(colorShader, "mvpMatrix", projMatPersp * viewMatM * worldMat * scaleMat);
+        drawMesh(loaded_mesh, "loadedModelMesh");
 
         // Title sprite
         bindProgram(textureShader);
@@ -210,7 +226,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
         worldMat = glm::translate(glm::mat4(1), glm::vec3(400 - (mainBackground.width/3/2), 0, -2));
         setShaderValue(textureShader, "mvpMatrix", projMat * viewMat * worldMat * scaleMat);
         bindTexture(porkImageTexture);
-        drawMesh(quadMesh);
+        drawMesh(quadMesh, "porkImage");
 
         // Title Image
         bindProgram(textureShader);

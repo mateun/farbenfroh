@@ -69,11 +69,11 @@ namespace renderer {
         return g_createTexture(image, format);
     }
 
-    IndexBufferHandle createIndexBuffer(std::vector<uint32_t> data) {
+    IndexBufferHandle createIndexBuffer(const IndexBufferDesc& ibd) {
         if (!g_createIndexBuffer) {
             return {};
         }
-        return g_createIndexBuffer(data);
+        return g_createIndexBuffer(ibd);
     }
 
     std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder() {
@@ -254,7 +254,11 @@ namespace renderer {
 
         auto vbo = vertexBufferBuilder()->attributeVec3(VertexAttributeSemantic::Position, positions)
             .attributeVec2(VertexAttributeSemantic::UV0, uvs).build();
-        auto ibo = createIndexBuffer(indices);
+        IndexBufferDesc ibd;
+        ibd.byteSize = indices.size() * sizeof(uint32_t);
+        ibd.data = indices.data();
+        ibd.format = GL_UNSIGNED_INT;
+        auto ibo = createIndexBuffer(ibd);
 
         std::vector<renderer::VertexAttribute> vertexAttributes = {
             renderer::VertexAttribute{

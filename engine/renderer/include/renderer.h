@@ -205,6 +205,18 @@ namespace renderer {
         }
     };
 
+    enum class IndexFormat {
+        UInt8,
+        UInt16,
+        UInt32
+    };
+
+    struct IndexBufferDesc {
+        const void* data;
+        size_t byteSize;
+        unsigned int format;
+    };
+
     enum class TextureFormat {
         // Color formats
         R8,         // 8-bit Red
@@ -259,9 +271,9 @@ namespace renderer {
     ENGINE_API VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo create_info);
     ENGINE_API void updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo);
 
-    typedef IndexBufferHandle (*CreateIndexBufferFn)(std::vector<uint32_t> data);
+    typedef IndexBufferHandle (*CreateIndexBufferFn)(const IndexBufferDesc&);
     ENGINE_API void registerCreateIndexBuffer(CreateIndexBufferFn fn);
-    ENGINE_API IndexBufferHandle createIndexBuffer(std::vector<uint32_t> data);
+    ENGINE_API IndexBufferHandle createIndexBuffer(const IndexBufferDesc&);
 
     typedef void (*UpdateIndexBufferFn)(IndexBufferHandle iboHandle, std::vector<uint32_t> data);
     ENGINE_API void registerUpdateIndexBuffer(UpdateIndexBufferFn fn);
@@ -305,7 +317,7 @@ namespace renderer {
     ENGINE_API FontHandle createFontFromFile(const std::string& fileToTTF, float fontSize);
 
     // Drawing geometry
-    ENGINE_API void drawMesh(Mesh m);
+    ENGINE_API void drawMesh(Mesh m, const std::string& debugInfo = "");
     ENGINE_API Mesh drawTextIntoQuad(FontHandle font, const std::string& text);
     ENGINE_API void updateText(Mesh& mesh, FontHandle font, const std::string& newText);
 
