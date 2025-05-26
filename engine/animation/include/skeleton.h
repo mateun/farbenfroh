@@ -6,11 +6,9 @@
 #define SKELETON_H
 
 #include <vector>
-#include <assimp/scene.h>
+#include <string>
 
 class Joint;
-
-namespace gru {
 
 struct Skeleton {
     std::vector<Joint*> joints;
@@ -18,6 +16,6 @@ struct Skeleton {
     Joint* findJointByName(const std::string &name);
 };
 
-}
+
 
 #endif //SKELETON_H

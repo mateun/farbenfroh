@@ -2,12 +2,12 @@
 // Created by mgrus on 25.03.2025.
 //
 
-#include <engine/animation\skeleton.h>
-#include <engine\animation\Joint.h>
+#include <skeleton.h>
+#include <Joint.h>
 
 
 
-void gru::Skeleton::resetToBindPose() {
+void Skeleton::resetToBindPose() {
     for (auto j: joints) {
         j->currentPoseLocalTransform = j->bindPoseLocalTransform;
         j->currentPoseLocation.clear();
@@ -15,7 +15,7 @@ void gru::Skeleton::resetToBindPose() {
     }
 }
 
-Joint* gru::Skeleton::findJointByName(const std::string &name) {
+Joint* Skeleton::findJointByName(const std::string &name) {
     for (auto j : joints) {
         if (j->name == name) {
             return j;

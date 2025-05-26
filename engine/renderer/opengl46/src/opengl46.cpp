@@ -6,17 +6,22 @@
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_access.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <cstdio>
 #include <stdexcept>
 #include <symbol_exports.h>
 #include "../include/opengl46.h"
 
 #include <complex>
+#include <fstream>
 #include <iostream>
+#include <Joint.h>
 #include <ranges>
 #include <unordered_map>
 
 #include <nljson.h>
+#include <skeleton.h>
 
 #include "../renderer/include/renderer.h"
 #include "base64.h"
@@ -768,27 +773,54 @@ namespace renderer {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(uint32_t), data.data(), GL_DYNAMIC_DRAW);
     }
 
+    bool strContains(const std::string& str, char test) {
+        for (auto c : str) {
+            if (c == test) return true;
+        }
 
-    /**
- * We only accept scenes with 1 mesh for now.
- * @param gltfJson the parsed json of the gltf
- * @return A Pointer to a newly created mesh object.
- */
- static std::unique_ptr<Mesh> parseGLTF(const std::string& filename) {
-     using json = nlohmann::json;
-     std::ifstream file(filename);
-     if (!file.is_open()) {
-         exit(99988877);
-     }
-
-    // Parse JSON
-    json gltf;
-    try {
-        file >> gltf;
-    } catch (std::exception& e) {
-        std::cerr << "Error parsing glTF: " << e.what() << "\n";
-        exit(989898);
+        return false;
     }
+
+    bool strContains(const std::string &str, const std::string &test) {
+        if (test.length() > str.length()) return false;
+        if (test.length() == str.length()) return str == test;
+
+        for (int i = 0; i < str.length(); i++) {
+            std::string testSequence = "";
+            for (int t = 0; t  < test.length(); t++) {
+                testSequence += str[t];
+            }
+            if (testSequence == test) {
+                return true;
+            }
+
+
+        }
+
+        return false;
+    }
+
+
+        /**
+     * We only accept scenes with 1 mesh for now.
+     * @param gltfJson the parsed json of the gltf
+     * @return A Pointer to a newly created mesh object.
+     */
+     static std::unique_ptr<Mesh> parseGLTF(const std::string& filename) {
+        using json = nlohmann::json;
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            exit(99988877);
+        }
+
+        // Parse JSON
+        json gltf;
+        try {
+            file >> gltf;
+        } catch (std::exception& e) {
+            std::cerr << "Error parsing glTF: " << e.what() << "\n";
+            exit(989898);
+        }
 
         // This is the embedded binary data, a base64 encoded string.
         auto dataBufferObj = gltf["/buffers/0"_json_pointer];
@@ -811,13 +843,13 @@ namespace renderer {
         // If we find a skin within the mesh object.
         // Otherwise we assume a static mesh.
         Skeleton* skeleton = nullptr;
-        const auto nodesNode = queryJson(gltfJson, "/nodes");
+        const auto nodesNode = gltf["/nodes"_json_pointer];
         int skinIndex = -1;
-        for (auto n : nodesNode->value->arrayValue->elements) {
-            if (n->value->valueType == JsonValueType::Object) {
-                auto potentialSkinMember = findByMemberName(n->value->objectValue, "skin");
-                if (potentialSkinMember) {
-                    skinIndex = potentialSkinMember->intValue;
+        for (auto n : nodesNode.array()) {
+
+            if (n.is_object()) {
+                if (n.contains("skin") && n["skin"].is_number_integer()) {
+                    skinIndex = n["skin"];
                     break;
                 }
             }
@@ -825,14 +857,14 @@ namespace renderer {
 
         if (skinIndex > -1) {
             skeleton = new Skeleton();
-            auto skinNode = queryJson(gltfJson, "/skins[" + std::to_string(skinIndex) + "]");
-            int inverseBindMatricesIndex = (int) findByMemberName(skinNode->value->objectValue, "inverseBindMatrices")->floatValue;
-            auto inverseBindAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(inverseBindMatricesIndex) + "]");
-            auto inverseBindViewIndex = (int) findByMemberName(inverseBindAccessor->value->objectValue, "bufferView")->floatValue;
-            auto inverseBindBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(inverseBindViewIndex) + "]");
-            auto inverseBindBufferIndex = (int) findByMemberName(inverseBindBufferView->value->objectValue, "buffer")->floatValue;
-            auto inverseBindBufferLen = findByMemberName(inverseBindBufferView->value->objectValue, "byteLength")->floatValue;
-            auto inverseBindBufferByteOffset = (int) findByMemberName(inverseBindBufferView->value->objectValue, "byteOffset")->floatValue;
+            auto skinNode = gltf["/skins/" + std::to_string(skinIndex)];
+            int inverseBindMatricesIndex = skinNode.value("inverseBindMatrices", -1);
+            auto inverseBindAccessor = gltf["/accessors/" + std::to_string(inverseBindMatricesIndex)];
+            auto inverseBindViewIndex = inverseBindAccessor.value("bufferView", -1);
+            auto inverseBindBufferView = gltf["/bufferViews/" + std::to_string(inverseBindViewIndex)];
+            auto inverseBindBufferIndex = inverseBindBufferView.value("buffer", -1);
+            auto inverseBindBufferLen = inverseBindBufferView.value("byteLength", -1);
+            auto inverseBindBufferByteOffset = inverseBindBufferView.value("byteOffset", -1);
 
             auto invBindMatricesOffset = dataBinary.data() + inverseBindBufferByteOffset;
             int count = 1;
@@ -857,14 +889,26 @@ namespace renderer {
                 count++;
             }
             // We search for a node called "Armature"
-            for (auto n : nodesNode->value->arrayValue->elements) {
-                auto obj = n->value->objectValue;
-                auto name = findByMemberName(obj, "name")->stringValue;
+            for (const auto& obj : nodesNode) {
+                std::string name = obj.value("name", "");
+
                 if (strContains(name, "Armature")) {
-                    auto children = findByMemberName(obj, "children")->arrayValue;
-                    collectJoints(children, skeleton->joints, nodesNode->value->arrayValue, nullptr);
+                    if (obj.contains("children") && obj["children"].is_array()) {
+                        const auto& children = obj["children"];
+                        // Legacy code:
+                        // collectJoints(children, skeleton->joints, nodesNode->value->arrayValue, nullptr);
+
+                        // Partial new code
+                        // loop over `children` or access it as needed
+                        for (const auto& childIndex : children) {
+                            // childIndex is typically an integer (node index)
+                            int index = childIndex;
+                            // use index...
+                        }
+                    }
                 }
             }
+
             // Now we can associate the joints with the respective inverse bind matrix
             for (int i =0; i < skeleton->joints.size(); i++) {
                 auto j = skeleton->joints[i];
@@ -880,41 +924,41 @@ namespace renderer {
             // The indices within the sampler are accessor indices.
             // Reading out the animations:
             // For now just 1 animation.
-            auto animationsNode = queryJson(gltfJson, "/animations");
-            if (!animationsNode && !animationsNode->value->arrayValue->elements.empty()) {
-                auto animNode = queryJson(gltfJson, "/animations[0]");
-                auto samplersNode = findByMemberName(animNode->value->objectValue, "samplers");
-                auto animName = findByMemberName(animNode->value->objectValue, "name");
-                auto channelsNode = findByMemberName(animNode->value->objectValue, "channels");
-                auto accessors = queryJson(gltfJson, "/accessors")->value->arrayValue->elements;
-                auto bufferViews = queryJson(gltfJson, "/bufferViews")->value->arrayValue->elements;
-                for (auto ch : channelsNode->arrayValue->elements) {
-                    int samplerIndex = (int) findByMemberName(ch->value->objectValue, "sampler")->floatValue;
-                    auto targetNode = findByMemberName(ch->value->objectValue, "target");
-                    auto targetPath = findByMemberName(targetNode->objectValue, "path")->stringValue;
-                    int targetJointIndex = (int) findByMemberName(targetNode->objectValue, "node")->floatValue;
-                    auto jointNode = nodesNode->value->arrayValue->elements[targetJointIndex];
-                    auto jointName = findByMemberName(jointNode->value->objectValue, "name")->stringValue;
+            auto animationsNode = gltf["/animations"_json_pointer];
+            if (!animationsNode && !animationsNode.is_array() && !animationsNode.empty()) {
+                auto animNode = gltf["/animations/0"_json_pointer];
+                auto samplersNode = animNode["samplers"_json_pointer];
+                auto animName = animNode.value("name", "");
+                auto channelsNode = animNode.value("channels", json::object());
+                auto accessors = gltf["/accessors"_json_pointer];
+                auto bufferViews =gltf["/bufferViews"_json_pointer];
+                for (auto ch : channelsNode) {
+                    int samplerIndex = ch.value("sampler", -1);
+                    auto targetNode = ch["target"_json_pointer];
+                    auto targetPath = targetNode.value("path", "");
+                    int targetJointIndex = targetNode.value("node", json::object());
+                    auto jointNode = nodesNode[targetJointIndex];
+                    auto jointName = jointNode.value("name", "");
                     printf("joint channel:%s %s\n", jointName.c_str(), targetPath.c_str());
-                    auto samplerNode = samplersNode->arrayValue->elements[samplerIndex]->value->objectValue;
-                    auto samplerInput = (int)findByMemberName(samplerNode, "input")->floatValue;
-                    auto samplerOutput = (int) findByMemberName(samplerNode, "output")->floatValue;
-                    auto samplerInterpolation = findByMemberName(samplerNode, "interpolation")->stringValue;
+                    auto samplerNode = samplersNode[samplerIndex];
+                    auto samplerInput = samplerNode.value("input", 0);
+                    auto samplerOutput = samplerNode.value("output", 0);
+                    auto samplerInterpolation = samplerNode.value("interpolation", "");
                     // Now lookup the accessors for input and output
-                    auto inputAccessor = accessors[samplerInput]->value->objectValue;
-                    auto outputAccessor = accessors[samplerOutput]->value->objectValue;
-                    auto inputCount = (int) findByMemberName(inputAccessor, "count")->floatValue;
-                    auto inputType = findByMemberName(inputAccessor, "type")->stringValue;
-                    auto outputType = findByMemberName(outputAccessor, "type")->stringValue;
-                    auto outputCount = (int) findByMemberName(outputAccessor, "count")->floatValue;
-                    auto inputBufferViewIndex = (int) findByMemberName(inputAccessor, "bufferView")->floatValue;
-                    auto outputBufferViewIndex = (int) findByMemberName(outputAccessor, "bufferView")->floatValue;
-                    auto inputBufferView = bufferViews[inputBufferViewIndex]->value->objectValue;
-                    auto outputBufferView = bufferViews[outputBufferViewIndex]->value->objectValue;
-                    auto inputBufferOffset = (int) findByMemberName(inputBufferView, "byteOffset")->floatValue;
-                    auto inputBufferLength = (int) findByMemberName(inputBufferView, "byteLength")->floatValue;
-                    auto outputBufferOffset = (int) findByMemberName(outputBufferView, "byteOffset")->floatValue;
-                    auto outputBufferLength = (int) findByMemberName(outputBufferView, "byteLength")->floatValue;
+                    auto inputAccessor = accessors[samplerInput];
+                    auto outputAccessor = accessors[samplerOutput];
+                    auto inputCount = inputAccessor.value("count", -1);
+                    auto inputType = inputAccessor.value("type", "");
+                    auto outputType = outputAccessor.value("type", "");
+                    auto outputCount = outputAccessor.value("count", 0.0);
+                    auto inputBufferViewIndex = inputAccessor.value("bufferView", -1);
+                    auto outputBufferViewIndex = outputAccessor.value("bufferView", -1);
+                    auto inputBufferView = bufferViews[inputBufferViewIndex];
+                    auto outputBufferView = bufferViews[outputBufferViewIndex];
+                    auto inputBufferOffset = inputBufferView.value("byteOffset", -1);
+                    auto inputBufferLength = inputBufferView.value("byteLength", -1);
+                    auto outputBufferOffset = outputBufferView.value("byteOffset", 0);
+                    auto outputBufferLength = outputBufferView.value("byteLength", 0);
                     auto inputDataPtr = dataBinary.data() + inputBufferOffset;
                     std::vector<float> timeValues;
                     for ( int i = 0; i < inputBufferLength; i+=4) {
@@ -988,97 +1032,97 @@ namespace renderer {
         }
 
         // Mesh data
-        auto primitivesNode = queryJson(gltfJson, "/meshes[0]/primitives[0]");
-        auto attrObj = findByMemberName(primitivesNode->value->objectValue, "attributes");
-        int posIndex = (int) findByMemberName(attrObj->objectValue, "POSITION")->floatValue;
-        auto uvIndex = (int) findByMemberName(attrObj->objectValue, "TEXCOORD_0")->floatValue;
-        auto normalIndex =(int) findByMemberName(attrObj->objectValue, "NORMAL")->floatValue;
-        auto indicesIndex = (int) findByMemberName(primitivesNode->value->objectValue, "indices")->floatValue;
+        auto primitivesNode = gltf["/meshes/0/primitives/0"_json_pointer];
+            auto attrObj = primitivesNode["attributes"_json_pointer];
+            int posIndex = attrObj["POSITION"];
+            auto uvIndex = attrObj["TEXCOORD_0"].get<int>();
+            auto normalIndex =attrObj["NORMAL"].get<int>();
+            auto indicesIndex = primitivesNode["indices"].get<int>();
 
-        auto posAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(posIndex) + "]");
-        auto uvAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(uvIndex) + "]");
-        auto normalAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(normalIndex) + "]");
-        auto indicesAccessor = queryJson(gltfJson,"/accessors[" + std::to_string(indicesIndex) + "]");
+            auto posAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(posIndex))];
+            auto uvAccessor =gltf[json::json_pointer("/accessors/" + std::to_string(uvIndex))];
+            auto normalAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(normalIndex))];
+            auto indicesAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(indicesIndex))];
 
-        auto posBufferViewIndex = (int) findByMemberName(posAccessor->value->objectValue, "bufferView")->floatValue;
-        auto posBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(posBufferViewIndex) + "]");
-        auto posBufferIndex = (int) findByMemberName(posBufferView->value->objectValue, "buffer")->floatValue;
-        auto posBufferLen = findByMemberName(posBufferView->value->objectValue, "byteLength")->floatValue;
-        auto posBufferByteOffset = (int) findByMemberName(posBufferView->value->objectValue, "byteOffset")->floatValue;
-        auto posGlTargetType = (int) findByMemberName(posBufferView->value->objectValue, "target")->floatValue;
+            auto posBufferViewIndex = posAccessor["bufferView"].get<int>();
+            auto posBufferView = gltf[json::json_pointer("/bufferViews" + std::to_string(posBufferViewIndex))];
+            auto posBufferIndex = posBufferView["buffer"].get<int>();
+            auto posBufferLen = posBufferView["byteLength"].get<float>();
+            auto posBufferByteOffset = posBufferView["byteOffset"].get<int>();
+            auto posGlTargetType = posBufferView["target"].get<int>();
 
-        auto uvBufferViewIndex = (int) findByMemberName(uvAccessor->value->objectValue, "bufferView")->floatValue;
-        auto uvBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(uvBufferViewIndex) + "]");
-        auto uvBufferIndex = (int) findByMemberName(uvBufferView->value->objectValue, "buffer")->floatValue;
-        auto uvBufferLen = findByMemberName(uvBufferView->value->objectValue, "byteLength")->floatValue;
-        auto uvBufferByteOffset = (int) findByMemberName(uvBufferView->value->objectValue, "byteOffset")->floatValue;
-        auto uvGlTargetType = (int) findByMemberName(uvBufferView->value->objectValue, "target")->floatValue;
+            auto uvBufferViewIndex = uvAccessor["bufferView"].get<int>();
+            auto uvBufferView =gltf[json::json_pointer("/bufferViews/" + std::to_string(uvBufferViewIndex))];
+            auto uvBufferIndex = uvBufferView["buffer"].get<int>();
+            auto uvBufferLen = uvBufferView["byteLength"].get<float>();
+            auto uvBufferByteOffset = uvBufferView["byteOffset"].get<int>();
+            auto uvGlTargetType = uvBufferView["target"].get<int>();
 
-        auto normalBufferViewIndex = (int) findByMemberName(normalAccessor->value->objectValue, "bufferView")->floatValue;
-        auto normalBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(normalBufferViewIndex) + "]");
-        auto normalBufferIndex = (int) findByMemberName(normalBufferView->value->objectValue, "buffer")->floatValue;
-        auto normalBufferLen = findByMemberName(normalBufferView->value->objectValue, "byteLength")->floatValue;
-        auto normalBufferByteOffset = (int) findByMemberName(normalBufferView->value->objectValue, "byteOffset")->floatValue;
-        auto normalGlTargetType = (int) findByMemberName(normalBufferView->value->objectValue, "target")->floatValue;
+            auto normalBufferViewIndex = normalAccessor["bufferView"].get<int>();
+            auto normalBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(normalBufferViewIndex))];
+            auto normalBufferIndex = normalBufferView["buffer"].get<int>();
+            auto normalBufferLen = normalBufferView["byteLength"].get<int>();
+            auto normalBufferByteOffset = normalBufferView["byteOffset"].get<int>();
+            auto normalGlTargetType = normalBufferView["target"].get<int>();
 
-        auto indicesBufferViewIndex = (int) findByMemberName(indicesAccessor->value->objectValue, "bufferView")->floatValue;
-        auto indicesBufferView = queryJson(gltfJson, "/bufferViews[" + std::to_string(indicesBufferViewIndex) + "]");
-        auto indicesBufferIndex = (int) findByMemberName(indicesBufferView->value->objectValue, "buffer")->floatValue;
-        auto indicesBufferLen = findByMemberName(indicesBufferView->value->objectValue, "byteLength")->floatValue;
-        auto indicesBufferByteOffset = (int) findByMemberName(indicesBufferView->value->objectValue, "byteOffset")->floatValue;
-        auto indicesGlTargetType = (int) findByMemberName(indicesBufferView->value->objectValue, "target")->floatValue;
-        auto indexCount = (int) findByMemberName(indicesAccessor->value->objectValue, "count")->floatValue;
-        auto indexComponentType = (GLenum) findByMemberName(indicesAccessor->value->objectValue, "componentType")->floatValue;
+            auto indicesBufferViewIndex = indicesAccessor["bufferView"].get<int>();
+            auto indicesBufferView = gltf[json::json_pointer("/bufferViews[" + std::to_string(indicesBufferViewIndex))];
+            auto indicesBufferIndex = indicesBufferView["buffer"].get<int>();
+            auto indicesBufferLen = indicesBufferView["byteLength"].get<int>();
+            auto indicesBufferByteOffset = indicesBufferView["byteOffset"].get<int>();
+            auto indicesGlTargetType = indicesBufferView["target"].get<int>();
+            auto indexCount = indicesAccessor["count"].get<int>();
+            auto indexComponentType = indicesAccessor["componentType"].get<int>();
 
 
 
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-        GLuint posBuffer;
-        glGenBuffers(1, &posBuffer);
-        glBindBuffer(posGlTargetType, posBuffer);
-        glBufferData(posGlTargetType, posBufferLen, dataBinary.data() + posBufferByteOffset, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(0);
+            GLuint vao;
+            glGenVertexArrays(1, &vao);
+            glBindVertexArray(vao);
+            GLuint posBuffer;
+            glGenBuffers(1, &posBuffer);
+            glBindBuffer(posGlTargetType, posBuffer);
+            glBufferData(posGlTargetType, posBufferLen, dataBinary.data() + posBufferByteOffset, GL_STATIC_DRAW);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+            glEnableVertexAttribArray(0);
 
-        GLuint uvBuffer;
-        glGenBuffers(1, &uvBuffer);
-        glBindBuffer(uvGlTargetType, uvBuffer);
-        glBufferData(uvGlTargetType, uvBufferLen, dataBinary.data() + uvBufferByteOffset , GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(1);
+            GLuint uvBuffer;
+            glGenBuffers(1, &uvBuffer);
+            glBindBuffer(uvGlTargetType, uvBuffer);
+            glBufferData(uvGlTargetType, uvBufferLen, dataBinary.data() + uvBufferByteOffset , GL_STATIC_DRAW);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+            glEnableVertexAttribArray(1);
 
-        GLuint normalBuffer;
-        glGenBuffers(1, &normalBuffer);
-        glBindBuffer(normalGlTargetType, normalBuffer);
-        glBufferData(normalGlTargetType, normalBufferLen, dataBinary.data() + normalBufferByteOffset, GL_STATIC_DRAW);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(2);
+            GLuint normalBuffer;
+            glGenBuffers(1, &normalBuffer);
+            glBindBuffer(normalGlTargetType, normalBuffer);
+            glBufferData(normalGlTargetType, normalBufferLen, dataBinary.data() + normalBufferByteOffset, GL_STATIC_DRAW);
+            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+            glEnableVertexAttribArray(2);
 
-        std::vector<float> instanceOffsets = {0, 0};
-        unsigned int instanceVBO;
-        glGenBuffers(1, &instanceVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * 1, instanceOffsets.data(), GL_STATIC_DRAW);
-        glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-        glVertexAttribDivisor(3, 1);
+            std::vector<float> instanceOffsets = {0, 0};
+            unsigned int instanceVBO;
+            glGenBuffers(1, &instanceVBO);
+            glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * 1, instanceOffsets.data(), GL_STATIC_DRAW);
+            glEnableVertexAttribArray(3);
+            glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+            glVertexAttribDivisor(3, 1);
 
-        GLuint indexBuffer;
-        glGenBuffers(1, &indexBuffer);
-        glBindBuffer(indicesGlTargetType, indexBuffer);
-        glBufferData(indicesGlTargetType, indicesBufferLen, dataBinary.data() + indicesBufferByteOffset, GL_STATIC_DRAW);
+            GLuint indexBuffer;
+            glGenBuffers(1, &indexBuffer);
+            glBindBuffer(indicesGlTargetType, indexBuffer);
+            glBufferData(indicesGlTargetType, indicesBufferLen, dataBinary.data() + indicesBufferByteOffset, GL_STATIC_DRAW);
 
-        auto mesh = std::make_unique<Mesh>();
-        mesh->skeleton = skeleton;
-        mesh->vao = vao;
-        mesh->instanceOffsetVBO = instanceVBO;
-        mesh->numberOfIndices = indexCount;
-        mesh->indexDataType = indexComponentType;
-        glBindVertexArray(0);
+            auto mesh = std::make_unique<Mesh>();
+            mesh->skeleton = skeleton;
+            mesh->vao = vao;
+            mesh->instanceOffsetVBO = instanceVBO;
+            mesh->numberOfIndices = indexCount;
+            mesh->indexDataType = indexComponentType;
+            glBindVertexArray(0);
 
-        return mesh;
+            return mesh;
 
 
     }
