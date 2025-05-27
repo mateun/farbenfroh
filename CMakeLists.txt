@@ -12,7 +12,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})  # .exe, .dll (runtime)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR})  # .dll (if treated as library)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR})  # .lib, .a (static libs)
 
-include_directories(${CMAKE_SOURCE_DIR}/engine/include v2025/extlibs/glm-0.9.9.8/glm)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/engine/include
+       ${CMAKE_CURRENT_SOURCE_DIR}/v2025/extlibs/glm-0.9.9.8/glm)
 
 
 add_subdirectory(engine)
