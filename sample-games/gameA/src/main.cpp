@@ -168,6 +168,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
     // Mesh loading
     auto loaded_mesh = renderer::importMesh("../../sample-games/gameA/assets/simple-geo.glb");
+    auto animated_plane = renderer::importMesh("../../sample-games/gameA/assets/animated_plane.glb");
 
     // Texturing
     auto mainBackground = renderer::createImageFromFile("../../sample-games/gameA/assets/captain_pork2.png");
@@ -219,6 +220,11 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
         auto projMatPersp = glm::perspective<float>(glm::radians(40.0f), 16.0f/9.0f, 0.1, 500.0f);
         setShaderValue(colorShader, "mvpMatrix", projMatPersp * viewMatM * worldMat * scaleMat);
         drawMesh(loaded_mesh, "loadedModelMesh");
+
+        scaleMat = glm::scale(glm::mat4(1), glm::vec3(.5, .5, 1));
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(-2, -1, -2));
+        setShaderValue(colorShader, "mvpMatrix", projMatPersp * viewMatM * worldMat * scaleMat);
+        drawMesh(animated_plane, "animatedPlane");
 
         // Title sprite
         bindProgram(textureShader);

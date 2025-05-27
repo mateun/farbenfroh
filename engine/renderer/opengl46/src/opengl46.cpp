@@ -874,7 +874,7 @@ namespace renderer {
         Skeleton* skeleton = nullptr;
         const auto nodesNode = gltf["/nodes"_json_pointer];
         int skinIndex = -1;
-        for (auto n : nodesNode.array()) {
+        for (auto n : nodesNode) {
 
             if (n.is_object()) {
                 if (n.contains("skin") && n["skin"].is_number_integer()) {
@@ -886,11 +886,11 @@ namespace renderer {
 
         if (skinIndex > -1) {
             skeleton = new Skeleton();
-            auto skinNode = gltf["/skins/" + std::to_string(skinIndex)];
+            auto skinNode = gltf[json::json_pointer("/skins/" + std::to_string(skinIndex))];
             int inverseBindMatricesIndex = skinNode.value("inverseBindMatrices", -1);
-            auto inverseBindAccessor = gltf["/accessors/" + std::to_string(inverseBindMatricesIndex)];
+            auto inverseBindAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(inverseBindMatricesIndex))];
             auto inverseBindViewIndex = inverseBindAccessor.value("bufferView", -1);
-            auto inverseBindBufferView = gltf["/bufferViews/" + std::to_string(inverseBindViewIndex)];
+            auto inverseBindBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(inverseBindViewIndex))];
             auto inverseBindBufferIndex = inverseBindBufferView.value("buffer", -1);
             auto inverseBindBufferLen = inverseBindBufferView.value("byteLength", -1);
             auto inverseBindBufferByteOffset = inverseBindBufferView.value("byteOffset", -1);
@@ -954,110 +954,112 @@ namespace renderer {
             // Reading out the animations:
             // For now just 1 animation.
             auto animationsNode = gltf["/animations"_json_pointer];
-            if (!animationsNode && !animationsNode.is_array() && !animationsNode.empty()) {
-                auto animNode = gltf["/animations/0"_json_pointer];
-                auto samplersNode = animNode["samplers"_json_pointer];
-                auto animName = animNode.value("name", "");
-                auto channelsNode = animNode.value("channels", json::object());
-                auto accessors = gltf["/accessors"_json_pointer];
-                auto bufferViews =gltf["/bufferViews"_json_pointer];
-                for (auto ch : channelsNode) {
-                    int samplerIndex = ch.value("sampler", -1);
-                    auto targetNode = ch["target"_json_pointer];
-                    auto targetPath = targetNode.value("path", "");
-                    int targetJointIndex = targetNode.value("node", json::object());
-                    auto jointNode = nodesNode[targetJointIndex];
-                    auto jointName = jointNode.value("name", "");
-                    printf("joint channel:%s %s\n", jointName.c_str(), targetPath.c_str());
-                    auto samplerNode = samplersNode[samplerIndex];
-                    auto samplerInput = samplerNode.value("input", 0);
-                    auto samplerOutput = samplerNode.value("output", 0);
-                    auto samplerInterpolation = samplerNode.value("interpolation", "");
-                    // Now lookup the accessors for input and output
-                    auto inputAccessor = accessors[samplerInput];
-                    auto outputAccessor = accessors[samplerOutput];
-                    auto inputCount = inputAccessor.value("count", -1);
-                    auto inputType = inputAccessor.value("type", "");
-                    auto outputType = outputAccessor.value("type", "");
-                    auto outputCount = outputAccessor.value("count", 0.0);
-                    auto inputBufferViewIndex = inputAccessor.value("bufferView", -1);
-                    auto outputBufferViewIndex = outputAccessor.value("bufferView", -1);
-                    auto inputBufferView = bufferViews[inputBufferViewIndex];
-                    auto outputBufferView = bufferViews[outputBufferViewIndex];
-                    auto inputBufferOffset = inputBufferView.value("byteOffset", -1);
-                    auto inputBufferLength = inputBufferView.value("byteLength", -1);
-                    auto outputBufferOffset = outputBufferView.value("byteOffset", 0);
-                    auto outputBufferLength = outputBufferView.value("byteLength", 0);
-                    auto inputDataPtr = dataBinary.data() + inputBufferOffset;
-                    std::vector<float> timeValues;
-                    for ( int i = 0; i < inputBufferLength; i+=4) {
-                        auto val= (float*)(inputDataPtr + i);
-                        timeValues.push_back(*val);
-                    }
-                    auto outputDataPtr = dataBinary.data() + outputBufferOffset;
-                    if (outputType == "VEC3") {
-                        std::vector<glm::vec3> outputValues;
-                        std::vector<float> fvals;
-                        count = 1;
-                        for ( int i = 0; i < outputBufferLength; i+=4) {
-                            auto val= (float*)(outputDataPtr + i);
-                            fvals.push_back(*val);
-                            if (count % 3 == 0) {
-                                outputValues.push_back(glm::vec3{fvals[0], fvals[1], fvals[2]});
-                                fvals.clear();
-                            }
-                            count++;
-                        }
-                        for (int i=0; i<timeValues.size(); i++) {
-                            printf("time val: %f -> %f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
-                                   outputValues[i].z);
-                        }
 
-                    } else if (outputType == "VEC4") {
-                        std::vector<glm::vec4> outputValues;
-                        std::vector<float> fvals;
-                        count = 1;
-                        for ( int i = 0; i < outputBufferLength; i+=4) {
-                            auto val= (float*)(outputDataPtr + i);
-                            fvals.push_back(*val);
-                            if (count % 4 == 0) {
-                                outputValues.push_back(glm::vec4{fvals[0], fvals[1], fvals[2], fvals[3]});
+                for (auto animNode : animationsNode) {
 
-                                glm::quat quat = {fvals[3], fvals[0], fvals[1], fvals[2]};
-                                glm::mat4 rotMat = glm::toMat4(quat);
-                                printf("rotmat: %f/%f/%f/%f\n",
-                                       glm::column(rotMat, 0).x,
-                                       glm::column(rotMat, 1).x,
-                                       glm::column(rotMat, 2).x,
-                                       glm::column(rotMat, 3).x);
-                                printf("rotmat: %f/%f/%f/%f\n",
-                                       glm::column(rotMat, 0).y,
-                                       glm::column(rotMat, 1).y,
-                                       glm::column(rotMat, 2).y,
-                                       glm::column(rotMat, 3).y);
-                                printf("rotmat: %f/%f/%f/%f\n",
-                                       glm::column(rotMat, 0).z,
-                                       glm::column(rotMat, 1).z,
-                                       glm::column(rotMat, 2).z,
-                                       glm::column(rotMat, 3).z);
-                                printf("rotmat: %f/%f/%f/%f\n",
-                                       glm::column(rotMat, 0).w,
-                                       glm::column(rotMat, 1).w,
-                                       glm::column(rotMat, 2).w,
-                                       glm::column(rotMat, 3).w);
-                                fvals.clear();
+                    auto samplersNode = animNode["/samplers"_json_pointer];
+                    auto animName = animNode.value("name", "");
+                    auto channelsNode = animNode.value("channels", json::object());
+                    auto accessors = gltf["/accessors"_json_pointer];
+                    auto bufferViews =gltf["/bufferViews"_json_pointer];
+                    for (auto ch : channelsNode) {
+                        int samplerIndex = ch.value("sampler", -1);
+                        auto targetNode = ch["/target"_json_pointer];
+                        auto targetPath = targetNode.value("path", "");
+                        int targetJointIndex = targetNode.value("node", json::object());
+                        auto jointNode = nodesNode[targetJointIndex];
+                        auto jointName = jointNode.value("name", "");
+                        printf("joint channel:%s %s\n", jointName.c_str(), targetPath.c_str());
+                        auto samplerNode = samplersNode[samplerIndex];
+                        auto samplerInput = samplerNode.value("input", 0);
+                        auto samplerOutput = samplerNode.value("output", 0);
+                        auto samplerInterpolation = samplerNode.value("interpolation", "");
+                        // Now lookup the accessors for input and output
+                        auto inputAccessor = accessors[samplerInput];
+                        auto outputAccessor = accessors[samplerOutput];
+                        auto inputCount = inputAccessor.value("count", -1);
+                        auto inputType = inputAccessor.value("type", "");
+                        auto outputType = outputAccessor.value("type", "");
+                        auto outputCount = outputAccessor.value("count", 0.0);
+                        auto inputBufferViewIndex = inputAccessor.value("bufferView", -1);
+                        auto outputBufferViewIndex = outputAccessor.value("bufferView", -1);
+                        auto inputBufferView = bufferViews[inputBufferViewIndex];
+                        auto outputBufferView = bufferViews[outputBufferViewIndex];
+                        auto inputBufferOffset = inputBufferView.value("byteOffset", -1);
+                        auto inputBufferLength = inputBufferView.value("byteLength", -1);
+                        auto outputBufferOffset = outputBufferView.value("byteOffset", 0);
+                        auto outputBufferLength = outputBufferView.value("byteLength", 0);
+                        auto inputDataPtr = dataBinary.data() + inputBufferOffset;
+                        std::vector<float> timeValues;
+                        for ( int i = 0; i < inputBufferLength; i+=4) {
+                            auto val= (float*)(inputDataPtr + i);
+                            timeValues.push_back(*val);
+                        }
+                        auto outputDataPtr = dataBinary.data() + outputBufferOffset;
+                        if (outputType == "VEC3") {
+                            std::vector<glm::vec3> outputValues;
+                            std::vector<float> fvals;
+                            count = 1;
+                            for ( int i = 0; i < outputBufferLength; i+=4) {
+                                auto val= (float*)(outputDataPtr + i);
+                                fvals.push_back(*val);
+                                if (count % 3 == 0) {
+                                    outputValues.push_back(glm::vec3{fvals[0], fvals[1], fvals[2]});
+                                    fvals.clear();
+                                }
+                                count++;
                             }
-                            count++;
+                            for (int i=0; i<timeValues.size(); i++) {
+                                printf("time val: %f -> %f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
+                                       outputValues[i].z);
+                            }
+
+                        } else if (outputType == "VEC4") {
+                            std::vector<glm::vec4> outputValues;
+                            std::vector<float> fvals;
+                            count = 1;
+                            for ( int i = 0; i < outputBufferLength; i+=4) {
+                                auto val= (float*)(outputDataPtr + i);
+                                fvals.push_back(*val);
+                                if (count % 4 == 0) {
+                                    outputValues.push_back(glm::vec4{fvals[0], fvals[1], fvals[2], fvals[3]});
+
+                                    glm::quat quat = {fvals[3], fvals[0], fvals[1], fvals[2]};
+                                    glm::mat4 rotMat = glm::toMat4(quat);
+                                    printf("rotmat: %f/%f/%f/%f\n",
+                                           glm::column(rotMat, 0).x,
+                                           glm::column(rotMat, 1).x,
+                                           glm::column(rotMat, 2).x,
+                                           glm::column(rotMat, 3).x);
+                                    printf("rotmat: %f/%f/%f/%f\n",
+                                           glm::column(rotMat, 0).y,
+                                           glm::column(rotMat, 1).y,
+                                           glm::column(rotMat, 2).y,
+                                           glm::column(rotMat, 3).y);
+                                    printf("rotmat: %f/%f/%f/%f\n",
+                                           glm::column(rotMat, 0).z,
+                                           glm::column(rotMat, 1).z,
+                                           glm::column(rotMat, 2).z,
+                                           glm::column(rotMat, 3).z);
+                                    printf("rotmat: %f/%f/%f/%f\n",
+                                           glm::column(rotMat, 0).w,
+                                           glm::column(rotMat, 1).w,
+                                           glm::column(rotMat, 2).w,
+                                           glm::column(rotMat, 3).w);
+                                    fvals.clear();
+                                }
+                                count++;
+                            }
+                            for (int i=0; i<timeValues.size(); i++) {
+                                printf("time val: %f -> %f/%f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
+                                       outputValues[i].z, outputValues[i].w);
+                            }
+                        } else if (outputType == "SCALAR") {
+                            // TODO scalar
                         }
-                        for (int i=0; i<timeValues.size(); i++) {
-                            printf("time val: %f -> %f/%f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
-                                   outputValues[i].z, outputValues[i].w);
-                        }
-                    } else if (outputType == "SCALAR") {
-                        // TODO scalar
                     }
                 }
-            }
+
         }
 
         // Mesh data
