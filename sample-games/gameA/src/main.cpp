@@ -54,7 +54,7 @@ renderer::ProgramHandle createColorShader() {
     return myprog;
 }
 
-renderer::ProgramHandle createTextureShader() {
+renderer::ProgramHandle createTiledTextureShader() {
     auto vsrc = renderer::vertexShaderBuilder()->position(0).uv(1).mvp().build();
     auto fsrc = renderer::fragmentShaderBuilder()->diffuseTexture(0, false).build();
     auto vertexShader = renderer::compileVertexShader(vsrc);
@@ -121,7 +121,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
     renderer::setClearColor(0.5, 0, 0, 1);
 
     auto colorShader = createColorShader();
-    auto textureShader = createTextureShader();
+    auto textureShader = createTiledTextureShader();
     auto textShader = createTextShader();
     auto fullScreenQuadShader = createFullScreenQuadShader();
 

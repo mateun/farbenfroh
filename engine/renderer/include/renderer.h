@@ -130,6 +130,11 @@ namespace renderer {
             virtual std::string build() const = 0;
     };
 
+    struct CustomUniform {
+        std::string declaration;
+        std::string custom_code;
+    };
+
     /**
      * This builder pattern class allows for
      * composing modulare vertex shaders with different attributes.
@@ -148,6 +153,7 @@ namespace renderer {
         virtual VertexShaderBuilder& worldMatrix() = 0;
         virtual VertexShaderBuilder& projectionMatrix() = 0;
         virtual VertexShaderBuilder& viewMatrix() = 0;
+        virtual VertexShaderBuilder& uniform(CustomUniform) = 0;
         virtual std::string build() const = 0;
 
 

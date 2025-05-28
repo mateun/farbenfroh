@@ -747,6 +747,17 @@ namespace renderer {
     }
 
     template<>
+    bool setShaderValue<glm::vec2>(ProgramHandle program, const std::string& name, const glm::vec2& value) {
+        auto prog = programMap[program.id].id;
+        glUseProgram(prog);
+        auto loc = glGetUniformLocation(prog, name.c_str());
+        glUniform2fv(loc, 1, glm::value_ptr(value));
+        return (glGetError() == GL_NO_ERROR);
+    }
+
+
+
+    template<>
     bool setShaderValue<float>(ProgramHandle program, const std::string& name, const float& value) {
         auto prog = programMap[program.id].id;
         glUseProgram(prog);
@@ -1220,5 +1231,6 @@ namespace renderer {
 
     template ENGINE_API bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
     template ENGINE_API bool setShaderValue<float>(ProgramHandle, const std::string&, const float&);
+    template ENGINE_API bool setShaderValue<glm::vec2>(ProgramHandle, const std::string&, const glm::vec2&);
 
 }

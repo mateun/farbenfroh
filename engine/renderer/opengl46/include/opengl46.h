@@ -143,11 +143,10 @@ public:
         return *this;
     }
 
-
-
-
-
-
+    GL46VertexShaderBuilder &uniform(renderer::CustomUniform customUniform) override {
+        custom_uniforms.push_back(customUniform);
+        return *this;
+    }
 
 
     [[nodiscard]] std::string build() const override {
@@ -176,6 +175,10 @@ public:
 
         if (hasViewMatrixUniform) {
             src += "uniform mat4 view_mat;\n";
+        }
+
+        for (auto cu : custom_uniforms) {
+            src += cu.declaration + "\n";
         }
 
         std::string mvpPart = "";
@@ -216,6 +219,10 @@ public:
             //src += "    fs_uvs.y = 1 - fs_uvs.y;\n";
         }
 
+        for (auto cu : custom_uniforms) {
+            src += cu.custom_code + "\n";
+        }
+
         src += "}\n";
 
         return src;
@@ -232,6 +239,7 @@ private:
     bool hasWorldMatrixUniform;
     bool hasProjectionMatrixUniform;
     bool hasViewMatrixUniform;
+    std::vector<renderer::CustomUniform> custom_uniforms;
 };
 
 
