@@ -10,6 +10,7 @@
 #include "../renderer/opengl46/include/opengl46.h"
 #include "../renderer/include/renderer.h"
 #include "../gamestate/include/gamestate.h"
+#include "../util/include/util.h"
 
 
 #endif //ENGINE_H

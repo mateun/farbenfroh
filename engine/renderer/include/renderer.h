@@ -200,6 +200,13 @@ namespace renderer {
         virtual RenderTarget build() = 0;
     };
 
+    struct BoundingBox {
+        float left;
+        float top;
+        float right;
+        float bottom;
+    };
+
     struct Image {
         uint8_t* pixels = nullptr;
         int width = 0;
@@ -325,6 +332,7 @@ namespace renderer {
     // Drawing geometry
     ENGINE_API void drawMesh(Mesh m, const std::string& debugInfo = "");
     ENGINE_API Mesh drawTextIntoQuad(FontHandle font, const std::string& text);
+    ENGINE_API BoundingBox measureText(FontHandle fontHandle, const std::string& text);
     ENGINE_API void updateText(Mesh& mesh, FontHandle font, const std::string& newText);
 
 
