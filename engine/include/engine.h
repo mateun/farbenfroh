@@ -11,6 +11,7 @@
 #include "../renderer/include/renderer.h"
 #include "../gamestate/include/gamestate.h"
 #include "../util/include/util.h"
+#include "../animation/include/property_animation.h"
 
 
 #endif //ENGINE_H
