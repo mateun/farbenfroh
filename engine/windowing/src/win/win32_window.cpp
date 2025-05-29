@@ -80,7 +80,7 @@ static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     return 0;
 }
 
-HWND ENGINE_API create_window(int w, int h, bool fullscreen, HINSTANCE hInstance) {
+HWND ENGINE_API create_window(int w, int h, bool fullscreen, HINSTANCE hInstance, const std::string& window_title) {
 
     // Window setup
     const char g_szClassName[] = "winClass";
@@ -114,7 +114,7 @@ HWND ENGINE_API create_window(int w, int h, bool fullscreen, HINSTANCE hInstance
 
     HWND win = CreateWindow(
              g_szClassName,
-             "Application",
+             window_title.c_str(),
              //WS_POPUP,
              WS_OVERLAPPEDWINDOW,
              screenWidth/2 - winWidthHalf, 0, corrRect.right - corrRect.left, corrRect.bottom - corrRect.top,
