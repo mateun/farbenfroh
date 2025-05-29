@@ -3,6 +3,17 @@
 //
 
 #include <engine.h>
+#include <windowsx.h>
+
+ENGINE_API WPARAM lastKeyPress = 0;
+int mouse_x = 0;
+int mouse_y = 0;
+int mouse_rel_x = 0;
+int mouse_rel_y = 0;
+bool useMouse = true;
+static int window_height = -1;
+static int window_width = -1;
+
 
 static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 
@@ -15,37 +26,46 @@ static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
         // For raw mouse input
         case WM_INPUT:
         {
-            // UINT dwSize;
-            // GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
-            // LPBYTE lpb = new BYTE[dwSize];
-            // if (lpb == NULL) {
-            //     return 0;
-            // }
-            //
-            // if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize) {
-            //     delete[] lpb;
-            //     return 0;
-            // }
-            //
-            // RAWINPUT* raw = (RAWINPUT*)lpb;
-            // if (raw->header.dwType == RIM_TYPEMOUSE) {
-            //
-            //     mouse_rel_x = raw->data.mouse.lLastX;
-            //     mouse_rel_y = raw->data.mouse.lLastY;
-            //
-            //
-            // }
-            //
-            // delete[] lpb;
-            // return 0;
+            UINT dwSize;
+            GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+            LPBYTE lpb = new BYTE[dwSize];
+            if (lpb == NULL) {
+                return 0;
+            }
+
+            if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize) {
+                delete[] lpb;
+                return 0;
+            }
+
+            RAWINPUT* raw = (RAWINPUT*)lpb;
+            if (raw->header.dwType == RIM_TYPEMOUSE) {
+
+                mouse_rel_x = raw->data.mouse.lLastX;
+                mouse_rel_y = raw->data.mouse.lLastY;
+
+
+            }
+
+            delete[] lpb;
+            return 0;
         }
+
+        case WM_MOUSEMOVE:
+            if (useMouse) {
+                mouse_x = GET_X_LPARAM(lParam);
+                mouse_y = GET_Y_LPARAM(lParam);
+            }
+
+            break;
 
         case WM_SIZE:
             break;
 
         case WM_SYSKEYDOWN:
         case WM_KEYDOWN:
-            //Input::getInstance()->updateLastKeyPress(wParam);
+            lastKeyPress = wParam;
+            break;
         break;
 
         case WM_DESTROY:
@@ -81,6 +101,9 @@ static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 }
 
 HWND ENGINE_API create_window(int w, int h, bool fullscreen, HINSTANCE hInstance, const std::string& window_title) {
+
+    window_height = h;
+    window_width = w;
 
     // Window setup
     const char g_szClassName[] = "winClass";

@@ -33,4 +33,5 @@ target_link_libraries(engine_interface INTERFACE
         lua547
         gamestate
         animation
+        input
 )

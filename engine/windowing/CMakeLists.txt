@@ -1,7 +1,7 @@
 file(GLOB_RECURSE windowing_src src/*.cpp)
 
 
-add_library(windowing SHARED
+add_library(windowing STATIC
     ${windowing_src}
 )
 

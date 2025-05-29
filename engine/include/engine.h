@@ -12,6 +12,7 @@
 #include "../gamestate/include/gamestate.h"
 #include "../util/include/util.h"
 #include "../animation/include/property_animation.h"
+#include "../input/include/input.h"
 
 
 #endif //ENGINE_H

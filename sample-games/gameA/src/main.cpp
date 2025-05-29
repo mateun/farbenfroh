@@ -11,6 +11,8 @@
 
 #include "../../../v2025/extlibs/lua547/src/lauxlib.h"
 
+extern int mouse_x;
+extern int mouse_y;
 
 std::vector<glm::vec3> getPositionData() {
     return std::vector<glm::vec3> {
@@ -205,6 +207,11 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
         setClearColor(0.02, 0.01, 0.01, 1);
         clear();
 
+        // Input tests
+        if (keyPressed(VK_ESCAPE)) {
+            run = false;
+        }
+
         // Draw the single colored quad
         bindProgram(colorShader);
         auto scaleMat = glm::scale(glm::mat4(1), glm::vec3(32, 32, 1));
@@ -271,6 +278,11 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
         static int frame = 0;
         frame++;
         updateText(quadTextCapital, font, "Frame: " + std::to_string(frame));
+        drawMesh(quadTextCapital);
+
+        worldMat = glm::translate(glm::mat4(1), glm::vec3(200, 600 - 8, -0.1));
+        setShaderValue(textShader, "mvpMatrix", projMat * worldMat);
+        updateText(quadTextCapital, font, "mouse: " + std::to_string(mouse_x) + "/" + std::to_string(mouse_y));
         drawMesh(quadTextCapital);
 
 
