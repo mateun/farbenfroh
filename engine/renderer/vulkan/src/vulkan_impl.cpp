@@ -29,7 +29,7 @@ VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hI
     createSwapChain();
     createImageViews();
     createRenderPass();
-    createDescriptorSetLayout();
+//    createDescriptorSetLayout();
     //createGraphicsPipeline();
     createFrameBuffers();
     createCommandPool();
