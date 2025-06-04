@@ -282,7 +282,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE, LPSTR, int) {
 
         worldMat = glm::translate(glm::mat4(1), glm::vec3(200, 600 - 8, -0.1));
         setShaderValue(textShader, "mvpMatrix", projMat * worldMat);
-        updateText(quadTextCapital, font, "mouse: " + std::to_string(mouse_x) + "/" + std::to_string(mouse_y));
+        updateText(quadTextCapital, font, "mouse: " + std::to_string(mouseX()) + "/" + std::to_string(mouseY()));
         drawMesh(quadTextCapital);
 
 

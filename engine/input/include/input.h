@@ -5,6 +5,10 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+// The current mouse coordinates
+int mouseX();
+int mouseY();
+
 // For single presses, when typing in a textfield for example.
 // We support Windows VK_ macros here.
 bool keyPressed(int key);

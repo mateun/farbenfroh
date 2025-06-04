@@ -5,15 +5,27 @@
 #include <engine.h>
 #include <windowsx.h>
 
-ENGINE_API WPARAM lastKeyPress = 0;
-int mouse_x = 0;
-int mouse_y = 0;
-int mouse_rel_x = 0;
-int mouse_rel_y = 0;
-bool useMouse = true;
+
+static int mouse_x = 0;
+static int mouse_y = 0;
+static int mouse_rel_x = 0;
+static int mouse_rel_y = 0;
+static bool useMouse = true;
 static int window_height = -1;
 static int window_width = -1;
+static WPARAM lastKeyPress = 0;
 
+int win_mouse_x() {
+    return mouse_x;
+}
+
+int win_mouse_y() {
+    return mouse_y;
+}
+
+WPARAM last_key_press() {
+    return lastKeyPress;
+}
 
 static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 
