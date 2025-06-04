@@ -17,4 +17,7 @@ void end_timer(Timer& timer);
 float timer_seconds(Timer& timer);
 float timer_microseconds(Timer& timer);
 
+uint8_t* read_file_binary(const std::string& fileName);
+
+
 #endif //UTIL_H
