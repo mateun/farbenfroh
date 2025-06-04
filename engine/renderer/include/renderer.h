@@ -130,9 +130,36 @@ namespace renderer {
             virtual std::string build() const = 0;
     };
 
+
+    /**
+     * Implemetns the FramgementShaderBuilder interface for OpenGL GLSL >= 4.6.
+     */
+    class GLSLFramgentShaderBuilder : public renderer::FragmentShaderBuilder {
+    public:
+        FragmentShaderBuilder &color() override;
+        FragmentShaderBuilder &diffuseTexture(uint8_t textureUnit, bool flipUVs) override;
+        FragmentShaderBuilder &textRender() override;
+        std::string build() const override;
+
+    private:
+        bool useTextRender = false;
+        bool useColor = false;
+        bool useDiffuseTexture = false;
+        uint8_t diffuseTextureUnit = 0;
+        bool flipUVs = false;
+    };
+
     struct CustomUniform {
         std::string declaration;
         std::string custom_code;
+    };
+
+    struct CustomUniformBufferObject {
+        std::string struct_name = "__undefined_struct_name";
+        int set = 0;
+        int binding = 0;
+        std::vector<CustomUniform> nested_uniforms;
+        std::string name = "___undefined_ubo_name___";
     };
 
     /**
@@ -154,9 +181,52 @@ namespace renderer {
         virtual VertexShaderBuilder& projectionMatrix() = 0;
         virtual VertexShaderBuilder& viewMatrix() = 0;
         virtual VertexShaderBuilder& uniform(CustomUniform) = 0;
+        virtual VertexShaderBuilder& uniformBufferObject(CustomUniformBufferObject) = 0;
         virtual std::string build() const = 0;
 
 
+    };
+
+
+    /**
+     * Implements the VertexSahderBuilder interface for GLSL (GL Version >= 4.6).
+     */
+    class GLSLVertexShaderBuilder : public VertexShaderBuilder {
+    public:
+        GLSLVertexShaderBuilder& position(uint8_t slot) override;
+
+        GLSLVertexShaderBuilder& normal(uint8_t slot) override;
+
+        GLSLVertexShaderBuilder& uv(uint8_t slot) override;
+
+        VertexShaderBuilder &mvp() override;
+
+
+        VertexShaderBuilder &worldMatrix() override;
+
+        VertexShaderBuilder &projectionMatrix() override;
+
+        VertexShaderBuilder &viewMatrix() override;
+
+        GLSLVertexShaderBuilder &uniform(CustomUniform customUniform) override;
+
+        VertexShaderBuilder &uniformBufferObject(CustomUniformBufferObject) override;
+
+        [[nodiscard]] std::string build() const override;
+
+    private:
+        bool hasPosition = false;
+        bool hasNormal = false;
+        bool hasUV = false;
+        uint8_t positionSlot = 0;
+        uint8_t normalSlot = 0;
+        uint8_t uvSlot = 0;
+        bool hasMVPUniforms = false;
+        bool hasWorldMatrixUniform;
+        bool hasProjectionMatrixUniform;
+        bool hasViewMatrixUniform;
+        std::vector<CustomUniform> custom_uniforms;
+        std::vector<CustomUniformBufferObject> custom_uniform_buffer_objects;
     };
 
     class VertexBufferBuilder {

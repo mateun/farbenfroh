@@ -17,6 +17,10 @@
 
 static VulkanRenderer* vulkan_renderer = nullptr;
 
+// Handle system
+static uint32_t nextHandleId = 1; // start at 1 to reserve 0 as "invalid"
+static std::unordered_map<uint32_t, VulkanShader> shaderMap;
+
 VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hInstance), _window(window) {
     createInstance();
     createSurface();
@@ -25,6 +29,7 @@ VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hI
     createSwapChain();
     createImageViews();
     createRenderPass();
+    createDescriptorSetLayout();
     //createGraphicsPipeline();
     createFrameBuffers();
     createCommandPool();
@@ -730,36 +735,104 @@ bool VulkanRenderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
     // TODO add checking for e.g. swap chain support here
     return true;
 }
+namespace renderer {
 
-void renderer::drawMesh(renderer::Mesh m, const std::string& debugInfo ) {
+    void drawMesh(renderer::Mesh m, const std::string& debugInfo ) {
 
-}
-
-
-// Handle system
-static uint32_t nextHandleId = 1; // start at 1 to reserve 0 as "invalid"
-static std::unordered_map<uint32_t, VulkanShader> shaderMap;
-
-renderer::ShaderHandle renderer::compileVertexShader(const std::string& source) {
-    shaderc::Compiler compiler;
-    shaderc::CompileOptions options;
-    shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source, shaderc_shader_kind::shaderc_glsl_vertex_shader, "vs", options);
-    if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
-        //handle errors
-        exit(123123);
     }
-    std::vector<uint8_t> vertexSPRV;
-    vertexSPRV.assign(result.cbegin(), result.cend());
-    auto shader_module = vulkan_renderer->createShaderModule(vertexSPRV.data(), vertexSPRV.size());
-    ShaderHandle handle = ShaderHandle {nextHandleId};
-    shaderMap[nextHandleId] = VulkanShader {shader_module} ;
-    nextHandleId++;
-    return handle;
+
+
+
+
+    ShaderHandle renderer::compileVertexShader(const std::string& source) {
+        shaderc::Compiler compiler;
+        shaderc::CompileOptions options;
+
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
+        options.SetTargetSpirv(shaderc_spirv_version_1_3);
+        options.SetSourceLanguage(shaderc_source_language_glsl);
+        options.SetOptimizationLevel(shaderc_optimization_level_zero); // or desired level
+        options.SetGenerateDebugInfo();
+        options.SetWarningsAsErrors();
+
+        auto preprocess_result = compiler.PreprocessGlsl(source, shaderc_glsl_vertex_shader, "vs", options);
+        if (preprocess_result.GetCompilationStatus() != shaderc_compilation_status_success) {
+            std::cout << "preprocess error" << preprocess_result.GetErrorMessage() << std::endl;
+            exit(123121);
+        }
+
+        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source, shaderc_shader_kind::shaderc_glsl_vertex_shader, "vs", options);
+        if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+            std::cout << "shader compilation error: " << std::endl <<result.GetErrorMessage() << std::endl;
+            //handle errors
+            exit(123123);
+        }
+        std::vector<uint8_t> vertexSPRV(result.cbegin(), result.cend());
+        if (vertexSPRV.size() == 0 || vertexSPRV.size()* sizeof(uint32_t) %4 != 0) {
+            std::cerr << "spirv size mismatch" << std::endl;
+            exit(1);
+        }
+        auto shader_module = vulkan_renderer->createShaderModule(vertexSPRV.data(), vertexSPRV.size());
+        ShaderHandle handle = ShaderHandle {nextHandleId};
+        shaderMap[nextHandleId] = VulkanShader {shader_module} ;
+        nextHandleId++;
+        return handle;
+    }
+
+    ShaderHandle renderer::compileFragmentShader(const std::string& source) {
+        return {};
+    }
+
+
+    void renderer::bindTexture(TextureHandle texture) {
+
+    }
+
+    void renderer::present(HDC hdc) {
+
+    }
+
+    void renderer::clear() {
+
+    }
+
+    void renderer::setClearColor(float r, float g, float b, float a) {
+
+    }
+
+
+    ProgramHandle linkShaderProgram(ShaderHandle vertexShader, ShaderHandle fragmentShader)
+    {
+        return {};
+    }
+
+
+    template<>
+    bool setShaderValue<glm::vec2>(ProgramHandle program, const std::string& name, const glm::vec2& value) {
+
+        return false;
+    }
+
+
+
+    template<>
+    bool setShaderValue<float>(ProgramHandle program, const std::string& name, const float& value) {
+       return false;
+    }
+
+    template<>
+    bool setShaderValue<glm::mat4>(ProgramHandle program, const std::string& name, const glm::mat4& value) {
+       return false;
+    }
+
+    template ENGINE_API bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
+    template ENGINE_API bool setShaderValue<float>(ProgramHandle, const std::string&, const float&);
+    template ENGINE_API bool setShaderValue<glm::vec2>(ProgramHandle, const std::string&, const glm::vec2&);
+
 }
 
-renderer::ShaderHandle renderer::compileFragmentShader(const std::string& source) {
-    return {};
-}
+
+
 
 
 void init_vulkan(HWND hwnd, HINSTANCE hinst, bool useSRGB, int msaaSampleCount) {

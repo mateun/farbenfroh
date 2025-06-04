@@ -327,4 +327,231 @@ namespace renderer {
 
     }
 
+
+    GLSLVertexShaderBuilder & GLSLVertexShaderBuilder::position(uint8_t slot) {
+        hasPosition = true;
+        positionSlot = slot;
+        return *this;
+    }
+
+    GLSLVertexShaderBuilder & GLSLVertexShaderBuilder::normal(uint8_t slot) {
+        hasNormal = true;
+        normalSlot = slot;
+        return *this;
+    }
+
+    GLSLVertexShaderBuilder & GLSLVertexShaderBuilder::uv(uint8_t slot) {
+        hasUV = true;
+        uvSlot = slot;
+        return *this;
+    }
+
+    VertexShaderBuilder & GLSLVertexShaderBuilder::mvp() {
+        hasMVPUniforms = true;
+        return *this;
+    }
+
+    VertexShaderBuilder & GLSLVertexShaderBuilder::worldMatrix() {
+        hasWorldMatrixUniform = true;
+        return *this;
+    }
+
+    VertexShaderBuilder & GLSLVertexShaderBuilder::projectionMatrix() {
+        hasWorldMatrixUniform = true;
+        return *this;
+    }
+
+    VertexShaderBuilder & GLSLVertexShaderBuilder::viewMatrix() {
+        hasWorldMatrixUniform = true;
+        return *this;
+    }
+
+    GLSLVertexShaderBuilder & GLSLVertexShaderBuilder::uniform(renderer::CustomUniform customUniform) {
+        custom_uniforms.push_back(customUniform);
+        return *this;
+    }
+
+    VertexShaderBuilder & GLSLVertexShaderBuilder::uniformBufferObject(CustomUniformBufferObject ubo) {
+        custom_uniform_buffer_objects.push_back(ubo);
+        return *this;
+    }
+
+    std::unique_ptr<VertexShaderBuilder>  vertexShaderBuilder() {
+        return std::make_unique<GLSLVertexShaderBuilder>();
+    }
+
+    std::unique_ptr<FragmentShaderBuilder> fragmentShaderBuilder() {
+        return std::make_unique<GLSLFramgentShaderBuilder>();
+    }
+
+
+    std::string GLSLVertexShaderBuilder::build() const {
+        std::string src = "#version 450 core\n";
+
+        // Declare vertex attributes:
+        if (hasPosition)
+            src += "layout(location = " + std::to_string(positionSlot) + ") in vec3 aPosition;\n";
+        if (hasNormal)
+            src += "layout(location = " + std::to_string(normalSlot) + ") in vec3 aNormal;\n";
+        if (hasUV)
+            src += "layout(location = " + std::to_string(uvSlot) +") in vec2 aUV;\n";
+
+        // Declare uniform buffer objects:
+        for (auto ubo : custom_uniform_buffer_objects) {
+            src += "\n";
+            src += "layout(set=" + std::to_string(ubo.set);
+            src += ", binding=" + std::to_string(ubo.binding);
+            src += ") uniform " + ubo.struct_name + " {\n";
+            for (auto un : ubo.nested_uniforms) {
+                src += "\t" + un.declaration    + ";\n";
+            }
+            src += "} " + ubo.name + ";\n\n";
+        }
+
+        // Declare uniforms:
+        if (hasMVPUniforms) {
+            src += "layout(set =0, binding = 0) uniform MVPBlock { \n mat4 mvpMatrix;\n } mvp_block; \n";
+        }
+
+        if (hasWorldMatrixUniform) {
+            src += "uniform mat4 world_mat;\n";
+        }
+
+        if (hasProjectionMatrixUniform) {
+            src += "uniform mat4 proj_mat;\n";
+        }
+
+        if (hasViewMatrixUniform) {
+            src += "uniform mat4 view_mat;\n";
+        }
+
+        for (auto cu : custom_uniforms) {
+            src += cu.declaration + "\n";
+        }
+
+        std::string mvpPart = "";
+        if (hasMVPUniforms) {
+            mvpPart += "mvp_block.mvpMatrix *";
+        }
+        if (hasWorldMatrixUniform) {
+            mvpPart += "world_mat *";
+        }
+
+        if (hasProjectionMatrixUniform) {
+            mvpPart += "proj_mat *";
+        }
+
+        if (hasViewMatrixUniform) {
+            mvpPart += "view_mat *";
+        }
+
+        // Declare outputs:
+        if (hasUV) {
+            src += "layout(location = 0) out vec2 fs_uvs;\n";
+        }
+
+        src += "void main() {\n";
+
+        // Calculate clip-space position:
+        if (hasPosition) {
+            src += "\tgl_Position = " + mvpPart + " vec4(aPosition, 1.0);\n";
+        }
+        else {
+            src += "    gl_Position = vec4(0.0);\n";
+        }
+
+        // Assign other outputs:
+        if (hasUV) {
+            src += "    fs_uvs = aUV;\n";
+            // TODO handle uv flipping
+            //src += "    fs_uvs.y = 1 - fs_uvs.y;\n";
+        }
+
+        for (auto cu : custom_uniforms) {
+            src += cu.custom_code + "\n";
+        }
+
+        for (auto ubo : custom_uniform_buffer_objects) {
+            src += "\n";
+            for (auto cu : ubo.nested_uniforms) {
+                src += cu.custom_code + "\n";
+            }
+        }
+
+        src += "}\n";
+
+        return src;
+    }
+
+    renderer::FragmentShaderBuilder & GLSLFramgentShaderBuilder::color() {
+        useColor = true;
+        return *this;
+    }
+
+    renderer::FragmentShaderBuilder & GLSLFramgentShaderBuilder::diffuseTexture(uint8_t textureUnit, bool flipUVs) {
+        useDiffuseTexture = true;
+        diffuseTextureUnit = textureUnit;
+        this->flipUVs = flipUVs;
+        return *this;
+    }
+
+    renderer::FragmentShaderBuilder & GLSLFramgentShaderBuilder::textRender() {
+        useTextRender = true;
+        return *this;
+    }
+
+    std::string GLSLFramgentShaderBuilder::build() const {
+        std::string src = "#version 460 core\n";
+
+        // Declare inputs:
+        if (useColor) {
+            src += "uniform vec4 color = vec4(1, 1, 1, 1);\n";
+        }
+        if (useDiffuseTexture || useTextRender) {
+
+
+            src += "layout(binding = " + std::to_string(diffuseTextureUnit) + ") uniform sampler2D diffuseTexture;\n\n";
+            src += "layout (location = 0) in vec2 fs_uvs;\n";
+        }
+
+
+
+        src += "out vec4 final_color;\n";
+        src += "void main() {\n";
+
+        if (useColor) {
+            src += "    final_color = color;\n";
+        }
+        else if (useDiffuseTexture ) {
+            // Move the uv into a local variable so we can modify it:
+            src += "vec2 uv = fs_uvs;\n";
+
+            // Account for uv-flipping:
+            if (flipUVs) {
+                src += "uv.y = 1.0- uv.y;\n";
+            }
+
+            src += "    final_color = texture(diffuseTexture, uv);\n";
+        }
+        else {
+            src += "    final_color = vec4(1, 0,1, 1);\n";
+        }
+
+        if (useTextRender) {
+            src += "   float r =  texture(diffuseTexture, uv).r;\n";
+            // TODO allow setting of textcolor
+            src += "   final_color = vec4(1, 1 , 1, r);\n";
+
+        }
+
+
+
+
+        src += "}\n";
+        return src;
+
+    }
+
+
+
 }

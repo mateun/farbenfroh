@@ -126,76 +126,6 @@ renderer::RenderTarget GL46RenderTargetBuilder::build() {
 
 }
 
-renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::color() {
-    useColor = true;
-    return *this;
-}
-
-renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::diffuseTexture(uint8_t textureUnit, bool flipUVs) {
-    useDiffuseTexture = true;
-    diffuseTextureUnit = textureUnit;
-    this->flipUVs = flipUVs;
-    return *this;
-}
-
-renderer::FragmentShaderBuilder & GL46FramgentShaderBuilder::textRender() {
-    useTextRender = true;
-    return *this;
-}
-
-std::string GL46FramgentShaderBuilder::build() const {
-    std::string src = "#version 460 core\n";
-
-    // Declare inputs:
-    if (useColor) {
-        src += "uniform vec4 color = vec4(1, 1, 1, 1);\n";
-    }
-    if (useDiffuseTexture || useTextRender) {
-
-
-        src += "layout(binding = " + std::to_string(diffuseTextureUnit) + ") uniform sampler2D diffuseTexture;\n\n";
-        src += "in vec2 fs_uvs;\n";
-    }
-
-
-
-    src += "out vec4 final_color;\n";
-    src += "void main() {\n";
-
-    if (useColor) {
-        src += "    final_color = color;\n";
-    }
-    else if (useDiffuseTexture ) {
-        // Move the uv into a local variable so we can modify it:
-        src += "vec2 uv = fs_uvs;\n";
-
-        // Account for uv-flipping:
-        if (flipUVs) {
-            src += "uv.y = 1.0- uv.y;\n";
-        }
-
-        src += "    final_color = texture(diffuseTexture, uv);\n";
-    }
-    else {
-        src += "    final_color = vec4(1, 0,1, 1);\n";
-    }
-
-     if (useTextRender) {
-         src += "   float r =  texture(diffuseTexture, uv).r;\n";
-         // TODO allow setting of textcolor
-         src += "   final_color = vec4(1, 1 , 1, r);\n";
-
-     }
-
-
-
-
-    src += "}\n";
-    return src;
-
-}
-
-
 
 
 template<typename T>
@@ -636,13 +566,9 @@ namespace renderer {
     }
 
 
-     std::unique_ptr<VertexShaderBuilder>  vertexShaderBuilder() {
-        return std::make_unique<GL46VertexShaderBuilder>();
-    }
 
-    std::unique_ptr<FragmentShaderBuilder> fragmentShaderBuilder() {
-        return std::make_unique<GL46FramgentShaderBuilder>();
-    }
+
+
 
     std::unique_ptr<RenderTargetBuilder> renderTargetBuilder() {
         return std::make_unique<GL46RenderTargetBuilder>();
