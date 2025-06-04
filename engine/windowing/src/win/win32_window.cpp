@@ -100,7 +100,7 @@ static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     return 0;
 }
 
-HWND ENGINE_API create_window(int w, int h, bool fullscreen, HINSTANCE hInstance, const std::string& window_title) {
+HWND create_window(int w, int h, bool fullscreen, HINSTANCE hInstance, const std::string& window_title) {
 
     window_height = h;
     window_width = w;
