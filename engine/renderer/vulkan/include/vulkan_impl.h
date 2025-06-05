@@ -54,7 +54,9 @@ struct QueueFamilyIndices {
 };
 
 struct VulkanShader {
+  std::vector<uint8_t> spirv_code;
   VkShaderModule shader_module;
+
 
 };
 
@@ -62,22 +64,28 @@ class VulkanRenderer {
 
   public:
 
+
     VulkanRenderer(HINSTANCE hInstance, HWND window);
     ~VulkanRenderer();
     void clearBuffers();
     void drawFrame();
-    VkShaderModule createShaderModule(uint8_t * vert_shader_code, uint32_t size);
+    VkShaderModule createShaderModule(std::vector<uint8_t> spirv);
 
   private:
     void createInstance();
+    bool createValidationLayers();
     void pickPhysicalDevice();
     void createLogicalDevice();
     void createSurface();
     void createSwapChain();
     void createImageViews();
     void createFrameBuffers();
-    void createGraphicsPipeline();
+    void createDefaultTestGraphicsPipeline();
     void createRenderPass();
+
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer,
+                      VkDeviceMemory &bufferMemory);
+
     void createVertexBuffers();
     void createCommandPool();
     void createSyncObjects();
@@ -113,10 +121,15 @@ class VulkanRenderer {
     VkSemaphore _renderFinishedSemaphore;
     VkFence _inFlightFence;
 
+    const std::vector<const char*> validationLayers = {
+      "VK_LAYER_KHRONOS_validation"
+    };
+
   const std::vector<PosColorVertex> vertices = {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{-0.3f, -0.5f}, {1.0f, 0.0f, 0.0f}},
     {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}}
   };
 };
 

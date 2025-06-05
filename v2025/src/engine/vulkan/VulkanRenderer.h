@@ -67,7 +67,7 @@ class VulkanRenderer {
     void createSwapChain();
     void createImageViews();
     void createFrameBuffers();
-    void createGraphicsPipeline();
+    void createDefaultTestGraphicsPipeline();
     void createRenderPass();
     void createVertexBuffers();
     void createCommandPool();

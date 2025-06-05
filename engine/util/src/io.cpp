@@ -7,7 +7,7 @@
 #include <fstream>
 #include "../include/util.h"
 
-uint8_t* read_file_binary(const std::string& filename) {
+std::vector<uint8_t> read_file_binary_to_vector(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
         throw std::runtime_error("Failed to open GLB file.");
@@ -21,6 +21,9 @@ uint8_t* read_file_binary(const std::string& filename) {
     // Read all data
     std::vector<uint8_t> data(fileSize);
     file.read(reinterpret_cast<char*>(data.data()), fileSize);
-    return data.data();
+    return data;
+}
 
+uint8_t* read_file_binary(const std::string& filename) {
+    return read_file_binary_to_vector(filename).data();
 }

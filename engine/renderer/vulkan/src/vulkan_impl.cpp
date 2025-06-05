@@ -23,6 +23,7 @@ static std::unordered_map<uint32_t, VulkanShader> shaderMap;
 
 VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hInstance), _window(window) {
     createInstance();
+    createValidationLayers();
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
@@ -30,7 +31,7 @@ VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hI
     createImageViews();
     createRenderPass();
 //    createDescriptorSetLayout();
-    //createGraphicsPipeline();
+    createDefaultTestGraphicsPipeline();
     createFrameBuffers();
     createCommandPool();
     createVertexBuffers();
@@ -85,34 +86,48 @@ void VulkanRenderer::createInstance() {
     extensionsRequested.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 
 
-    // Validation layers
-#ifdef NDEBUG
-    const bool enableValidationLayers = false;
-#else
-    const bool enableValidationLayers = true;
-#endif
-
-    const std::vector<const char*> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
     VkInstanceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledExtensionCount = extensionsRequested.size();
     createInfo.ppEnabledExtensionNames = extensionsRequested.data();
-    if (enableValidationLayers) {
-        createInfo.enabledLayerCount = 1;
+    if (createValidationLayers()) {
+        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
+    } else {
+        createInfo.enabledLayerCount = 0;
     }
+
 
     if (vkCreateInstance(&createInfo, NULL, &_instance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create Vulkan instance");
     }
+}
+
+bool VulkanRenderer::createValidationLayers() {
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+
+    for (const char* layerName : validationLayers) {
+        bool layerFound = false;
+        for (const auto& layerProperties : availableLayers) {
+            if (strcmp(layerName, layerProperties.layerName) == 0) {
+                layerFound = true;
+                break;
+            }
+        }
+
+        if (!layerFound) {
+        return false;
+        }
+    }
+
+    return true;
+
 }
 
 void VulkanRenderer::pickPhysicalDevice() {
@@ -306,13 +321,13 @@ void VulkanRenderer::createFrameBuffers() {
     }
 }
 
-VkShaderModule VulkanRenderer::createShaderModule(uint8_t *binaryCode, uint32_t size) {
+VkShaderModule VulkanRenderer::createShaderModule(std::vector<uint8_t> spirv) {
     auto shaderCreateInfo = VkShaderModuleCreateInfo();
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shaderCreateInfo.pNext = nullptr;
     shaderCreateInfo.flags = 0;
-    shaderCreateInfo.codeSize = size;
-    shaderCreateInfo.pCode = reinterpret_cast<uint32_t *>(binaryCode);
+    shaderCreateInfo.codeSize = spirv.size();
+    shaderCreateInfo.pCode = reinterpret_cast<uint32_t *>(spirv.data());
 
     VkShaderModule shaderModule;
     if (vkCreateShaderModule(_device, &shaderCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
@@ -322,28 +337,63 @@ VkShaderModule VulkanRenderer::createShaderModule(uint8_t *binaryCode, uint32_t 
     return shaderModule;
 }
 
-void VulkanRenderer::createGraphicsPipeline() {
+void VulkanRenderer::createDefaultTestGraphicsPipeline() {
     uint32_t vertSize = 0;
     uint32_t fragSize = 0;
 
+    auto vertShaderCode = R"(
+        #version 450
 
+        vec2 positions[3] = vec2[](
+            vec2(0.0, -0.5),
+            vec2(0.5, 0.5),
+            vec2(-0.5, 0.5)
+        );
 
-    auto vertShaderCode = read_file_binary("../assets/vulkan_shaders/output/vert.spv");
-    auto fragShaderCode = read_file_binary("../assets/vulkan_shaders/output/frag.spv");
+        void main() {
+            gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+        }
 
-    auto vertModule = createShaderModule(vertShaderCode, vertSize);
-    auto fragModule = createShaderModule(fragShaderCode, fragSize);
+    )";
+    auto fragShaderCode = R"(
+        #version 450
+
+        layout(location = 0) out vec4 outColor;
+
+        void main() {
+            outColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+
+    )";
+    // auto vert_handle = renderer::compileVertexShader(vertShaderCode);
+    // auto frag_handle = renderer::compileFragmentShader(fragShaderCode);
+    // auto vert_spirv = shaderMap[vert_handle.id].spirv_code;
+    // auto frag_spirv = shaderMap[frag_handle.id].spirv_code;
+
+    auto vert_spirv = read_file_binary_to_vector("../../assets/vk_shaders/basic_vert.spr");
+    auto frag_spirv = read_file_binary_to_vector("../../assets/vk_shaders/basic_frag.spr");
+    auto vert_handle = renderer::ShaderHandle{nextHandleId};
+    shaderMap[nextHandleId] = VulkanShader {vert_spirv, {}} ;
+    nextHandleId++;
+    auto frag_handle = renderer::ShaderHandle{nextHandleId};
+    shaderMap[nextHandleId] = VulkanShader {frag_spirv, {}} ;
+    nextHandleId++;
+
+    auto vert_module =  createShaderModule(vert_spirv);
+    auto frag_module = createShaderModule(frag_spirv);
+    shaderMap[vert_handle.id].shader_module = vert_module;
+    shaderMap[frag_handle.id].shader_module = frag_module;
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertShaderStageInfo.module = vertModule;
+    vertShaderStageInfo.module = vert_module;
     vertShaderStageInfo.pName = "main";
 
     VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
     fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragShaderStageInfo.module = fragModule;
+    fragShaderStageInfo.module = frag_module;
     fragShaderStageInfo.pName = "main";
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
@@ -450,8 +500,8 @@ void VulkanRenderer::createGraphicsPipeline() {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
 
-    vkDestroyShaderModule(_device, fragModule, nullptr);
-    vkDestroyShaderModule(_device, vertModule, nullptr);
+    vkDestroyShaderModule(_device, frag_module, nullptr);
+    vkDestroyShaderModule(_device, vert_module, nullptr);
 }
 
 void VulkanRenderer::createRenderPass() {
@@ -496,49 +546,135 @@ void VulkanRenderer::createRenderPass() {
     }
 }
 
-void VulkanRenderer::createVertexBuffers() {
+void VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(_device, &bufferInfo, nullptr, &_vertexBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create vertex buffer!");
+    if (vkCreateBuffer(_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create buffer!");
     }
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_device, _vertexBuffer, &memRequirements);
-
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(_device, buffer, &memoryRequirements);
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
 
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-
-    auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    uint32_t typeFilter = memRequirements.memoryTypeBits;
+    VkMemoryAllocateInfo memoryAllocateInfo{};
+    memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memoryAllocateInfo.allocationSize = memoryRequirements.size;
+    uint32_t typeFilter = memoryRequirements.memoryTypeBits;
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            allocInfo.memoryTypeIndex = i;
+            memoryAllocateInfo.memoryTypeIndex = i;
             break;
         }
     }
 
-    VkDeviceMemory vertexBufferMemory;
-    if (vkAllocateMemory(_device, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate vertex buffer memory!");
+    if (vkAllocateMemory(_device, &memoryAllocateInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate buffer memory!");
     }
 
-    if (vkBindBufferMemory(_device, _vertexBuffer, vertexBufferMemory, 0) != VK_SUCCESS) {
-        throw std::runtime_error("failed to bind vertex buffer memory!");
-    };
+    vkBindBufferMemory(_device, buffer, bufferMemory, 0);
 
-    void* data;
-    vkMapMemory(_device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-    memcpy(data, vertices.data(), (size_t) bufferInfo.size);
-    vkUnmapMemory(_device, vertexBufferMemory);
+
+}
+
+void VulkanRenderer::createVertexBuffers() {
+    // Use a staging buffer, accessed by host and the "real" vertex buffer, GPU only.
+    // We copy data from CPU to the staging buffer, then to the actual vertex buffer on gpu. only once.
+    // Every draw will then be done from the GPU vertex buffer.
+    VkDeviceSize bufferSize = vertices.size() * sizeof(vertices[0]);
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+    void *data;
+    vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t) bufferSize);
+    vkUnmapMemory(_device, stagingBufferMemory);
+
+    VkDeviceMemory vertexBufferMemory;
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, vertexBufferMemory);
+
+    // Not the actual copy
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = _commandPool;
+    allocInfo.commandBufferCount = 1;
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(_device, &allocInfo, &commandBuffer);
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    VkBufferCopy copyRegion{};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = bufferSize;
+    vkCmdCopyBuffer(commandBuffer, stagingBuffer, _vertexBuffer, 1, &copyRegion);
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+    vkQueueSubmit(_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(_graphicsQueue);
+
+    vkFreeCommandBuffers(_device, _commandPool, 1, &commandBuffer);
+
+    // Cleanup our staging buffer, we no longer need it:
+    vkDestroyBuffer(_device, stagingBuffer, nullptr);
+    vkFreeMemory(_device, stagingBufferMemory, nullptr);
+
+
+    // VkBufferCreateInfo bufferInfo{};
+    // bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    // bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+    // bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    // bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    //
+    // if (vkCreateBuffer(_device, &bufferInfo, nullptr, &_vertexBuffer) != VK_SUCCESS) {
+    //     throw std::runtime_error("failed to create vertex buffer!");
+    // }
+    //
+    // VkMemoryRequirements memRequirements;
+    // vkGetBufferMemoryRequirements(_device, _vertexBuffer, &memRequirements);
+    //
+    // VkPhysicalDeviceMemoryProperties memProperties;
+    // vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
+    //
+    // VkMemoryAllocateInfo allocInfo{};
+    // allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    // allocInfo.allocationSize = memRequirements.size;
+    //
+    // auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    // uint32_t typeFilter = memRequirements.memoryTypeBits;
+    // for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    //     if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+    //         allocInfo.memoryTypeIndex = i;
+    //         break;
+    //     }
+    // }
+    //
+    // VkDeviceMemory vertexBufferMemory;
+    // if (vkAllocateMemory(_device, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
+    //     throw std::runtime_error("failed to allocate vertex buffer memory!");
+    // }
+    //
+    // if (vkBindBufferMemory(_device, _vertexBuffer, vertexBufferMemory, 0) != VK_SUCCESS) {
+    //     throw std::runtime_error("failed to bind vertex buffer memory!");
+    // };
+    //
+    // void* data;
+    // vkMapMemory(_device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+    // memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+    // vkUnmapMemory(_device, vertexBufferMemory);
 
 }
 
@@ -641,7 +777,7 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
     renderPassInfo.framebuffer = _swapChainFramebuffers[imageIndex];
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = _extent;
-    VkClearValue clearColor = {{{0.5f, 0.5f, 0.0f, 1.0f}}};
+    VkClearValue clearColor = {{{0.1f, 0.0f, 0.1f, 1.0f}}};
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -738,13 +874,47 @@ bool VulkanRenderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 namespace renderer {
 
     void drawMesh(renderer::Mesh m, const std::string& debugInfo ) {
-
+        vulkan_renderer->drawFrame();
     }
 
 
 
 
     ShaderHandle renderer::compileVertexShader(const std::string& source) {
+        shaderc::Compiler compiler;
+        shaderc::CompileOptions options;
+
+        // options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
+        // options.SetTargetSpirv(shaderc_spirv_version_1_3);
+        // options.SetSourceLanguage(shaderc_source_language_glsl);
+        // options.SetOptimizationLevel(shaderc_optimization_level_zero); // or desired level
+        // options.SetGenerateDebugInfo();
+        // options.SetWarningsAsErrors();
+
+        auto preprocess_result = compiler.PreprocessGlsl(source, shaderc_glsl_vertex_shader, "vs", options);
+        if (preprocess_result.GetCompilationStatus() != shaderc_compilation_status_success) {
+            std::cout << "preprocess error" << preprocess_result.GetErrorMessage() << std::endl;
+            exit(1);
+        }
+
+        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source, shaderc_shader_kind::shaderc_glsl_vertex_shader, "", options);
+        if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+            std::cout << "shader compilation error: " << std::endl <<result.GetErrorMessage() << std::endl;
+            exit(1);
+        }
+        std::vector<uint8_t> spirv(result.cbegin(), result.cend());
+        if (spirv.size() == 0 || spirv.size()* sizeof(uint32_t) %4 != 0) {
+            std::cerr << "spirv size mismatch" << std::endl;
+            exit(1);
+        }
+
+        ShaderHandle handle = ShaderHandle {nextHandleId};
+        shaderMap[nextHandleId] = VulkanShader {spirv, {}} ;
+        nextHandleId++;
+        return handle;
+    }
+
+    ShaderHandle renderer::compileFragmentShader(const std::string& source) {
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
 
@@ -755,32 +925,28 @@ namespace renderer {
         options.SetGenerateDebugInfo();
         options.SetWarningsAsErrors();
 
-        auto preprocess_result = compiler.PreprocessGlsl(source, shaderc_glsl_vertex_shader, "vs", options);
+        auto preprocess_result = compiler.PreprocessGlsl(source, shaderc_glsl_fragment_shader, "fs", options);
         if (preprocess_result.GetCompilationStatus() != shaderc_compilation_status_success) {
             std::cout << "preprocess error" << preprocess_result.GetErrorMessage() << std::endl;
             exit(123121);
         }
 
-        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source, shaderc_shader_kind::shaderc_glsl_vertex_shader, "vs", options);
+        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source, shaderc_shader_kind::shaderc_glsl_fragment_shader, "fs", options);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             std::cout << "shader compilation error: " << std::endl <<result.GetErrorMessage() << std::endl;
             //handle errors
             exit(123123);
         }
-        std::vector<uint8_t> vertexSPRV(result.cbegin(), result.cend());
-        if (vertexSPRV.size() == 0 || vertexSPRV.size()* sizeof(uint32_t) %4 != 0) {
+        std::vector<uint8_t> spirv(result.cbegin(), result.cend());
+        if (spirv.size() == 0 || spirv.size()* sizeof(uint32_t) %4 != 0) {
             std::cerr << "spirv size mismatch" << std::endl;
             exit(1);
         }
-        auto shader_module = vulkan_renderer->createShaderModule(vertexSPRV.data(), vertexSPRV.size());
+
         ShaderHandle handle = ShaderHandle {nextHandleId};
-        shaderMap[nextHandleId] = VulkanShader {shader_module} ;
+        shaderMap[nextHandleId] = VulkanShader {spirv, {}} ;
         nextHandleId++;
         return handle;
-    }
-
-    ShaderHandle renderer::compileFragmentShader(const std::string& source) {
-        return {};
     }
 
 

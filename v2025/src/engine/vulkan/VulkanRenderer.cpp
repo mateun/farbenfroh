@@ -18,7 +18,7 @@ VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hI
     createSwapChain();
     createImageViews();
     createRenderPass();
-    createGraphicsPipeline();
+    createDefaultTestGraphicsPipeline();
     createFrameBuffers();
     createCommandPool();
     createVertexBuffers();
@@ -308,7 +308,7 @@ VkShaderModule VulkanRenderer::createShaderModule(uint8_t *binaryCode, uint32_t 
     return shaderModule;
 }
 
-void VulkanRenderer::createGraphicsPipeline() {
+void VulkanRenderer::createDefaultTestGraphicsPipeline() {
     uint32_t vertSize = 0;
     uint32_t fragSize = 0;
 
