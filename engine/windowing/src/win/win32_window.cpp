@@ -2,7 +2,9 @@
 // Created by mgrus on 23.04.2025.
 //
 
-#include <engine.h>
+#include <symbol_exports.h>
+#include <string>
+#include <windows.h>
 #include <windowsx.h>
 
 
@@ -167,7 +169,7 @@ HWND create_window(int w, int h, bool fullscreen, HINSTANCE hInstance, const std
 
 }
 
-bool ENGINE_API poll_window(HWND window) {
+bool poll_window(HWND window) {
 
     MSG msg;
     while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) > 0) {

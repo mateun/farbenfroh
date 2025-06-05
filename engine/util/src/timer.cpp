@@ -2,7 +2,8 @@
 // Created by mgrus on 28.05.2025.
 //
 
-#include "../util/include/util.h"
+// #include "../util/include/util.h"
+#include <util.h>
 
 // Private variables needed for high performance timing on windows:
 static LARGE_INTEGER freq;

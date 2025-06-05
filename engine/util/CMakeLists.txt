@@ -8,4 +8,4 @@ add_library(util STATIC
 target_include_directories(util
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-#target_link_libraries(lua547 PRIVATE gamestate)
+target_link_libraries(util PRIVATE engine_common gamestate)

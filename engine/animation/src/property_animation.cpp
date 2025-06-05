@@ -2,7 +2,9 @@
 // Created by mgrus on 28.05.2025.
 //
 
-#include "../animation/include/property_animation.h"
+
+// #include "../../animation/include/property_animation.h"
+#include <property_animation.h>
 #include "iostream"
 
 

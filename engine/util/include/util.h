@@ -4,7 +4,7 @@
 
 #ifndef UTIL_H
 #define UTIL_H
-#include "engine.h"
+#include <engine.h>
 
 struct Timer {
     LARGE_INTEGER start_ticks;

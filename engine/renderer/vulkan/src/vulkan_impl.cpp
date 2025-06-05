@@ -30,11 +30,12 @@ VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hI
     createSwapChain();
     createImageViews();
     createRenderPass();
-//    createDescriptorSetLayout();
+    //createDescriptorSetLayout();
     createDefaultTestGraphicsPipeline();
     createFrameBuffers();
     createCommandPool();
-    createVertexBuffers();
+    createVertexBuffer();
+    createIndexBuffer();
     createCommandBuffer();
     createSyncObjects();
 
@@ -337,12 +338,31 @@ VkShaderModule VulkanRenderer::createShaderModule(std::vector<uint8_t> spirv) {
     return shaderModule;
 }
 
+VkShaderModule VulkanRenderer::createShaderModule(std::vector<uint32_t> spirv) {
+    auto shaderCreateInfo = VkShaderModuleCreateInfo();
+    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shaderCreateInfo.pNext = nullptr;
+    shaderCreateInfo.flags = 0;
+    shaderCreateInfo.codeSize = spirv.size() * sizeof(uint32_t);
+    shaderCreateInfo.pCode = spirv.data();
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(_device, &shaderCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create shader module!");
+    }
+
+    return shaderModule;
+}
+
 void VulkanRenderer::createDefaultTestGraphicsPipeline() {
     uint32_t vertSize = 0;
     uint32_t fragSize = 0;
 
     auto vertShaderCode = R"(
         #version 450
+
+        layout(location = 0) in vec2 inPosition;
+        layout(location = 1) in vec3 inColor;
 
         vec2 positions[3] = vec2[](
             vec2(0.0, -0.5),
@@ -351,7 +371,8 @@ void VulkanRenderer::createDefaultTestGraphicsPipeline() {
         );
 
         void main() {
-            gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+            //gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+            gl_Position = vec4(inPosition, 0.0, 1.0);
         }
 
     )";
@@ -361,23 +382,23 @@ void VulkanRenderer::createDefaultTestGraphicsPipeline() {
         layout(location = 0) out vec4 outColor;
 
         void main() {
-            outColor = vec4(1.0, 0.0, 0.0, 1.0);
+            outColor = vec4(.5, 0.0, 0.5, 1.0);
         }
 
     )";
-    // auto vert_handle = renderer::compileVertexShader(vertShaderCode);
-    // auto frag_handle = renderer::compileFragmentShader(fragShaderCode);
-    // auto vert_spirv = shaderMap[vert_handle.id].spirv_code;
-    // auto frag_spirv = shaderMap[frag_handle.id].spirv_code;
+    auto vert_handle = renderer::compileVertexShader(vertShaderCode);
+    auto frag_handle = renderer::compileFragmentShader(fragShaderCode);
+    auto vert_spirv = shaderMap[vert_handle.id].spirv_code;
+    auto frag_spirv = shaderMap[frag_handle.id].spirv_code;
 
-    auto vert_spirv = read_file_binary_to_vector("../../assets/vk_shaders/basic_vert.spr");
-    auto frag_spirv = read_file_binary_to_vector("../../assets/vk_shaders/basic_frag.spr");
-    auto vert_handle = renderer::ShaderHandle{nextHandleId};
-    shaderMap[nextHandleId] = VulkanShader {vert_spirv, {}} ;
-    nextHandleId++;
-    auto frag_handle = renderer::ShaderHandle{nextHandleId};
-    shaderMap[nextHandleId] = VulkanShader {frag_spirv, {}} ;
-    nextHandleId++;
+    // auto vert_spirv = read_file_binary_to_vector("../../assets/vk_shaders/basic_vert.spr");
+    // auto frag_spirv = read_file_binary_to_vector("../../assets/vk_shaders/basic_frag.spr");
+    // auto vert_handle = renderer::ShaderHandle{nextHandleId};
+    // shaderMap[nextHandleId] = VulkanShader {vert_spirv, {}} ;
+    // nextHandleId++;
+    // auto frag_handle = renderer::ShaderHandle{nextHandleId};
+    // shaderMap[nextHandleId] = VulkanShader {frag_spirv, {}} ;
+    // nextHandleId++;
 
     auto vert_module =  createShaderModule(vert_spirv);
     auto frag_module = createShaderModule(frag_spirv);
@@ -582,24 +603,7 @@ void VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 
 }
 
-void VulkanRenderer::createVertexBuffers() {
-    // Use a staging buffer, accessed by host and the "real" vertex buffer, GPU only.
-    // We copy data from CPU to the staging buffer, then to the actual vertex buffer on gpu. only once.
-    // Every draw will then be done from the GPU vertex buffer.
-    VkDeviceSize bufferSize = vertices.size() * sizeof(vertices[0]);
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-    void *data;
-    vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t) bufferSize);
-    vkUnmapMemory(_device, stagingBufferMemory);
-
-    VkDeviceMemory vertexBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, vertexBufferMemory);
-
-    // Not the actual copy
+void VulkanRenderer::copyBuffer(VkDeviceSize bufferSize, VkBuffer sourceBuffer, VkBuffer targetBuffer) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -616,7 +620,7 @@ void VulkanRenderer::createVertexBuffers() {
     copyRegion.srcOffset = 0;
     copyRegion.dstOffset = 0;
     copyRegion.size = bufferSize;
-    vkCmdCopyBuffer(commandBuffer, stagingBuffer, _vertexBuffer, 1, &copyRegion);
+    vkCmdCopyBuffer(commandBuffer, sourceBuffer, targetBuffer, 1, &copyRegion);
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};
@@ -627,6 +631,27 @@ void VulkanRenderer::createVertexBuffers() {
     vkQueueWaitIdle(_graphicsQueue);
 
     vkFreeCommandBuffers(_device, _commandPool, 1, &commandBuffer);
+}
+
+void VulkanRenderer::createVertexBuffer() {
+    // Use a staging buffer, accessed by host and the "real" vertex buffer, GPU only.
+    // We copy data from CPU to the staging buffer, then to the actual vertex buffer on gpu. only once.
+    // Every draw will then be done from the GPU vertex buffer.
+    VkDeviceSize bufferSize = vertices.size() * sizeof(vertices[0]);
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+    void *data;
+    vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t) bufferSize);
+    vkUnmapMemory(_device, stagingBufferMemory);
+
+    VkDeviceMemory vertexBufferMemory;
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, vertexBufferMemory);
+
+    // Now the actual copy
+    copyBuffer(bufferSize, stagingBuffer, _vertexBuffer);
 
     // Cleanup our staging buffer, we no longer need it:
     vkDestroyBuffer(_device, stagingBuffer, nullptr);
@@ -676,6 +701,27 @@ void VulkanRenderer::createVertexBuffers() {
     // memcpy(data, vertices.data(), (size_t) bufferInfo.size);
     // vkUnmapMemory(_device, vertexBufferMemory);
 
+}
+
+void VulkanRenderer::createIndexBuffer() {
+    VkDeviceSize bufferSize = indices.size() * sizeof(indices[0]);
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    
+    void *data;
+    vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, indices.data(), (size_t) bufferSize);
+    vkUnmapMemory(_device, stagingBufferMemory);
+
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indexBuffer, _indexBufferMemory);
+
+    copyBuffer(bufferSize, stagingBuffer, _indexBuffer);
+
+    vkDestroyBuffer(_device, stagingBuffer, nullptr);
+    vkFreeMemory(_device, stagingBufferMemory, nullptr);
+    
 }
 
 
@@ -802,7 +848,11 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    vkCmdBindIndexBuffer(commandBuffer, _indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+    //vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
     //vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
@@ -897,19 +947,29 @@ namespace renderer {
             exit(1);
         }
 
-        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source, shaderc_shader_kind::shaderc_glsl_vertex_shader, "", options);
+        const std::string prep_code(preprocess_result.begin(), preprocess_result.end());
+
+        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(prep_code, shaderc_shader_kind::shaderc_glsl_vertex_shader, "", options);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             std::cout << "shader compilation error: " << std::endl <<result.GetErrorMessage() << std::endl;
             exit(1);
         }
-        std::vector<uint8_t> spirv(result.cbegin(), result.cend());
+        std::vector<uint32_t> spirv(result.cbegin(), result.cend());
+        std::cout << "SPIR-V magic: 0x" << std::hex << spirv[0] << std::dec << std::endl;
         if (spirv.size() == 0 || spirv.size()* sizeof(uint32_t) %4 != 0) {
             std::cerr << "spirv size mismatch" << std::endl;
             exit(1);
         }
 
+#define skip_module_creation
+#ifndef skip_module_creation
+
+    auto module = vulkan_renderer->createShaderModule(spirv);
+
+#endif
+
         ShaderHandle handle = ShaderHandle {nextHandleId};
-        shaderMap[nextHandleId] = VulkanShader {spirv, {}} ;
+        shaderMap[nextHandleId] = VulkanShader {spirv, {}};
         nextHandleId++;
         return handle;
     }
@@ -937,7 +997,7 @@ namespace renderer {
             //handle errors
             exit(123123);
         }
-        std::vector<uint8_t> spirv(result.cbegin(), result.cend());
+        std::vector<uint32_t> spirv(result.cbegin(), result.cend());
         if (spirv.size() == 0 || spirv.size()* sizeof(uint32_t) %4 != 0) {
             std::cerr << "spirv size mismatch" << std::endl;
             exit(1);
@@ -991,15 +1051,11 @@ namespace renderer {
        return false;
     }
 
-    template ENGINE_API bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
-    template ENGINE_API bool setShaderValue<float>(ProgramHandle, const std::string&, const float&);
-    template ENGINE_API bool setShaderValue<glm::vec2>(ProgramHandle, const std::string&, const glm::vec2&);
+    template bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
+    template bool setShaderValue<float>(ProgramHandle, const std::string&, const float&);
+    template bool setShaderValue<glm::vec2>(ProgramHandle, const std::string&, const glm::vec2&);
 
 }
-
-
-
-
 
 void init_vulkan(HWND hwnd, HINSTANCE hinst, bool useSRGB, int msaaSampleCount) {
     if (!vulkan_renderer) {

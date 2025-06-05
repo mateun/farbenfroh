@@ -5,9 +5,8 @@
 #ifndef OPENGL46_H
 #define OPENGL46_H
 
-#include <symbol_exports.h>
 
-#include "../renderer/include/renderer.h"
+#include <renderer.h>
 #include <gl/gl.h>
 #include <cinttypes>
 
@@ -83,10 +82,7 @@ private:
 };
 
 
-
-
-
-extern "C" ENGINE_API void initOpenGL46(HWND, bool useSRGB = false, int msaaSampleCount = 0);
+void initOpenGL46(HWND, bool useSRGB = false, int msaaSampleCount = 0);
 
 
 

@@ -6,7 +6,6 @@
 #define JOINT_H
 
 #include <string>
-#include <glm/glm.hpp>
 #include <map>
 #include <vector>
 #include <glm/gtc/quaternion.hpp>

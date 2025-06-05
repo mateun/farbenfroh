@@ -23,7 +23,7 @@
 #include <nljson.h>
 #include <skeleton.h>
 
-#include "../renderer/include/renderer.h"
+#include <renderer.h>
 #include "base64.h"
 
 

@@ -1,7 +1,7 @@
 //
 // Created by mgrus on 25.04.2025.
 //
-#include "../../include/renderer.h"
+#include <renderer.h>
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 #define STB_IMAGE_IMPLEMENTATION

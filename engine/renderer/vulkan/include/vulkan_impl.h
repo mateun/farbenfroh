@@ -13,8 +13,8 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <vulkan/vulkan.h>
-
-#include "symbol_exports.h"
+// #include <renderer.h>
+#include <symbol_exports.h>
 
 struct PosColorVertex {
   glm::vec2 pos;
@@ -54,7 +54,7 @@ struct QueueFamilyIndices {
 };
 
 struct VulkanShader {
-  std::vector<uint8_t> spirv_code;
+  std::vector<uint32_t> spirv_code;
   VkShaderModule shader_module;
 
 
@@ -70,8 +70,9 @@ class VulkanRenderer {
     void clearBuffers();
     void drawFrame();
     VkShaderModule createShaderModule(std::vector<uint8_t> spirv);
+    VkShaderModule createShaderModule(std::vector<uint32_t> spirv);
 
-  private:
+
     void createInstance();
     bool createValidationLayers();
     void pickPhysicalDevice();
@@ -82,20 +83,21 @@ class VulkanRenderer {
     void createFrameBuffers();
     void createDefaultTestGraphicsPipeline();
     void createRenderPass();
-
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer,
                       VkDeviceMemory &bufferMemory);
 
-    void createVertexBuffers();
+    void copyBuffer(VkDeviceSize bufferSize, VkBuffer sourceBuffer, VkBuffer targetBuffer);
+
+    void createVertexBuffer();
+    void createIndexBuffer();
     void createCommandPool();
     void createSyncObjects();
     void createCommandBuffer();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
     bool isDeviceSuitable(VkPhysicalDevice device);
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-
+private:
     HINSTANCE _hInstance;
     HWND _window;
     VkInstance _instance;
@@ -117,6 +119,9 @@ class VulkanRenderer {
     VkCommandBuffer _commandBuffer;
     VkBuffer _vertexBuffer;
 
+    VkBuffer _indexBuffer;
+    VkDeviceMemory _indexBufferMemory;
+
     VkSemaphore _imageAvailableSemaphore;
     VkSemaphore _renderFinishedSemaphore;
     VkFence _inFlightFence;
@@ -129,10 +134,14 @@ class VulkanRenderer {
     {{-0.3f, -0.5f}, {1.0f, 0.0f, 0.0f}},
     {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
     {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}}
+    {{0.4f, -0.5f}, {0.0f, 1.0f, 0.0f}}
+  };
+
+  const std::vector<uint16_t> indices = {
+    0, 1, 2, 0, 3,1
   };
 };
 
-extern "C" ENGINE_API void init_vulkan(HWND, HINSTANCE, bool useSRGB = false, int msaaSampleCount = 0);
+void init_vulkan(HWND, HINSTANCE, bool useSRGB = false, int msaaSampleCount = 0);
 
 #endif //VULKAN_IMPL_H
