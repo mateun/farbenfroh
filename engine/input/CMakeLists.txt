@@ -7,4 +7,4 @@ add_library(input STATIC
 
 target_include_directories(input PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(input PRIVATE windowing)
+target_link_libraries(input PRIVATE windowing engine_common)

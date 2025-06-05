@@ -10,7 +10,6 @@
 #include <glm/gtx/quaternion.hpp>
 #include <cstdio>
 #include <stdexcept>
-#include <symbol_exports.h>
 #include "../include/opengl46.h"
 
 #include <complex>
@@ -446,11 +445,11 @@ void initOpenGL46(HWND hwnd, bool useSRGB, int msaaSampleCount) {
 namespace renderer {
 
 
-    void ENGINE_API present(HDC hdc) {
+    void present(HDC hdc) {
         SwapBuffers(hdc);
     }
 
-    void ENGINE_API clear() {
+    void clear() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
@@ -1157,8 +1156,8 @@ namespace renderer {
 
 
 
-    template ENGINE_API bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
-    template ENGINE_API bool setShaderValue<float>(ProgramHandle, const std::string&, const float&);
-    template ENGINE_API bool setShaderValue<glm::vec2>(ProgramHandle, const std::string&, const glm::vec2&);
+    template bool setShaderValue<glm::mat4>(ProgramHandle, const std::string&, const glm::mat4&);
+    template bool setShaderValue<float>(ProgramHandle, const std::string&, const float&);
+    template bool setShaderValue<glm::vec2>(ProgramHandle, const std::string&, const glm::vec2&);
 
 }

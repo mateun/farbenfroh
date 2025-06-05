@@ -5,7 +5,6 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#include "../include/symbol_exports.h"
 #include "../../windowing/include/win32_window.h"
 #include "../../renderer/common/include/renderer.h"
 // #include "../../renderer/opengl46/include/opengl46.h"

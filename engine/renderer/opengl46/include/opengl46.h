@@ -11,8 +11,6 @@
 #include <cinttypes>
 
 
-
-
 struct GLTexture {
     GLuint id;
     uint32_t width;

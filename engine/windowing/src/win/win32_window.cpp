@@ -2,7 +2,6 @@
 // Created by mgrus on 23.04.2025.
 //
 
-#include <symbol_exports.h>
 #include <string>
 #include <windows.h>
 #include <windowsx.h>

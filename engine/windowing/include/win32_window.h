@@ -6,7 +6,6 @@
 #define WIN32_WINDOW_H
 
 #include <Windows.h>
-#include <symbol_exports.h>
 #include <string>
 
 int win_mouse_x();

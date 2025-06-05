@@ -21,7 +21,7 @@ struct Font {
 
 };
 
-uint32_t nextHandleId = 1; // start at 1 to reserve 0 as "invalid"
+static uint32_t nextHandleId = 1; // start at 1 to reserve 0 as "invalid"
 static std::unordered_map<uint32_t, Font> fontMap;
 
 namespace renderer {

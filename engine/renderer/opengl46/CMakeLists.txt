@@ -4,9 +4,9 @@ add_library(opengl46 STATIC
         ${opengl46_src}
 )
 
-target_link_directories(opengl46 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../../v2025/extlibs/glew-2.2.0/lib  )
+target_link_directories(opengl46 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../../v2025/extlibs/glew-2.2.0/lib)
 target_include_directories(opengl46 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../../v2025/extlibs/glew-2.2.0/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../../v2025/src/engine/io )
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../v2025/src/engine/io include)
 target_link_libraries(opengl46 common_renderer engine_common glew32 opengl32  animation )
 
 #target_link_libraries(vulkan engine_common vulkan-1 util common_renderer shaderc_combinedd)

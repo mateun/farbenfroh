@@ -6,7 +6,6 @@
 #define RENDERER_H
 
 #include <Windows.h>
-#include <symbol_exports.h>
 #include <vector>
 #include <string>
 #include <memory>
