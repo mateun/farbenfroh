@@ -507,11 +507,133 @@ VkShaderModule VulkanRenderer::createShaderModule(std::vector<uint32_t> spirv) {
     return shaderModule;
 }
 
+VkPipeline VulkanRenderer::createGraphicsPipeline(VkShaderModule vertexModule, VkShaderModule fragModule, std::vector<VkVertexInputAttributeDescription> attributeDescriptions,
+    VkVertexInputBindingDescription bindingDescription) {
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertShaderStageInfo.module = vertexModule;
+    vertShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragShaderStageInfo.module = fragModule;
+    fragShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+    // How our vertex data looks like:
+    //auto bindingDescription = PosColorVertex::getBindingDescription();
+    //auto attributeDescriptions = PosColorVertex::getAttributeDescriptions();
+
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+    // Describe the geometry and if primitive restart is enabled:
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+ VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float) _extent.width;
+    viewport.height = (float) _extent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = _extent;
+
+    VkPipelineViewportStateCreateInfo viewportState{};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.pViewports = &viewport;
+    viewportState.scissorCount = 1;
+    viewportState.pScissors = &scissor;
+
+    VkPipelineRasterizationStateCreateInfo rasterizer{};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    // rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.lineWidth = 1.0f;
+
+    VkPipelineMultisampleStateCreateInfo multisampling{};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisampling.minSampleShading = 1.0f; // Optional
+    multisampling.pSampleMask = nullptr; // Optional
+    multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+    multisampling.alphaToOneEnable = VK_FALSE; // Optional
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &_descriptorSetLayout;
+
+    if (vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = nullptr; // Optional
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.layout = _pipelineLayout;
+    pipelineInfo.renderPass = _renderPass;
+    pipelineInfo.subpass = 0;
+
+    VkPipeline pipeline;
+    if (vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create graphics pipeline!");
+    }
+
+    return pipeline;
+
+}
 
 
 void VulkanRenderer::createDefaultTestGraphicsPipeline() {
-    uint32_t vertSize = 0;
-    uint32_t fragSize = 0;
 
     auto vertShaderCode = R"(
         #version 450
@@ -1254,6 +1376,51 @@ void VulkanRenderer::recordCustomCommandBuffer(VkCommandBuffer commandBuffer, ui
 size_t VulkanRenderer::getNumberOfSwapChainImages() {
     return _swapChainImages.size();
 }
+
+shaderc_shader_kind to_shaderc_kind(VulkanShaderType shaderType) {
+    switch (shaderType) {
+        case VulkanShaderType::Vertex:
+            return shaderc_glsl_vertex_shader;
+        case VulkanShaderType::Fragment:
+            return shaderc_glsl_fragment_shader;
+        case VulkanShaderType::Geometry:
+            return shaderc_glsl_geometry_shader;
+        case VulkanShaderType::Compute:
+            return shaderc_glsl_compute_shader;
+        case VulkanShaderType::TessControl:
+            return shaderc_glsl_tess_control_shader;
+        default: return {};
+    }
+}
+
+std::vector<uint32_t> VulkanRenderer::compileShader(const std::string& source, VulkanShaderType shaderType) {
+    shaderc::Compiler compiler;
+    shaderc::CompileOptions options;
+
+    auto preprocess_result = compiler.PreprocessGlsl(source, to_shaderc_kind(shaderType), "vs", options);
+    if (preprocess_result.GetCompilationStatus() != shaderc_compilation_status_success) {
+        std::cout << "preprocess error" << preprocess_result.GetErrorMessage() << std::endl;
+        exit(1);
+    }
+
+    const std::string prep_code(preprocess_result.begin(), preprocess_result.end());
+
+    shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(prep_code, to_shaderc_kind(shaderType), "vs", options);
+    if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+        std::cout << "shader compilation error: " << std::endl <<result.GetErrorMessage() << std::endl;
+        exit(1);
+    }
+
+    std::vector spirv(result.cbegin(), result.cend());
+    std::cout << "SPIR-V magic: 0x" << std::hex << spirv[0] << std::dec << std::endl;
+    if (spirv.size() == 0 || spirv.size()* sizeof(uint32_t) %4 != 0) {
+        std::cerr << "spirv size mismatch" << std::endl;
+        exit(1);
+    }
+
+    return spirv;
+}
+
 
 bool VulkanRenderer::isDeviceSuitable(VkPhysicalDevice device) {
     VkPhysicalDeviceProperties physicalDeviceProperties = {};

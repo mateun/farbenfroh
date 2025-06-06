@@ -12,10 +12,27 @@
 #include <Windows.h>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
+#include <renderer.h>
+#include <shaderc/shaderc.h>
 
-#include "renderer.h"
+enum class VulkanShaderType {
+  Vertex,
+  Fragment,
+  Geometry,
+  Compute,
+  TessControl,
+  TessEvaluation,
+  RayGen,
+  Miss,
+  ClosestHit
 
-template<typename T, typename  N>
+};
+
+shaderc_shader_kind to_shaderc_kind(VulkanShaderType shaderType);
+
+
+
+template<typename T>
 struct VulkanVertexDescriber {
 
     static VkVertexInputBindingDescription getBindingDescription() {
@@ -162,6 +179,9 @@ class VulkanRenderer {
 
     void createCommandBuffer();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+    std::vector<uint32_t> compileShader(const std::string &source, VulkanShaderType shaderType);
+
     bool isDeviceSuitable(VkPhysicalDevice device);
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     VkShaderModule createShaderModule(std::vector<uint8_t> spirv);
@@ -174,6 +194,9 @@ class VulkanRenderer {
     void recordCustomCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkBuffer vertexBuffer, VkBuffer indexBuffer, int instance_count);
 
     size_t getNumberOfSwapChainImages();
+
+    VkPipeline createGraphicsPipeline(VkShaderModule vertexModule, VkShaderModule fragModule, std::vector<VkVertexInputAttributeDescription>
+                                      attributeDescriptions, VkVertexInputBindingDescription bindingDescription);
 
   private:
     HINSTANCE _hInstance;
