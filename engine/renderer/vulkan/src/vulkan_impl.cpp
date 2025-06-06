@@ -15,6 +15,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <chrono>
+#include <complex.h>
+#include <complex.h>
 #include <engine.h>
 #include <unordered_map>
 
@@ -41,19 +43,24 @@ void VulkanRenderer::createQueryPool() {
     }
 }
 
-VkDescriptorSetLayout VulkanRenderer::createDescriptorSetLayoutSSBO(uint32_t binding) {
-    VkDescriptorSetLayoutBinding ssboLayoutBinding{};
-    ssboLayoutBinding.binding = binding;
-    ssboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    ssboLayoutBinding.descriptorCount = 1;
-    ssboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    ssboLayoutBinding.pImmutableSamplers = nullptr;
+VkDescriptorSetLayout VulkanRenderer::createDescriptorSetLayout(std::vector<std::tuple<uint32_t, VkDescriptorType>> bindingInfos) {
+    std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
+    for (auto bi : bindingInfos) {
+        
+        VkDescriptorSetLayoutBinding layoutBinding{};
+        layoutBinding.binding = std::get<0>(bi);
+        layoutBinding.descriptorType = std::get<1>(bi);
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        layoutBinding.pImmutableSamplers = nullptr;
+        layoutBindings.push_back(layoutBinding);
+    }
 
     VkDescriptorSetLayout descriptorSetLayout{};
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &ssboLayoutBinding;
+    layoutInfo.bindingCount = layoutBindings.size();
+    layoutInfo.pBindings = layoutBindings.data();
     vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &descriptorSetLayout);
 
     return descriptorSetLayout;
@@ -96,7 +103,7 @@ void VulkanRenderer::createDescriptorPool() {
     }
 }
 
-void VulkanRenderer::createDescriptorSets() {
+void VulkanRenderer::createDescriptorSetsForLayout(VkDescriptorSetLayout layout, std::vector<VkBuffer> ordered_buffers) {
     std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, _descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -109,28 +116,34 @@ void VulkanRenderer::createDescriptorSets() {
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
+    // TODO this won't work:
+    // We need the association of the underlying buffer with a descriptor set based on the actual buffer.
+    // So we must also bring in the actual buffer per binding in the parameters.
+    // Then, instead of using the hardcoded deafult "_uniformBuffers" array here (just a testing thing this is ... )
+    // We need to use the correct buffers here.
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         updateDescriptorSets(0, _uniformBuffers[i], sizeof(UniformBufferObject), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     }
 
-     //for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    //     VkDescriptorBufferInfo bufferInfo{};
-    //     bufferInfo.buffer = _uniformBuffers[i];
-    //     bufferInfo.offset = 0;
-    //     bufferInfo.range = sizeof(UniformBufferObject);
-    //
-    //     VkWriteDescriptorSet descriptorWrite{};
-    //     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    //     descriptorWrite.dstSet = _descriptorSets[i];
-    //     descriptorWrite.dstBinding = 0;
-    //     descriptorWrite.dstArrayElement = 0;
-    //     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    //     descriptorWrite.descriptorCount = 1;
-    //     descriptorWrite.pBufferInfo = &bufferInfo;
-    //     descriptorWrite.pImageInfo = nullptr;
-    //     descriptorWrite.pTexelBufferView = nullptr;
-    //     vkUpdateDescriptorSets(_device, 1, &descriptorWrite, 0, nullptr);
-    // }
+}
+
+void VulkanRenderer::createDescriptorSetsDefault() {
+    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, _descriptorSetLayout);
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = _descriptorPool;
+    allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    allocInfo.pSetLayouts = layouts.data();
+
+    _descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+    if (vkAllocateDescriptorSets(_device, &allocInfo, _descriptorSets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        updateDescriptorSets(0, _uniformBuffers[i], sizeof(UniformBufferObject), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    }
 
 
 }
@@ -177,7 +190,7 @@ VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hI
     createIndexBuffer();
     createUniformBuffers();
     createDescriptorPool();
-    createDescriptorSets();
+    createDescriptorSetsDefault();
     createCommandBuffer();
     createSyncObjects();
 

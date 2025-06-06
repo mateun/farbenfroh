@@ -145,11 +145,15 @@ class VulkanRenderer {
     void createInstance();
     void createQueryPool();
 
-    VkDescriptorSetLayout createDescriptorSetLayoutSSBO(uint32_t binding);
-
+    VkDescriptorSetLayout createDescriptorSetLayout(std::vector<std::tuple<uint32_t, VkDescriptorType>> bindingInfos);
     void createDescriptorSetLayout();
     void createDescriptorPool();
-    void createDescriptorSets();
+
+    // We need the ordered_buffers to hold VkBuffers as the underlying buffers per binding.
+    // so if binding 0 is a UBO, we need a buffer for that, binding 1 may be an SSBO, we need the underlying SSBO buffer
+    // at index 1.
+    void createDescriptorSetsForLayout(VkDescriptorSetLayout layout, std::vector<VkBuffer> ordered_buffers);
+    void createDescriptorSetsDefault();
 
     void updateDescriptorSets(uint32_t binding, VkBuffer buffer, VkDeviceSize size, VkDescriptorType type);
 
