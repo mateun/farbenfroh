@@ -278,8 +278,9 @@ namespace renderer {
         virtual void update(VertexBufferHandle existingVBO) const = 0;
     };
 
+    template<typename T>
     struct VertexBufferCreateInfo {
-        std::vector<float> data;
+        std::vector<T> data;
         size_t element_size = 0;
         size_t stride = 0;
     };
@@ -338,7 +339,7 @@ namespace renderer {
 
     struct IndexBufferDesc {
         const void *data;
-        size_t byteSize;
+        size_t size_in_bytes;
         unsigned int format;
     };
 
@@ -399,7 +400,8 @@ namespace renderer {
 
     std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder();
 
-    VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo create_info);
+    template<typename T>
+    VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo<T> create_info);
 
     void updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo);
 

@@ -287,7 +287,7 @@ namespace renderer {
         auto vbo = vertexBufferBuilder()->attributeVec3(VertexAttributeSemantic::Position, positions)
             .attributeVec2(VertexAttributeSemantic::UV0, uvs).build();
         IndexBufferDesc ibd;
-        ibd.byteSize = indices.size() * sizeof(uint32_t);
+        ibd.size_in_bytes = indices.size() * sizeof(uint32_t);
         ibd.data = indices.data();
         ibd.format = GL_UNSIGNED_INT;
         auto ibo = createIndexBuffer(ibd);

@@ -13,7 +13,47 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
+#include "renderer.h"
 
+template<typename T, typename  N>
+struct VulkanVertexDescriber {
+
+    static VkVertexInputBindingDescription getBindingDescription() {
+      VkVertexInputBindingDescription bindingDescription{};
+      bindingDescription.binding = 0;
+      bindingDescription.stride = sizeof(T);
+      bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+      return bindingDescription;
+    }
+
+    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+      return T::getAttributeDescriptions(); // delegate to T
+    }
+
+
+};
+
+struct Pos2Vertex {
+  glm::vec2 pos;
+
+  static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+    return {
+              { 0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Pos2Vertex, pos) },
+    };
+
+  }
+};
+
+struct Pos3Vertex {
+  glm::vec3 pos;
+
+  static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+    return {
+                { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Pos3Vertex, pos) },
+      };
+
+  }
+};
 
 struct PosColorVertex {
   glm::vec2 pos;
@@ -56,7 +96,15 @@ struct VulkanShader {
   std::vector<uint32_t> spirv_code;
   VkShaderModule shader_module;
 
+};
 
+struct VulkanVertexBuffer {
+  VkBuffer buffer;
+
+};
+
+struct VulkanIndexBuffer {
+  VkBuffer buffer;
 };
 
 struct UniformBufferObject {
@@ -70,21 +118,24 @@ struct UniformBufferObject {
 class VulkanRenderer {
 
   public:
-
-
     VulkanRenderer(HINSTANCE hInstance, HWND window);
     ~VulkanRenderer();
     void clearBuffers();
     void drawFrameExp();
-    VkShaderModule createShaderModule(std::vector<uint8_t> spirv);
-    VkShaderModule createShaderModule(std::vector<uint32_t> spirv);
 
+    VkCommandBuffer createCommandBuffer(int imageIndex);
 
     void createInstance();
     void createQueryPool();
+
+    VkDescriptorSetLayout createDescriptorSetLayoutSSBO(uint32_t binding);
+
     void createDescriptorSetLayout();
     void createDescriptorPool();
     void createDescriptorSets();
+
+    void updateDescriptorSets(uint32_t binding, VkBuffer buffer, VkDeviceSize size, VkDescriptorType type);
+
     bool createValidationLayers();
     void pickPhysicalDevice();
     void createLogicalDevice();
@@ -94,23 +145,37 @@ class VulkanRenderer {
     void createFrameBuffers();
     void createDefaultTestGraphicsPipeline();
     void createRenderPass();
-    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer,
-                      VkDeviceMemory &bufferMemory);
-
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
     void copyBuffer(VkDeviceSize bufferSize, VkBuffer sourceBuffer, VkBuffer targetBuffer);
     void updateUniformBuffer(int current_image);
-
     void createVertexBuffer();
+
+    VkBuffer createIndexBuffer(renderer::IndexBufferDesc ibd);
+
     void createIndexBuffer();
     void createUniformBuffers();
     void createCommandPool();
     void createSyncObjects();
+
+    void drawFrame();
+    void uploadData(VkDeviceMemory dstMemory, VkDeviceSize size, void *data);
+
     void createCommandBuffer();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
     bool isDeviceSuitable(VkPhysicalDevice device);
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+    VkShaderModule createShaderModule(std::vector<uint8_t> spirv);
+    VkShaderModule createShaderModule(std::vector<uint32_t> spirv);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-private:
+
+    template<typename T>
+    VkBuffer createVertexBuffer(renderer::VertexBufferCreateInfo<T>);
+
+    void recordCustomCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkBuffer vertexBuffer, VkBuffer indexBuffer, int instance_count);
+
+    size_t getNumberOfSwapChainImages();
+
+  private:
     HINSTANCE _hInstance;
     HWND _window;
     VkInstance _instance;
@@ -168,6 +233,7 @@ private:
 
 };
 
+VulkanRenderer* get_vulkan_renderer();
 void init_vulkan(HWND, HINSTANCE, bool useSRGB = false, int msaaSampleCount = 0);
 
 #endif //VULKAN_IMPL_H

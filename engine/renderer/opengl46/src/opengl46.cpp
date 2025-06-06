@@ -705,7 +705,7 @@ namespace renderer {
         GLuint ibo;
         glCreateBuffers(1, &ibo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, desc.byteSize, desc.data, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, desc.size_in_bytes, desc.data, GL_STATIC_DRAW);
         auto handleId = nextHandleId++;
         vbufferMap[handleId] = GLVbo{ibo, desc.format};
         return renderer::IndexBufferHandle{handleId};
@@ -1102,7 +1102,7 @@ namespace renderer {
         const uint8_t* indices = dataBinary.data() + indicesBufferByteOffset;
 
         IndexBufferDesc ibd;
-        ibd.byteSize = indicesBufferLen;
+        ibd.size_in_bytes = indicesBufferLen;
         ibd.format = indexComponentType;
         ibd.data = indices;
         IndexBufferHandle ibo = createIndexBufferGL46(ibd);

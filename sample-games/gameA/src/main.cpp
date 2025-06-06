@@ -46,7 +46,7 @@ std::vector<glm::vec2> getUVData() {
 renderer::IndexBufferDesc getIndexData() {
     renderer::IndexBufferDesc ibd;
     ibd.format = GL_UNSIGNED_INT;
-    ibd.byteSize = 6 * sizeof(uint32_t);
+    ibd.size_in_bytes = 6 * sizeof(uint32_t);
     return ibd;
 }
 
