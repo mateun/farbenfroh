@@ -10,9 +10,10 @@
 #include <optional>
 #include <vector>
 #include <Windows.h>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
+#include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
+
+
 
 struct PosColorVertex {
   glm::vec2 pos;
@@ -58,6 +59,14 @@ struct VulkanShader {
 
 };
 
+struct UniformBufferObject {
+  glm::mat4 model;
+  glm::mat4 view;
+  glm::mat4 proj;
+};
+
+
+
 class VulkanRenderer {
 
   public:
@@ -73,6 +82,9 @@ class VulkanRenderer {
 
     void createInstance();
     void createQueryPool();
+    void createDescriptorSetLayout();
+    void createDescriptorPool();
+    void createDescriptorSets();
     bool createValidationLayers();
     void pickPhysicalDevice();
     void createLogicalDevice();
@@ -86,9 +98,11 @@ class VulkanRenderer {
                       VkDeviceMemory &bufferMemory);
 
     void copyBuffer(VkDeviceSize bufferSize, VkBuffer sourceBuffer, VkBuffer targetBuffer);
+    void updateUniformBuffer(int current_image);
 
     void createVertexBuffer();
     void createIndexBuffer();
+    void createUniformBuffers();
     void createCommandPool();
     void createSyncObjects();
     void createCommandBuffer();
@@ -111,6 +125,9 @@ private:
     std::vector<VkImage> _swapChainImages;
     std::vector<VkImageView> _swapChainImageViews;
     VkRenderPass _renderPass;
+    VkDescriptorSetLayout _descriptorSetLayout;
+    VkDescriptorPool _descriptorPool;
+    std::vector<VkDescriptorSet> _descriptorSets;
     VkPipelineLayout _pipelineLayout;
     VkPipeline _graphicsPipeline;
     std::vector<VkFramebuffer> _swapChainFramebuffers;
@@ -123,10 +140,16 @@ private:
     VkBuffer _indexBuffer;
     VkDeviceMemory _indexBufferMemory;
 
+    std::vector<VkBuffer> _uniformBuffers;
+    std::vector<VkDeviceMemory> _uniformBuffersMemory;
+    std::vector<void*> _uniformBuffersMapped;
+
     VkSemaphore _imageAvailableSemaphore;
     VkSemaphore _renderFinishedSemaphore;
     VkFence _inFlightFence;
     VkQueryPool _queryPool;
+
+
 
     const std::vector<const char*> validationLayers = {
       "VK_LAYER_KHRONOS_validation"
@@ -142,6 +165,7 @@ private:
   const std::vector<uint16_t> indices = {
     0, 1, 2, 0, 3,1
   };
+
 };
 
 void init_vulkan(HWND, HINSTANCE, bool useSRGB = false, int msaaSampleCount = 0);
