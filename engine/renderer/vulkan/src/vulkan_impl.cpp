@@ -11,6 +11,7 @@
 #include <shaderc/shaderc.hpp>
 
 //#include "../../../util/include/util.h"
+#include <chrono>
 #include <engine.h>
 #include <unordered_map>
 #include <windowsx.h>
@@ -21,12 +22,25 @@ static VulkanRenderer* vulkan_renderer = nullptr;
 static uint32_t nextHandleId = 1; // start at 1 to reserve 0 as "invalid"
 static std::unordered_map<uint32_t, VulkanShader> shaderMap;
 
+void VulkanRenderer::createQueryPool() {
+    VkQueryPoolCreateInfo queryPoolInfo{};
+    queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    queryPoolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    queryPoolInfo.queryCount = 2; // one for start, one for end
+
+    if (vkCreateQueryPool(_device, &queryPoolInfo, nullptr, &_queryPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create query pool!");
+    }
+}
+
 VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hInstance), _window(window) {
     createInstance();
+
     createValidationLayers();
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
+    createQueryPool();
     createSwapChain();
     createImageViews();
     createRenderPass();
@@ -107,6 +121,11 @@ void VulkanRenderer::createInstance() {
 }
 
 bool VulkanRenderer::createValidationLayers() {
+
+#ifdef NO_VALIDATION_LAYERS
+    return false;
+#endif
+
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
     std::vector<VkLayerProperties> availableLayers(layerCount);
@@ -254,7 +273,7 @@ void VulkanRenderer::createSwapChain() {
     swapChainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapChainInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapChainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapChainInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    swapChainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     swapChainInfo.clipped = VK_TRUE;
     swapChainInfo.oldSwapchain = VK_NULL_HANDLE;
 
@@ -753,15 +772,49 @@ void VulkanRenderer::createSyncObjects() {
 
 }
 
-void VulkanRenderer::drawFrame() {
+void VulkanRenderer::drawFrameExp() {
     vkWaitForFences(_device, 1, &_inFlightFence, VK_TRUE, UINT64_MAX);
     vkResetFences(_device, 1, &_inFlightFence);
+
+#ifdef PERFORMANCE_TESTS
+    // Performance queries
+    {
+        uint64_t timestamps[2] = {};
+        vkGetQueryPoolResults(
+            _device,
+            _queryPool,
+            0,
+            2,
+            sizeof(timestamps),
+            timestamps,
+            sizeof(uint64_t),
+            VK_QUERY_RESULT_64_BIT
+        );
+
+        VkPhysicalDeviceProperties properties;
+        vkGetPhysicalDeviceProperties(_physicalDevice, &properties);
+
+        double timestampPeriod = properties.limits.timestampPeriod; // in nanoseconds per tick
+
+        double gpuTimeNs = double(timestamps[1] - timestamps[0]) * timestampPeriod;
+        double gpuTimeMs = gpuTimeNs / 1'000'000.0;
+        std::cout << "GPU time: " << gpuTimeMs << " ms" << std::endl;
+
+    }
+
+    auto cpu_start = std::chrono::high_resolution_clock::now();
+#endif
 
     uint32_t imageIndex;
     vkAcquireNextImageKHR(_device, _swapChain, UINT64_MAX, _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
-    vkResetCommandBuffer(_commandBuffer, 0);
-    recordCommandBuffer(_commandBuffer, imageIndex);
+    // static bool firstFrame = true;
+    // if (firstFrame) {
+    //     firstFrame = false;
+    //     vkResetCommandBuffer(_commandBuffer, 0);
+    //     recordCommandBuffer(_commandBuffer, imageIndex);
+    // }
+
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -772,7 +825,7 @@ void VulkanRenderer::drawFrame() {
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_commandBuffer;
+    submitInfo.pCommandBuffers = &_imageAvailableCommandBuffers[imageIndex];
 
     VkSemaphore signalSemaphores[] = {_renderFinishedSemaphore};
     submitInfo.signalSemaphoreCount = 1;
@@ -781,6 +834,13 @@ void VulkanRenderer::drawFrame() {
     if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _inFlightFence) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
+
+
+#ifdef PERFORMANCE_TESTS
+    auto end = std::chrono::high_resolution_clock::now();
+    double elapsedMs = std::chrono::duration<double, std::milli>(end - cpu_start).count();
+    std::cout << "CPU time: " << elapsedMs << " ms" << std::endl;
+#endif
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -805,9 +865,24 @@ void VulkanRenderer::createCommandBuffer() {
     if (vkAllocateCommandBuffers(_device, &allocInfo, &_commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
+
+    // Create additional command buffer for each image in our swapchain:
+    for (size_t i = 0; i < _swapChainImages.size(); i++) {
+        VkCommandBuffer commandBuffer;
+
+        if (vkAllocateCommandBuffers(_device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate command buffers!");
+        }
+
+        _imageAvailableCommandBuffers.push_back(commandBuffer);
+        vkResetCommandBuffer(commandBuffer, 0);
+        recordCommandBuffer(commandBuffer, i);
+    }
 }
 
 void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+
+
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
@@ -816,6 +891,8 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
+    //vkResetQueryPool(_device, _queryPool, 0, 2);
+    vkCmdResetQueryPool(commandBuffer, _queryPool, 0, 2);
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -823,7 +900,7 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
     renderPassInfo.framebuffer = _swapChainFramebuffers[imageIndex];
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = _extent;
-    VkClearValue clearColor = {{{0.1f, 0.0f, 0.1f, 1.0f}}};
+    VkClearValue clearColor = {{{0.1f, 0.0f, 0.4f, 1.0f}}};
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -844,18 +921,17 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
     scissor.extent = _extent;
     //vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+#ifndef NOT_ONLY_CLEAR
     VkBuffer vertexBuffers[] = {_vertexBuffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
     vkCmdBindIndexBuffer(commandBuffer, _indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
+    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _queryPool, 0);
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _queryPool, 1);
 
-    //vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
-
-    //vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-
+#endif
     vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -924,7 +1000,7 @@ bool VulkanRenderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 namespace renderer {
 
     void drawMesh(renderer::Mesh m, const std::string& debugInfo ) {
-        vulkan_renderer->drawFrame();
+        vulkan_renderer->drawFrameExp();
     }
 
 

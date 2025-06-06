@@ -66,12 +66,13 @@ class VulkanRenderer {
     VulkanRenderer(HINSTANCE hInstance, HWND window);
     ~VulkanRenderer();
     void clearBuffers();
-    void drawFrame();
+    void drawFrameExp();
     VkShaderModule createShaderModule(std::vector<uint8_t> spirv);
     VkShaderModule createShaderModule(std::vector<uint32_t> spirv);
 
 
     void createInstance();
+    void createQueryPool();
     bool createValidationLayers();
     void pickPhysicalDevice();
     void createLogicalDevice();
@@ -117,22 +118,25 @@ private:
     VkCommandBuffer _commandBuffer;
     VkBuffer _vertexBuffer;
 
+    std::vector<VkCommandBuffer> _imageAvailableCommandBuffers;
+
     VkBuffer _indexBuffer;
     VkDeviceMemory _indexBufferMemory;
 
     VkSemaphore _imageAvailableSemaphore;
     VkSemaphore _renderFinishedSemaphore;
     VkFence _inFlightFence;
+    VkQueryPool _queryPool;
 
     const std::vector<const char*> validationLayers = {
       "VK_LAYER_KHRONOS_validation"
     };
 
   const std::vector<PosColorVertex> vertices = {
-    {{-0.3f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{0.4f, -0.5f}, {0.0f, 1.0f, 0.0f}}
+    {{-1, -0.99f}, {1.0f, 0.0f, 0.0f}},
+    {{1.0f, 0.999f}, {0.0f, 1.0f, 0.0f}},
+    {{-1.0f, 0.999f}, {0.0f, 0.0f, 1.0f}},
+    {{1.0f, -0.99f}, {0.0f, 1.0f, 0.0f}}
   };
 
   const std::vector<uint16_t> indices = {
