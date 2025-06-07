@@ -159,7 +159,8 @@ renderer::VertexBufferBuilder & GL46VertexBufferBuilder::attributeVec2(renderer:
     return attributeT(semantic, data);
 }
 
-renderer::VertexBufferCreateInfo GL46VertexBufferBuilder::commonUpdateBuild() const {
+template<>
+renderer::VertexBufferCreateInfo<float> GL46VertexBufferBuilder::commonUpdateBuild() const {
     std::vector<float> interleavedData(element_count_ * (current_stride_ / sizeof(float)));
 
     for (size_t i = 0; i < element_count_; ++i) {
@@ -188,12 +189,12 @@ renderer::VertexBufferCreateInfo GL46VertexBufferBuilder::commonUpdateBuild() co
 }
 
 renderer::VertexBufferHandle GL46VertexBufferBuilder::build() const {
-    auto info = commonUpdateBuild();
+    auto info = commonUpdateBuild<float>();
     return createVertexBuffer(info);
 }
 
 void GL46VertexBufferBuilder::update(renderer::VertexBufferHandle oldVbo) const {
-    auto createInfo  = commonUpdateBuild();
+    auto createInfo  = commonUpdateBuild<float>();
     renderer::VertexBufferUpdateInfo updateInfo = {
         .data = createInfo.data,
         .stride = createInfo.stride,
@@ -210,7 +211,8 @@ void renderer::updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo) {
 
 
 
-renderer::VertexBufferHandle renderer::createVertexBuffer(renderer::VertexBufferCreateInfo create_info) {
+template<typename T>
+renderer::VertexBufferHandle renderer::createVertexBuffer(renderer::VertexBufferCreateInfo<T> create_info) {
     GLuint vbo;
     glCreateBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -1091,7 +1093,7 @@ namespace renderer {
         glBufferData(indicesGlTargetType, indicesBufferLen, dataBinary.data() + indicesBufferByteOffset, GL_STATIC_DRAW);
         */
 
-        VertexBufferCreateInfo ci;
+        VertexBufferCreateInfo<float> ci;
         const uint8_t* base = dataBinary.data() + posBufferByteOffset;
         const float* floatData = reinterpret_cast<const float*>(base);
         size_t totalFloats = posAccessor["count"].get<int>() * 3;

@@ -9,10 +9,8 @@
 #include <lua_parser.h>
 #include <lua.hpp>
 #include <GL/glew.h>
-
-
 #include <opengl46.h>
-#include "../../../v2025/extlibs/lua547/src/lauxlib.h"
+#include <lauxlib.h>
 
 extern int mouse_x;
 extern int mouse_y;

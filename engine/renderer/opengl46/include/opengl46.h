@@ -69,7 +69,8 @@ private:
     template<typename T>
     VertexBufferBuilder &attributeT(renderer::VertexAttributeSemantic semantic, const std::vector<T> &data) ;
 
-    renderer::VertexBufferCreateInfo commonUpdateBuild() const;
+    template<typename T>
+    renderer::VertexBufferCreateInfo<T> commonUpdateBuild() const;
 
     std::vector<renderer::VertexAttribute> attributes_;
     std::vector<float> raw_data_;

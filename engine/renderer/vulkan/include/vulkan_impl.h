@@ -145,17 +145,18 @@ class VulkanRenderer {
     void createInstance();
     void createQueryPool();
 
-    VkDescriptorSetLayout createDescriptorSetLayout(std::vector<std::tuple<uint32_t, VkDescriptorType>> bindingInfos);
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+    VkDescriptorSetLayout createDescriptorSetLayout(std::vector<std::tuple<uint32_t, VkDescriptorType, VkShaderStageFlags>> bindingInfos);
     void createDescriptorSetLayout();
     void createDescriptorPool();
 
-    // We need the ordered_buffers to hold VkBuffers as the underlying buffers per binding.
-    // so if binding 0 is a UBO, we need a buffer for that, binding 1 may be an SSBO, we need the underlying SSBO buffer
-    // at index 1.
-    void createDescriptorSetsForLayout(VkDescriptorSetLayout layout, std::vector<VkBuffer> ordered_buffers);
+    std::vector<VkDescriptorSet> createDescriptorSetsForLayout(VkDescriptorSetLayout layout, std::vector<std::tuple<uint32_t, VkBuffer, VkDeviceSize, VkDescriptorType>> binding_infos);
     void createDescriptorSetsDefault();
 
-    void updateDescriptorSets(uint32_t binding, VkBuffer buffer, VkDeviceSize size, VkDescriptorType type);
+    void updateDescriptorSets(VkDescriptorSet descriptorSet, uint32_t binding, VkBuffer buffer, VkDeviceSize size, VkDescriptorType type);
 
     bool createValidationLayers();
     void pickPhysicalDevice();
@@ -163,13 +164,21 @@ class VulkanRenderer {
     void createSurface();
     void createSwapChain();
     void createImageViews();
+    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &imageMemory);
     void createFrameBuffers();
     void createDefaultTestGraphicsPipeline();
     void createRenderPass();
+
+    uint32_t findMemoryType(const VkMemoryRequirements &memoryRequirements, VkPhysicalDeviceMemoryProperties memProperties, VkFlags properties);
+
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
     void copyBuffer(VkDeviceSize bufferSize, VkBuffer sourceBuffer, VkBuffer targetBuffer);
     void updateUniformBuffer(int current_image);
     void createVertexBuffer();
+
+    VkImageView createImageView(VkImage vk_image, VkFormat vk_format, VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT);
+
+    void createDepthResources();
 
     VkBuffer createIndexBuffer(renderer::IndexBufferDesc ibd);
 
@@ -192,15 +201,29 @@ class VulkanRenderer {
     VkShaderModule createShaderModule(std::vector<uint32_t> spirv);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
+    VkBuffer createVertexBufferRaw(size_t size, void *data);
+
     template<typename T>
     VkBuffer createVertexBuffer(renderer::VertexBufferCreateInfo<T>);
 
-    void recordCustomCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkBuffer vertexBuffer, VkBuffer indexBuffer, int instance_count);
+    void recordCustomCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkBuffer vertexBuffer, VkBuffer indexBuffer, int instance_count, VkPipeline, VkPipelineLayout,  std::vector<VkDescriptorSet>);
 
     size_t getNumberOfSwapChainImages();
 
-    VkPipeline createGraphicsPipeline(VkShaderModule vertexModule, VkShaderModule fragModule, std::vector<VkVertexInputAttributeDescription>
-                                      attributeDescriptions, VkVertexInputBindingDescription bindingDescription);
+    std::tuple<VkPipeline, VkPipelineLayout> createGraphicsPipeline(VkShaderModule vertexModule, VkShaderModule fragModule,
+                                      std::vector<VkVertexInputAttributeDescription>
+                                      attributeDescriptions, VkVertexInputBindingDescription bindingDescription,
+                                      VkDescriptorSetLayout layout);
+
+    void executeCommandBuffer(std::vector<VkCommandBuffer> command_buffers);
+
+    VkImageView createTextureImageView(VkImage image, VkFormat format);
+
+    VkImage createTextureImage(const renderer::Image &image);
+
+    VkCommandBuffer beginSingleTimeCommands();
+
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
   private:
     HINSTANCE _hInstance;
@@ -216,6 +239,7 @@ class VulkanRenderer {
     VkSwapchainKHR _swapChain;
     std::vector<VkImage> _swapChainImages;
     std::vector<VkImageView> _swapChainImageViews;
+    VkImageView _depthImageView;
     VkRenderPass _renderPass;
     VkDescriptorSetLayout _descriptorSetLayout;
     VkDescriptorPool _descriptorPool;
