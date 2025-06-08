@@ -72,6 +72,32 @@ struct Pos3Vertex {
   }
 };
 
+struct Pos3VertexUV {
+  glm::vec3 pos;
+  glm::vec2 uv;
+
+  static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+    return {
+                { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Pos3VertexUV, pos) },
+                { 1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Pos3VertexUV, uv) },
+      };
+  }
+};
+
+struct Pos3VertexUVNormal {
+  glm::vec3 pos;
+  glm::vec2 uv;
+  glm::vec3 normal;
+
+  static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+    return {
+          { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Pos3VertexUVNormal, pos) },
+          { 1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Pos3VertexUVNormal, uv) },
+          { 2, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Pos3VertexUVNormal, normal) },
+        };
+  }
+};
+
 struct PosColorVertex {
   glm::vec2 pos;
   glm::vec3 color;
@@ -142,7 +168,14 @@ class VulkanRenderer {
 
     VkCommandBuffer createCommandBuffer(int imageIndex);
 
+    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
+
+    VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+                                          const VkAllocationCallbacks *pAllocator,
+                                          VkDebugUtilsMessengerEXT *pDebugMessenger);
+
     void createInstance();
+    void setupDebugMessenger();
     void createQueryPool();
 
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
@@ -153,21 +186,30 @@ class VulkanRenderer {
     void createDescriptorSetLayout();
     void createDescriptorPool();
 
-    std::vector<VkDescriptorSet> createDescriptorSetsForLayout(VkDescriptorSetLayout layout, std::vector<std::tuple<uint32_t, VkBuffer, VkDeviceSize, VkDescriptorType>> binding_infos);
+    std::vector<VkDescriptorSet> createDescriptorSetsForLayout(VkDescriptorSetLayout layout,
+      std::vector<std::tuple<uint32_t, VkBuffer, VkDeviceSize, VkDescriptorType>> binding_infos,
+      std::vector<std::tuple<uint32_t, VkImageView, VkDeviceSize, VkDescriptorType, VkSampler>> image_infos);
     void createDescriptorSetsDefault();
 
-    void updateDescriptorSets(VkDescriptorSet descriptorSet, uint32_t binding, VkBuffer buffer, VkDeviceSize size, VkDescriptorType type);
+    void updateDescriptorSetsForImages(VkDescriptorSet descriptorSet, uint32_t binding, VkImageView textureImageView,
+                                       VkDeviceSize size, VkDescriptorType type, VkSampler textureSampler);
+
+    void updateDescriptorSetsForBuffers(VkDescriptorSet descriptorSet, uint32_t binding, VkBuffer buffer, VkDeviceSize size, VkDescriptorType type);
 
     bool createValidationLayers();
     void pickPhysicalDevice();
     void createLogicalDevice();
     void createSurface();
     void createSwapChain();
+
+    VkSampler createTextureSampler();
+
     void createImageViews();
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &imageMemory);
     void createFrameBuffers();
     void createDefaultTestGraphicsPipeline();
     void createRenderPass();
+
 
     uint32_t findMemoryType(const VkMemoryRequirements &memoryRequirements, VkPhysicalDeviceMemoryProperties memProperties, VkFlags properties);
 
@@ -219,7 +261,7 @@ class VulkanRenderer {
 
     VkImageView createTextureImageView(VkImage image, VkFormat format);
 
-    VkImage createTextureImage(const renderer::Image &image);
+    VkImage createTextureImage(const renderer::Image &image, VkFormat format);
 
     VkCommandBuffer beginSingleTimeCommands();
 
@@ -250,6 +292,7 @@ class VulkanRenderer {
     VkCommandPool _commandPool;
     VkCommandBuffer _commandBuffer;
     VkBuffer _vertexBuffer;
+    VkDebugUtilsMessengerEXT debugMessenger;
 
     std::vector<VkCommandBuffer> _imageAvailableCommandBuffers;
 

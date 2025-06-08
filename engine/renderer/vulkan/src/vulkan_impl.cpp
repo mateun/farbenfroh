@@ -198,7 +198,10 @@ void VulkanRenderer::createDescriptorPool() {
     }
 }
 
-std::vector<VkDescriptorSet> VulkanRenderer::createDescriptorSetsForLayout(VkDescriptorSetLayout layout, std::vector<std::tuple<uint32_t, VkBuffer, VkDeviceSize, VkDescriptorType>> binding_infos) {
+std::vector<VkDescriptorSet> VulkanRenderer::createDescriptorSetsForLayout(VkDescriptorSetLayout layout,
+    std::vector<std::tuple<uint32_t, VkBuffer, VkDeviceSize, VkDescriptorType>> binding_infos,
+    std::vector<std::tuple<uint32_t, VkImageView, VkDeviceSize, VkDescriptorType, VkSampler>> image_infos) {
+
     std::vector layouts(MAX_FRAMES_IN_FLIGHT, layout);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -222,7 +225,16 @@ std::vector<VkDescriptorSet> VulkanRenderer::createDescriptorSetsForLayout(VkDes
             auto buffer = std::get<1>(bi);
             auto size = std::get<2>(bi);
             auto type = std::get<3>(bi);
-            updateDescriptorSets(descriptorSets[i], binding, buffer, size, type);
+            updateDescriptorSetsForBuffers(descriptorSets[i], binding, buffer, size, type);
+        }
+
+        for (auto ii : image_infos) {
+            auto binding = std::get<0>(ii);
+            auto textureImageView = std::get<1>(ii);
+            auto size = std::get<2>(ii);
+            auto type = std::get<3>(ii);
+            auto textureSampler = std::get<4>(ii);
+            updateDescriptorSetsForImages(descriptorSets[i], binding, textureImageView, size, type, textureSampler);
         }
 
     }
@@ -246,12 +258,33 @@ void VulkanRenderer::createDescriptorSetsDefault() {
 
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        updateDescriptorSets(_descriptorSets[i], 0, _uniformBuffers[i], sizeof(UniformBufferObject), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        updateDescriptorSetsForBuffers(_descriptorSets[i], 0, _uniformBuffers[i], sizeof(UniformBufferObject), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     }
 
 }
 
-void VulkanRenderer::updateDescriptorSets(VkDescriptorSet descriptorSet, uint32_t binding, VkBuffer buffer, VkDeviceSize size, VkDescriptorType type) {
+void VulkanRenderer::updateDescriptorSetsForImages(VkDescriptorSet descriptorSet, uint32_t binding, VkImageView textureImageView, VkDeviceSize size, VkDescriptorType type, VkSampler textureSampler) {
+
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageView = textureImageView;
+    imageInfo.sampler = textureSampler;
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = descriptorSet;
+    descriptorWrite.dstBinding = binding;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = type;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pImageInfo = &imageInfo;
+
+    vkUpdateDescriptorSets(_device, 1, &descriptorWrite, 0, nullptr);
+
+}
+
+
+void VulkanRenderer::updateDescriptorSetsForBuffers(VkDescriptorSet descriptorSet, uint32_t binding, VkBuffer buffer, VkDeviceSize size, VkDescriptorType type) {
 
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = buffer;
@@ -273,8 +306,7 @@ void VulkanRenderer::updateDescriptorSets(VkDescriptorSet descriptorSet, uint32_
 
 VulkanRenderer::VulkanRenderer(HINSTANCE hInstance, HWND window) : _hInstance(hInstance), _window(window) {
     createInstance();
-
-    createValidationLayers();
+    setupDebugMessenger();
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
@@ -328,7 +360,45 @@ void VulkanRenderer::clearBuffers() {
 
 }
 
+VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT                  messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT*      pCallbackData,
+    void*                                             pUserData) {
 
+    if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        std::cerr << "Validation layer error: " << pCallbackData->pMessage << std::endl;
+    } else {
+        std::cout << "Validation layer debug msg: " << pCallbackData->pMessage << std::endl;
+    }
+
+
+    return VK_FALSE;
+}
+
+void VulkanRenderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+    createInfo = {}; // zero everything
+    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    createInfo.messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType =
+        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    createInfo.pfnUserCallback = debugCallback;
+    createInfo.pUserData = nullptr; // Optional
+}
+
+VkResult VulkanRenderer::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+    } else {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    }
+}
 
 void VulkanRenderer::createInstance() {
     VkApplicationInfo appInfo{};
@@ -353,8 +423,10 @@ void VulkanRenderer::createInstance() {
     std::vector<const char*> extensionsRequested;
     extensionsRequested.push_back(VK_KHR_SURFACE_EXTENSION_NAME); // Always required for surface creation
     extensionsRequested.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    extensionsRequested.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME); // Required for debug messenger
 
 
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
 
     VkInstanceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -364,13 +436,31 @@ void VulkanRenderer::createInstance() {
     if (createValidationLayers()) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
+        populateDebugMessengerCreateInfo(debugCreateInfo);
+        createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+
     } else {
         createInfo.enabledLayerCount = 0;
+        createInfo.pNext = nullptr;
     }
 
+    for (const auto& layer : validationLayers) {
+        std::cout << "Available layer: " << layer << std::endl;
+    }
 
     if (vkCreateInstance(&createInfo, NULL, &_instance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create Vulkan instance");
+    }
+
+
+}
+
+void VulkanRenderer::setupDebugMessenger() {
+    VkDebugUtilsMessengerCreateInfoEXT createInfo;
+    populateDebugMessengerCreateInfo(createInfo);
+
+    if (CreateDebugUtilsMessengerEXT(_instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+        throw std::runtime_error("failed to set up debug messenger!");
     }
 }
 
@@ -445,6 +535,7 @@ void VulkanRenderer::createLogicalDevice() {
     };
 
     VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
     VkDeviceCreateInfo logicalDeviceCreateInfo{};
     logicalDeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     logicalDeviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
@@ -562,6 +653,7 @@ VkSampler VulkanRenderer::createTextureSampler() {
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(_physicalDevice, &properties);
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_FALSE;
@@ -894,7 +986,7 @@ VkImageView VulkanRenderer::createTextureImageView(VkImage image, VkFormat forma
 
 
 
-VkImage VulkanRenderer::createTextureImage(const renderer::Image &image) {
+VkImage VulkanRenderer::createTextureImage(const renderer::Image &image, VkFormat format) {
     VkDeviceSize imageSize = image.width * image.height * 4;
 
     VkBuffer stagingBuffer;
@@ -908,10 +1000,12 @@ VkImage VulkanRenderer::createTextureImage(const renderer::Image &image) {
 
     VkImage textureImage;
     VkDeviceMemory textureImageMemory;
-    createImage(image.width, image.height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+    createImage(image.width, image.height, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
 
-    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    transitionImageLayout(textureImage, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(image.width), static_cast<uint32_t>(image.height));
+
+    transitionImageLayout(textureImage, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vkDestroyBuffer(_device, stagingBuffer, nullptr);
     vkFreeMemory(_device, stagingBufferMemory, nullptr);
@@ -1286,6 +1380,12 @@ void VulkanRenderer::updateUniformBuffer(int current_image) {
 
 template<>
 VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo<Pos3Vertex> vertex_buffer_create_info) {
+    auto vb = createVertexBufferRaw(vertex_buffer_create_info.data.size() * sizeof(vertex_buffer_create_info.data[0]), vertex_buffer_create_info.data.data());
+    return vb;
+}
+
+template<>
+VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo<Pos3VertexUV> vertex_buffer_create_info) {
     auto vb = createVertexBufferRaw(vertex_buffer_create_info.data.size() * sizeof(vertex_buffer_create_info.data[0]), vertex_buffer_create_info.data.data());
     return vb;
 }
