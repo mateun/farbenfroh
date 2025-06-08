@@ -42,6 +42,7 @@ namespace renderer {
     static void updateIndexBufferGL46(IndexBufferHandle iboHandle, std::vector<uint32_t> data);
     static Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count);
     static Mesh importMeshGL46(const std::string& filename);
+    static Mesh drawTextIntoQuadGL46(FontHandle fontHandle, const std::string& text);
 }
 
 
@@ -439,7 +440,9 @@ void initOpenGL46(HWND hwnd, bool useSRGB, int msaaSampleCount) {
     registerCreateIndexBuffer(&renderer::createIndexBufferGL46);
     registerCreateMesh(&renderer::createMeshGL46);
     registerImportMesh(&renderer::importMeshGL46);
-    renderer::registerUpdateIndexBuffer(&renderer::updateIndexBufferGL46);
+    registerUpdateIndexBuffer(&renderer::updateIndexBufferGL46);
+    renderer::registerDrawTextIntoQuad(&renderer::drawTextIntoQuadGL46);
+
 
 
 }
@@ -1125,6 +1128,47 @@ namespace renderer {
     Mesh importMeshGL46(const std::string& filename) {
         return parseGLTF(filename);
     }
+
+
+    Mesh drawTextIntoQuadGL46(FontHandle fontHandle, const std::string& text) {
+
+         std::vector<glm::vec3> positions;
+         std::vector<glm::vec2> uvs;
+         std::vector<uint32_t> indices;
+
+         drawTextIntoQuadGeometry(fontHandle, text, positions, uvs, indices);
+
+         auto vbo = vertexBufferBuilder()->attributeVec3(VertexAttributeSemantic::Position, positions)
+             .attributeVec2(VertexAttributeSemantic::UV0, uvs).build();
+         IndexBufferDesc ibd;
+         ibd.size_in_bytes = indices.size() * sizeof(uint32_t);
+         ibd.data = indices.data();
+         ibd.format = GL_UNSIGNED_INT;
+         auto ibo = createIndexBuffer(ibd);
+
+         std::vector<renderer::VertexAttribute> vertexAttributes = {
+             renderer::VertexAttribute{
+                 .semantic = renderer::VertexAttributeSemantic::Position,
+                 .format = renderer::VertexAttributeFormat::Float3,
+                 .location = 0,
+                 .offset = 0,
+                 .components = 3,
+                 .stride = 20
+             },
+              renderer::VertexAttribute{
+                  .semantic = renderer::VertexAttributeSemantic::UV0,
+                  .format = renderer::VertexAttributeFormat::Float2,
+                  .location = 1,
+                  .offset = 12,
+                  .components = 2,
+                  .stride = 20
+              }
+
+         };
+         auto quadMesh = createMesh(vbo, ibo, vertexAttributes, indices.size());
+         return quadMesh;
+     }
+
 
     Mesh createMeshGL46(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> &attributes,
                        size_t index_count) {

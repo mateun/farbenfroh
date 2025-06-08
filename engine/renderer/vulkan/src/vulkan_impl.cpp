@@ -1046,6 +1046,12 @@ void VulkanRenderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
     vkFreeCommandBuffers(_device, _commandPool, 1, &commandBuffer);
 }
 
+void * VulkanRenderer::mapMemory(VkDeviceMemory memory, int offset, uint64_t size) {
+    void* mappedData;
+    vkMapMemory(_device, memory, offset, size, 0, &mappedData);
+    return mappedData;
+}
+
 
 void VulkanRenderer::createDefaultTestGraphicsPipeline() {
 
@@ -1606,6 +1612,10 @@ void VulkanRenderer::drawFrame() {
 
 }
 
+void VulkanRenderer::updateMappedMemory(void* mappedMemory, void* sourceData, VkDeviceSize size) {
+    memcpy(mappedMemory, sourceData, size);
+}
+
 void VulkanRenderer::uploadData(VkDeviceMemory dstMemory, VkDeviceSize size, void *sourceData) {
     void *data;
     vkMapMemory(_device, dstMemory, 0, size, 0, &data);
@@ -2091,6 +2101,10 @@ namespace renderer {
         return {};
     }
 
+    Mesh drawTextIntoQuadVulkan(FontHandle fontHandle, const std::string& text) {
+        return {};
+    }
+
 
     template<>
     bool setShaderValue<glm::vec2>(ProgramHandle program, const std::string& name, const glm::vec2& value) {
@@ -2127,5 +2141,6 @@ void init_vulkan(HWND hwnd, HINSTANCE hinst, bool useSRGB, int msaaSampleCount) 
     }
 
     renderer::registerCreateIndexBuffer(&renderer::createIndexBufferVulkan);
+    renderer::registerDrawTextIntoQuad(&renderer::drawTextIntoQuadVulkan);
 
 }

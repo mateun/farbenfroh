@@ -35,6 +35,7 @@ namespace renderer {
     static CreateIndexBufferFn g_createIndexBuffer = nullptr;
     static UpdateIndexBufferFn g_updateIndexBuffer = nullptr;
     static VertexBufferBuilderFn g_vertexBufferBuilder = nullptr;
+    static DrawTextIntoQuadFn g_drawTextIntoQuad = nullptr;
     static CreateMeshFn g_createMesh = nullptr;
     static ImportMeshFn g_importMesh = nullptr;
 
@@ -48,6 +49,10 @@ namespace renderer {
 
     void registerCreateIndexBuffer(CreateIndexBufferFn fn) {
         g_createIndexBuffer = fn;
+    }
+
+    void registerDrawTextIntoQuad(DrawTextIntoQuadFn fn) {
+        g_drawTextIntoQuad = fn;
     }
 
     void registerUpdateIndexBuffer(UpdateIndexBufferFn fn) {
@@ -175,7 +180,7 @@ namespace renderer {
         return image;
     }
 
-    static void drawTextIntoQuadGeometry(FontHandle fontHandle, const std::string& text,
+    void drawTextIntoQuadGeometry(FontHandle fontHandle, const std::string& text,
         std::vector<glm::vec3>& outPositions, std::vector<glm::vec2>& outUVs, std::vector<uint32_t>& outIndices) {
 
         auto font = fontMap[fontHandle.id];
@@ -278,41 +283,11 @@ namespace renderer {
     }
 
     Mesh drawTextIntoQuad(FontHandle fontHandle, const std::string& text) {
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec2> uvs;
-        std::vector<uint32_t> indices;
+        if (!g_drawTextIntoQuad) {
+            return {};
+        }
+        return g_drawTextIntoQuad(fontHandle, text);
 
-        drawTextIntoQuadGeometry(fontHandle, text, positions, uvs, indices);
-
-        auto vbo = vertexBufferBuilder()->attributeVec3(VertexAttributeSemantic::Position, positions)
-            .attributeVec2(VertexAttributeSemantic::UV0, uvs).build();
-        IndexBufferDesc ibd;
-        ibd.size_in_bytes = indices.size() * sizeof(uint32_t);
-        ibd.data = indices.data();
-        ibd.format = GL_UNSIGNED_INT;
-        auto ibo = createIndexBuffer(ibd);
-
-        std::vector<renderer::VertexAttribute> vertexAttributes = {
-            renderer::VertexAttribute{
-                .semantic = renderer::VertexAttributeSemantic::Position,
-                .format = renderer::VertexAttributeFormat::Float3,
-                .location = 0,
-                .offset = 0,
-                .components = 3,
-                .stride = 20
-            },
-             renderer::VertexAttribute{
-                 .semantic = renderer::VertexAttributeSemantic::UV0,
-                 .format = renderer::VertexAttributeFormat::Float2,
-                 .location = 1,
-                 .offset = 12,
-                 .components = 2,
-                 .stride = 20
-             }
-
-        };
-        auto quadMesh = createMesh(vbo, ibo, vertexAttributes, indices.size());
-        return quadMesh;
     }
 
     void updateText(Mesh& mesh, FontHandle fontHandle, const std::string& newText) {

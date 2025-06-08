@@ -230,6 +230,9 @@ class VulkanRenderer {
     void createSyncObjects();
 
     void drawFrame();
+
+    void updateMappedMemory(void *mappedMemory, void *sourceData, VkDeviceSize size);
+
     void uploadData(VkDeviceMemory dstMemory, VkDeviceSize size, void *data);
 
     void createCommandBuffer();
@@ -266,6 +269,8 @@ class VulkanRenderer {
     VkCommandBuffer beginSingleTimeCommands();
 
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
+    void* mapMemory(VkDeviceMemory memory, int i, uint64_t size);
 
   private:
     HINSTANCE _hInstance;

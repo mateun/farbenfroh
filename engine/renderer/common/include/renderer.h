@@ -476,6 +476,11 @@ namespace renderer {
     // Drawing geometry
     void drawMesh(Mesh m, const std::string &debugInfo = "");
 
+    void drawTextIntoQuadGeometry(FontHandle fontHandle, const std::string& text,
+        std::vector<glm::vec3>& outPositions, std::vector<glm::vec2>& outUVs, std::vector<uint32_t>& outIndices);
+
+    typedef Mesh (*DrawTextIntoQuadFn)(FontHandle fontHandle, const std::string &);
+    void registerDrawTextIntoQuad(DrawTextIntoQuadFn fn);
     Mesh drawTextIntoQuad(FontHandle font, const std::string &text);
 
     BoundingBox measureText(FontHandle fontHandle, const std::string &text);
