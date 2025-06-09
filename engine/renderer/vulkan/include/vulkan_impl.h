@@ -170,7 +170,7 @@ class VulkanRenderer {
     void clearBuffers();
     void drawFrameExp();
 
-    VkCommandBuffer createCommandBuffer(int imageIndex, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
 
@@ -210,8 +210,19 @@ class VulkanRenderer {
 
     void createImageViews();
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &imageMemory);
+
+    std::tuple<VkFramebuffer, renderer::Image, VkImageView, VkImage>createOffscreenFrameBuffer(int width, int height, VkFormat colorFormat, VkFormat depthFormat,
+                                             VkRenderPass renderPass);
+
     void createFrameBuffers();
     void createDefaultTestGraphicsPipeline();
+
+    VkRenderPass createCustomRenderPass(VkFormat colorFormat, VkFormat depthFormat);
+
+    VkRenderPass getDefaultFrameBufferRenderPass();
+
+    VkFramebuffer getDefaultFramebuffer(int index);
+
     void createRenderPass();
 
 
@@ -240,6 +251,7 @@ class VulkanRenderer {
     void uploadData(VkDeviceMemory dstMemory, VkDeviceSize size, void *data);
 
     void createCommandBuffer();
+    VkCommandBuffer createCommandBuffer(VkCommandBufferLevel level);
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     std::vector<uint32_t> compileShader(const std::string &source, VulkanShaderType shaderType);
@@ -257,13 +269,16 @@ class VulkanRenderer {
 
     void endFrameCommands(VkCommandBuffer commandBuffer);
 
+    void beginCustomRenderPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer frameBuffer,
+                               uint32_t width, uint32_t height);
+
     VkRenderPass beginRenderPass(VkCommandBuffer commandBuffer, int swapChainImageIndex);
 
     void endRenderPass(VkCommandBuffer commandBuffer);
 
     void recordSecondaryExecCommandBuffers(VkCommandBuffer primary, std::vector<VkCommandBuffer> secondaries);
 
-    VkCommandBufferInheritanceInfo createInheritanceInfo(VkRenderPass renderPass, int imageIndex);
+    VkCommandBufferInheritanceInfo createInheritanceInfo(VkRenderPass renderPass, VkFramebuffer frameBuffer);
 
     void recordMeshData(VkCommandBuffer commandBuffer, VkBuffer vertexBuffer, VkBuffer indexBuffer,
                         VkIndexType indexType, VkPipelineLayout pipeline_layout,
@@ -283,6 +298,8 @@ class VulkanRenderer {
                                       std::vector<VkVertexInputAttributeDescription>
                                       attributeDescriptions, VkVertexInputBindingDescription bindingDescription,
                                       VkDescriptorSetLayout layout);
+
+    void executeCommandBuffers(std::vector<std::vector<VkCommandBuffer>> commandBuffers);
 
     void executeCommandBuffer(std::vector<VkCommandBuffer> command_buffers);
 

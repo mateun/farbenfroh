@@ -25,6 +25,10 @@
 #include <complex.h>
 #include <complex.h>
 #include <complex.h>
+#include <complex.h>
+#include <complex.h>
+#include <complex.h>
+#include <complex.h>
 #include <engine.h>
 #include <unordered_map>
 
@@ -738,6 +742,47 @@ void VulkanRenderer::createImage(uint32_t width, uint32_t height, VkFormat forma
     vkBindImageMemory(_device, image, imageMemory, 0);
 }
 
+std::tuple<VkFramebuffer, renderer::Image, VkImageView, VkImage> VulkanRenderer::createOffscreenFrameBuffer(int width, int height, VkFormat colorFormat,
+                                                         VkFormat depthFormat, VkRenderPass renderPass) {
+
+    renderer::Image image;
+    image.width = width;
+    image.height = height;
+    image.channels = 4;
+
+    VkImage colorImage;
+    VkDeviceMemory colorImageMemory;
+
+    createImage(width, height, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,  colorImage, colorImageMemory);
+    auto colorImageView = createImageView(colorImage, colorFormat);
+
+    VkImage depthImage;
+    VkDeviceMemory depthImageMemory;
+
+    createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,  depthImage, depthImageMemory);
+    auto depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    std::array attachments = {
+        colorImageView,
+        depthImageView
+    };
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = renderPass;
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(std::size(attachments));
+    framebufferInfo.pAttachments = attachments.data();
+    framebufferInfo.width = width;
+    framebufferInfo.height = height;
+    framebufferInfo.layers = 1;
+
+    VkFramebuffer frameBuffer;
+
+    if (vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create framebuffer!");
+    }
+
+    return {frameBuffer, image, colorImageView, colorImage} ;
+}
+
 void VulkanRenderer::createFrameBuffers() {
     _swapChainFramebuffers.resize(_swapChainImages.size());
     std::array<VkImageView,2> attachments;
@@ -930,6 +975,46 @@ std::tuple<VkPipeline, VkPipelineLayout> VulkanRenderer::createGraphicsPipeline(
     }
 
     return {pipeline, pipeline_layout};
+
+}
+
+void VulkanRenderer::executeCommandBuffers(std::vector<std::vector<VkCommandBuffer>> commandBuffers) {
+    vkWaitForFences(_device, 1, &_inFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(_device, 1, &_inFlightFence);
+
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(_device, _swapChain, UINT64_MAX, _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = {_imageAvailableSemaphore};
+    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = commandBuffers[imageIndex].size();
+    submitInfo.pCommandBuffers = commandBuffers[imageIndex].data();
+
+    VkSemaphore signalSemaphores[] = {_renderFinishedSemaphore};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _inFlightFence) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit draw command buffer!");
+    }
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = {_swapChain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    vkQueuePresentKHR(_presentQueue, &presentInfo);
 
 }
 
@@ -1236,6 +1321,77 @@ void VulkanRenderer::createDefaultTestGraphicsPipeline() {
 
     vkDestroyShaderModule(_device, frag_module, nullptr);
     vkDestroyShaderModule(_device, vert_module, nullptr);
+}
+
+VkRenderPass VulkanRenderer::createCustomRenderPass(VkFormat colorFormat, VkFormat depthFormat) {
+    VkRenderPass renderPass;
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = colorFormat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+
+
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format = depthFormat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
+
+    if (vkCreateRenderPass(_device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+
+    return renderPass;
+}
+
+VkRenderPass VulkanRenderer::getDefaultFrameBufferRenderPass() {
+    return _renderPass;
+}
+
+VkFramebuffer VulkanRenderer::getDefaultFramebuffer(int index) {
+    return _swapChainFramebuffers[index];
 }
 
 void VulkanRenderer::createRenderPass() {
@@ -1716,16 +1872,12 @@ void VulkanRenderer::drawFrameExp() {
 }
 
 
-VkCommandBuffer VulkanRenderer::createCommandBuffer(int imageIndex, VkCommandBufferLevel level) {
+VkCommandBuffer VulkanRenderer::createCommandBuffer(VkCommandBufferLevel level) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = _commandPool;
     allocInfo.level = level;
     allocInfo.commandBufferCount = 1;
-
-    if (vkAllocateCommandBuffers(_device, &allocInfo, &_commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate command buffers!");
-    }
 
     VkCommandBuffer commandBuffer;
     if (vkAllocateCommandBuffers(_device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
@@ -1893,6 +2045,23 @@ void VulkanRenderer::endFrameCommands(VkCommandBuffer commandBuffer) {
     }
 }
 
+void VulkanRenderer::beginCustomRenderPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer frameBuffer, uint32_t width, uint32_t height) {
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = frameBuffer;
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = {width, height};
+    std::array<VkClearValue,2> clearValues{};
+    clearValues[0].color = {{0.1f, 0.0f, 0.4f, 1.0f}};
+    clearValues[1].depthStencil = {1.0f, 0};
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+}
+
 VkRenderPass VulkanRenderer::beginRenderPass(VkCommandBuffer commandBuffer, int swapChainImageIndex) {
 
     VkRenderPassBeginInfo renderPassInfo{};
@@ -1922,12 +2091,12 @@ void VulkanRenderer::recordSecondaryExecCommandBuffers(VkCommandBuffer primary, 
     vkCmdExecuteCommands(primary, static_cast<uint32_t>(secondaries.size()), secondaries.data());
 }
 
-VkCommandBufferInheritanceInfo VulkanRenderer::createInheritanceInfo(VkRenderPass renderPass, int imageIndex) {
+VkCommandBufferInheritanceInfo VulkanRenderer::createInheritanceInfo(VkRenderPass renderPass, VkFramebuffer frameBuffer) {
     VkCommandBufferInheritanceInfo inheritanceInfo{};
     inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     inheritanceInfo.renderPass = renderPass;        // same as used in vkCmdBeginRenderPass
     inheritanceInfo.subpass = 0;                    // usually 0 unless you're inside a multi-subpass setup
-    inheritanceInfo.framebuffer = _swapChainFramebuffers[imageIndex];      // can be VK_NULL_HANDLE if not framebuffer-dependent
+    inheritanceInfo.framebuffer = frameBuffer;      // can be VK_NULL_HANDLE if not framebuffer-dependent
     inheritanceInfo.occlusionQueryEnable = VK_FALSE;
     inheritanceInfo.queryFlags = 0;
     inheritanceInfo.pipelineStatistics = 0;
