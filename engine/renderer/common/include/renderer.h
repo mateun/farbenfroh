@@ -133,10 +133,8 @@ namespace renderer {
         uint32_t id;
     };
 
-    struct FontHandle {
-        uint32_t id;
-        TextureHandle atlasTexture;
-    };
+
+
 
 
     /**
@@ -331,6 +329,12 @@ namespace renderer {
         }
     };
 
+    struct FontHandle {
+        uint32_t id;
+        TextureHandle atlasTexture;
+        Image atlasImage;
+    };
+
     enum class IndexFormat {
         UInt8,
         UInt16,
@@ -486,6 +490,19 @@ namespace renderer {
     BoundingBox measureText(FontHandle fontHandle, const std::string &text);
 
     void updateText(Mesh &mesh, FontHandle font, const std::string &newText);
+
+    typedef void* (*GetVertexBufferForHandleFn)(VertexBufferHandle vbh);
+    void registerGetVertexBufferForHandle(GetVertexBufferForHandleFn fn);
+    void* getVertexBufferForHandle(VertexBufferHandle vbh);
+
+    typedef void* (*GetIndexBufferForHandleFn)(IndexBufferHandle ibh);
+    void registerGetIndexBufferForHandle(GetIndexBufferForHandleFn fn);
+    void* getIndexBufferForHandle(IndexBufferHandle ibh);
+
+    typedef void* (*GetTextureForHandleFn)(TextureHandle ibh);
+    void registerGetTextureForHandle(GetTextureForHandleFn fn);
+    void* getTextureForHandle(TextureHandle ibh);
+
 }
 
 #endif //RENDERER_H

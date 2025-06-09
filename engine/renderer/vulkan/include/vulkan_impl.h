@@ -150,6 +150,10 @@ struct VulkanIndexBuffer {
   VkBuffer buffer;
 };
 
+struct VulkanTexture {
+  VkImageView textureImageView;
+};
+
 struct UniformBufferObject {
   glm::mat4 model;
   glm::mat4 view;
@@ -166,7 +170,7 @@ class VulkanRenderer {
     void clearBuffers();
     void drawFrameExp();
 
-    VkCommandBuffer createCommandBuffer(int imageIndex);
+    VkCommandBuffer createCommandBuffer(int imageIndex, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
 
@@ -246,6 +250,26 @@ class VulkanRenderer {
     VkShaderModule createShaderModule(std::vector<uint32_t> spirv);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
+    void beginSecondaryCommandBuffer(VkCommandBuffer commandBuffer, VkRenderPass renderPass, int imageIndex, VkCommandBufferInheritanceInfo *
+                                     inheritance_info);
+
+    void beginFrameCommands(VkCommandBuffer commandBuffer);
+
+    void endFrameCommands(VkCommandBuffer commandBuffer);
+
+    VkRenderPass beginRenderPass(VkCommandBuffer commandBuffer, int swapChainImageIndex);
+
+    void endRenderPass(VkCommandBuffer commandBuffer);
+
+    void recordSecondaryExecCommandBuffers(VkCommandBuffer primary, std::vector<VkCommandBuffer> secondaries);
+
+    VkCommandBufferInheritanceInfo createInheritanceInfo(VkRenderPass renderPass, int imageIndex);
+
+    void recordMeshData(VkCommandBuffer commandBuffer, VkBuffer vertexBuffer, VkBuffer indexBuffer,
+                        VkIndexType indexType, VkPipelineLayout pipeline_layout,
+                        VkPipeline pipeline, std::vector<VkDescriptorSet> descriptorSets, int instance_count, int instance_offset, uint32_t
+                        num_indices);
+
     VkBuffer createVertexBufferRaw(size_t size, void *data);
 
     template<typename T>
@@ -264,13 +288,15 @@ class VulkanRenderer {
 
     VkImageView createTextureImageView(VkImage image, VkFormat format);
 
-    VkImage createTextureImage(const renderer::Image &image, VkFormat format);
+    VkImage createTextureImage(const renderer::Image &image, VkFormat format, VkDeviceSize imageSize);
 
     VkCommandBuffer beginSingleTimeCommands();
 
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     void* mapMemory(VkDeviceMemory memory, int i, uint64_t size);
+
+    void endSecondaryCommandBuffer(VkCommandBuffer vk_command_buffer);
 
   private:
     HINSTANCE _hInstance;

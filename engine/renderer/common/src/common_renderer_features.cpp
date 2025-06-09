@@ -36,6 +36,9 @@ namespace renderer {
     static UpdateIndexBufferFn g_updateIndexBuffer = nullptr;
     static VertexBufferBuilderFn g_vertexBufferBuilder = nullptr;
     static DrawTextIntoQuadFn g_drawTextIntoQuad = nullptr;
+    static GetVertexBufferForHandleFn g_getVertexBufferForHandleFn = nullptr;
+    static GetIndexBufferForHandleFn g_getIndexBufferForHandleFn = nullptr;
+    static GetTextureForHandleFn g_getTextureForHandleFn = nullptr;
     static CreateMeshFn g_createMesh = nullptr;
     static ImportMeshFn g_importMesh = nullptr;
 
@@ -53,6 +56,18 @@ namespace renderer {
 
     void registerDrawTextIntoQuad(DrawTextIntoQuadFn fn) {
         g_drawTextIntoQuad = fn;
+    }
+
+    void registerGetVertexBufferForHandle(GetVertexBufferForHandleFn fn) {
+        g_getVertexBufferForHandleFn = fn;
+    }
+
+    void registerGetIndexBufferForHandle(GetIndexBufferForHandleFn fn) {
+        g_getIndexBufferForHandleFn = fn;
+    }
+
+    void registerGetTextureForHandle(GetTextureForHandleFn fn) {
+        g_getTextureForHandleFn = fn;
     }
 
     void registerUpdateIndexBuffer(UpdateIndexBufferFn fn) {
@@ -79,6 +94,18 @@ namespace renderer {
             return {};
         }
         return g_createIndexBuffer(ibd);
+    }
+
+    void* getVertexBufferForHandle(VertexBufferHandle vbh) {
+        return g_getVertexBufferForHandleFn(vbh);
+    }
+
+    void* getIndexBufferForHandle(IndexBufferHandle ibh) {
+        return g_getIndexBufferForHandleFn(ibh);
+    }
+
+    void* getTextureForHandle(TextureHandle th) {
+        return g_getTextureForHandleFn(th);
     }
 
     std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder() {
@@ -109,8 +136,6 @@ namespace renderer {
         return g_createMesh(vbo, ibo, attributes, index_count);
     }
 
-    // TODO: maybe this could go into a "common" renderer implementation.
-    // It is not GL46 specific (not GL at all...).
     FontHandle createFontFromFile(const std::string &pathToTTF, float fontSize) {
         // Read font file
         FILE *fp = fopen(pathToTTF.c_str(), "rb");

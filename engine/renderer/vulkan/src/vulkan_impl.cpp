@@ -36,9 +36,11 @@ static VulkanRenderer* vulkan_renderer = nullptr;
 static uint32_t nextHandleId = 1; // start at 1 to reserve 0 as "invalid"
 static uint32_t nextVBHandleId = 1;
 static uint32_t nextIBHandleId = 1;
+static uint32_t nextTextureHandleId = 1;
 static std::unordered_map<uint32_t, VulkanShader> shaderMap;
 static std::unordered_map<uint32_t, VulkanVertexBuffer> vertexBufferMap;
 static std::unordered_map<uint32_t, VulkanIndexBuffer> indexBufferMap;
+static std::unordered_map<uint32_t, VulkanTexture> textureMap;
 
 void VulkanRenderer::createQueryPool() {
     VkQueryPoolCreateInfo queryPoolInfo{};
@@ -865,8 +867,8 @@ std::tuple<VkPipeline, VkPipelineLayout> VulkanRenderer::createGraphicsPipeline(
     rasterizer.depthBiasEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    //rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    //rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.lineWidth = 1.0f;
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -880,13 +882,13 @@ std::tuple<VkPipeline, VkPipelineLayout> VulkanRenderer::createGraphicsPipeline(
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
-    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -986,8 +988,9 @@ VkImageView VulkanRenderer::createTextureImageView(VkImage image, VkFormat forma
 
 
 
-VkImage VulkanRenderer::createTextureImage(const renderer::Image &image, VkFormat format) {
-    VkDeviceSize imageSize = image.width * image.height * 4;
+VkImage VulkanRenderer::createTextureImage(const renderer::Image &image, VkFormat format, VkDeviceSize imageSize) {
+
+    //VkDeviceSize imageSize = image.width * image.height * 4;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1050,6 +1053,10 @@ void * VulkanRenderer::mapMemory(VkDeviceMemory memory, int offset, uint64_t siz
     void* mappedData;
     vkMapMemory(_device, memory, offset, size, 0, &mappedData);
     return mappedData;
+}
+
+void VulkanRenderer::endSecondaryCommandBuffer(VkCommandBuffer vk_command_buffer) {
+    vkEndCommandBuffer(vk_command_buffer);
 }
 
 
@@ -1708,11 +1715,12 @@ void VulkanRenderer::drawFrameExp() {
     vkQueuePresentKHR(_presentQueue, &presentInfo);
 }
 
-VkCommandBuffer VulkanRenderer::createCommandBuffer(int imageIndex) {
+
+VkCommandBuffer VulkanRenderer::createCommandBuffer(int imageIndex, VkCommandBufferLevel level) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = _commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.level = level;
     allocInfo.commandBufferCount = 1;
 
     if (vkAllocateCommandBuffers(_device, &allocInfo, &_commandBuffer) != VK_SUCCESS) {
@@ -1859,6 +1867,90 @@ QueueFamilyIndices VulkanRenderer::findQueueFamilies(VkPhysicalDevice device) {
     return indices;
 }
 
+void VulkanRenderer::beginSecondaryCommandBuffer(VkCommandBuffer commandBuffer, VkRenderPass renderPass, int imageIndex,
+    VkCommandBufferInheritanceInfo* inheritance_info) {
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    beginInfo.pInheritanceInfo = inheritance_info;
+
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+}
+
+void VulkanRenderer::beginFrameCommands(VkCommandBuffer commandBuffer) {
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vkResetCommandBuffer(commandBuffer, 0);
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording custom command buffer!");
+    }
+}
+
+void VulkanRenderer::endFrameCommands(VkCommandBuffer commandBuffer) {
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
+}
+
+VkRenderPass VulkanRenderer::beginRenderPass(VkCommandBuffer commandBuffer, int swapChainImageIndex) {
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = _renderPass;
+    renderPassInfo.framebuffer = _swapChainFramebuffers[swapChainImageIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = _extent;
+    std::array<VkClearValue,2> clearValues{};
+    clearValues[0].color = {{0.1f, 0.0f, 0.4f, 1.0f}};
+    clearValues[1].depthStencil = {1.0f, 0};
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+
+
+    return _renderPass;
+}
+
+void VulkanRenderer::endRenderPass(VkCommandBuffer commandBuffer) {
+    vkCmdEndRenderPass(commandBuffer);
+}
+
+void VulkanRenderer::recordSecondaryExecCommandBuffers(VkCommandBuffer primary, std::vector<VkCommandBuffer> secondaries) {
+    vkCmdExecuteCommands(primary, static_cast<uint32_t>(secondaries.size()), secondaries.data());
+}
+
+VkCommandBufferInheritanceInfo VulkanRenderer::createInheritanceInfo(VkRenderPass renderPass, int imageIndex) {
+    VkCommandBufferInheritanceInfo inheritanceInfo{};
+    inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    inheritanceInfo.renderPass = renderPass;        // same as used in vkCmdBeginRenderPass
+    inheritanceInfo.subpass = 0;                    // usually 0 unless you're inside a multi-subpass setup
+    inheritanceInfo.framebuffer = _swapChainFramebuffers[imageIndex];      // can be VK_NULL_HANDLE if not framebuffer-dependent
+    inheritanceInfo.occlusionQueryEnable = VK_FALSE;
+    inheritanceInfo.queryFlags = 0;
+    inheritanceInfo.pipelineStatistics = 0;
+    return inheritanceInfo;
+}
+
+void VulkanRenderer::recordMeshData(VkCommandBuffer commandBuffer, VkBuffer vertexBuffer, VkBuffer indexBuffer, VkIndexType indexType, VkPipelineLayout pipeline_layout, VkPipeline pipeline,
+    std::vector<VkDescriptorSet> descriptorSets, int instance_count, int instance_offset, uint32_t num_indices) {
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    VkBuffer vertexBuffers[] = {vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+    vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, indexType);
+    //vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _queryPool, 0);
+
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSets[0], 0, nullptr);
+    vkCmdDrawIndexed(commandBuffer, num_indices, instance_count, 0, 0, instance_offset);
+    //vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _queryPool, 1);
+}
+
 void VulkanRenderer::recordCustomCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkBuffer vertexBuffer, VkBuffer indexBuffer, int instance_count,
         VkPipeline pipeline, VkPipelineLayout pipeline_layout, std::vector<VkDescriptorSet> descriptorSets) {
     VkCommandBufferBeginInfo beginInfo{};
@@ -1990,6 +2082,18 @@ namespace renderer {
         return ibh;
     }
 
+    TextureHandle createTextureVulkan(const Image &srcImage, TextureFormat textureFormat) {
+        auto vk_format = VK_FORMAT_R8G8B8A8_UNORM;
+        if (textureFormat == TextureFormat::R8) {
+            vk_format = VK_FORMAT_R8_UNORM;
+        }
+        auto image = get_vulkan_renderer()->createTextureImage(srcImage, vk_format, srcImage.width * srcImage.height);
+        auto image_view = get_vulkan_renderer()->createTextureImageView(image, vk_format);
+        TextureHandle th = { nextTextureHandleId++};
+        textureMap[th.id] = VulkanTexture{image_view};
+        return th;
+    }
+
 
     template<>
     VertexBufferHandle createVertexBuffer(renderer::VertexBufferCreateInfo<Pos2Vertex> create_info) {
@@ -2101,8 +2205,50 @@ namespace renderer {
         return {};
     }
 
+    void*  getVertexBufferForHandleVulkan(VertexBufferHandle vbh) {
+        return vertexBufferMap[vbh.id].buffer;
+    }
+
+    void*  getIndexBufferForHandleVulkan(IndexBufferHandle ibh) {
+        return indexBufferMap[ibh.id].buffer;
+    }
+
+    void* getTextureForHandleVulkan(TextureHandle th) {
+        return textureMap[th.id].textureImageView;
+    }
+
     Mesh drawTextIntoQuadVulkan(FontHandle fontHandle, const std::string& text) {
-        return {};
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec2> uvs;
+        std::vector<uint32_t> indices;
+
+        drawTextIntoQuadGeometry(fontHandle, text, positions, uvs, indices);
+
+        std::vector<Pos3VertexUV> vertices;
+        for (int i = 0; i < positions.size(); i++) {
+            vertices.push_back({positions[i], uvs[i]});
+        }
+
+        VertexBufferCreateInfo<Pos3VertexUV> vbci;
+        vbci.data = vertices;
+        auto vbo = get_vulkan_renderer()->createVertexBuffer(vbci);
+        VertexBufferHandle vbh = {nextVBHandleId++};
+        vertexBufferMap[vbh.id] = VulkanVertexBuffer{vbo};
+
+        IndexBufferDesc ibd{};
+        ibd.data = indices.data();
+        ibd.size_in_bytes = indices.size() * sizeof(uint32_t);
+        auto ibo = get_vulkan_renderer()->createIndexBuffer(ibd);
+        IndexBufferHandle ibh = {nextIBHandleId++};
+        indexBufferMap[ibh.id] = VulkanIndexBuffer{ibo};
+
+
+        Mesh mesh;
+        mesh.index_count = indices.size();
+        mesh.index_buffer = ibh;
+        mesh.vertex_buffer = vbh;
+
+        return mesh;
     }
 
 
@@ -2142,5 +2288,9 @@ void init_vulkan(HWND hwnd, HINSTANCE hinst, bool useSRGB, int msaaSampleCount) 
 
     renderer::registerCreateIndexBuffer(&renderer::createIndexBufferVulkan);
     renderer::registerDrawTextIntoQuad(&renderer::drawTextIntoQuadVulkan);
+    renderer::registerGetVertexBufferForHandle(&renderer::getVertexBufferForHandleVulkan);
+    renderer::registerGetIndexBufferForHandle(&renderer::getIndexBufferForHandleVulkan);
+    renderer::registerGetTextureForHandle(&renderer::getTextureForHandleVulkan);
+    renderer::registerCreateTexture(&renderer::createTextureVulkan);
 
 }
