@@ -184,6 +184,9 @@ class VulkanRenderer {
 
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+    void recordImgaeTransitionCommand(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout,
+                                      VkImageLayout newLayout);
+
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
     VkDescriptorSetLayout createDescriptorSetLayout(std::vector<std::tuple<uint32_t, VkDescriptorType, VkShaderStageFlags>> bindingInfos);
@@ -295,9 +298,9 @@ class VulkanRenderer {
     size_t getNumberOfSwapChainImages();
 
     std::tuple<VkPipeline, VkPipelineLayout> createGraphicsPipeline(VkShaderModule vertexModule, VkShaderModule fragModule,
-                                      std::vector<VkVertexInputAttributeDescription>
-                                      attributeDescriptions, VkVertexInputBindingDescription bindingDescription,
-                                      VkDescriptorSetLayout layout);
+                                                                    std::vector<VkVertexInputAttributeDescription>
+                                                                    attributeDescriptions, VkVertexInputBindingDescription bindingDescription,
+                                                                    VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass);
 
     void executeCommandBuffers(std::vector<std::vector<VkCommandBuffer>> commandBuffers);
 
@@ -314,6 +317,10 @@ class VulkanRenderer {
     void* mapMemory(VkDeviceMemory memory, int i, uint64_t size);
 
     void endSecondaryCommandBuffer(VkCommandBuffer vk_command_buffer);
+
+    VkPipelineLayout getDefaultPipelineLayout();
+
+    VkPipeline getDefaultPipeline();
 
   private:
     HINSTANCE _hInstance;

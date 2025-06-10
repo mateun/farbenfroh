@@ -29,6 +29,8 @@
 #include <complex.h>
 #include <complex.h>
 #include <complex.h>
+#include <complex.h>
+#include <complex.h>
 #include <engine.h>
 #include <unordered_map>
 
@@ -89,9 +91,7 @@ void VulkanRenderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t 
     endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanRenderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
+void VulkanRenderer::recordImgaeTransitionCommand(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout) {
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = oldLayout;
@@ -122,21 +122,31 @@ void VulkanRenderer::transitionImageLayout(VkImage image, VkFormat format, VkIma
     } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    } else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     } else {
         throw std::invalid_argument("unsupported layout transition!");
     }
 
     vkCmdPipelineBarrier(
-    commandBuffer,
-    sourceStage, destinationStage,
-    0,
-    0, nullptr,
-    0, nullptr,
-    1, &barrier
-);
+        commandBuffer,
+        sourceStage, destinationStage,
+        0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier
+    );
+}
+
+void VulkanRenderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
+    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+    recordImgaeTransitionCommand(commandBuffer, image, oldLayout, newLayout);
+
 
     endSingleTimeCommands(commandBuffer);
 }
@@ -591,7 +601,7 @@ void VulkanRenderer::createSwapChain() {
     vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount, surfaceFormats.data());
 
     for (auto f : surfaceFormats) {
-        if (f.format == VK_FORMAT_B8G8R8A8_UNORM && f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if (f.format == VK_FORMAT_B8G8R8A8_SRGB && f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             _surfaceFormat = f;
             break;
         }
@@ -842,7 +852,7 @@ VkShaderModule VulkanRenderer::createShaderModule(std::vector<uint32_t> spirv) {
 std::tuple<VkPipeline, VkPipelineLayout> VulkanRenderer::createGraphicsPipeline(VkShaderModule vertexModule, VkShaderModule fragModule,
                                                   std::vector<VkVertexInputAttributeDescription> attributeDescriptions,
                                                   VkVertexInputBindingDescription bindingDescription,
-                                                  VkDescriptorSetLayout descriptorSetLayout) {
+                                                  VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass) {
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -966,7 +976,7 @@ std::tuple<VkPipeline, VkPipelineLayout> VulkanRenderer::createGraphicsPipeline(
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.layout = pipeline_layout;
-    pipelineInfo.renderPass = _renderPass;
+    pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
 
     VkPipeline pipeline;
@@ -1142,6 +1152,14 @@ void * VulkanRenderer::mapMemory(VkDeviceMemory memory, int offset, uint64_t siz
 
 void VulkanRenderer::endSecondaryCommandBuffer(VkCommandBuffer vk_command_buffer) {
     vkEndCommandBuffer(vk_command_buffer);
+}
+
+VkPipelineLayout VulkanRenderer::getDefaultPipelineLayout() {
+    return _pipelineLayout;
+}
+
+VkPipeline VulkanRenderer::getDefaultPipeline() {
+    return _graphicsPipeline;
 }
 
 
@@ -1333,7 +1351,7 @@ VkRenderPass VulkanRenderer::createCustomRenderPass(VkFormat colorFormat, VkForm
     colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkAttachmentReference colorAttachmentRef{};
     colorAttachmentRef.attachment = 0;
