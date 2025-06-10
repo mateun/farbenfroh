@@ -8,5 +8,6 @@ add_subdirectory(asset_handling)
 add_subdirectory(animation)
 add_subdirectory(util)
 add_subdirectory(input)
+add_subdirectory(audio)
 
 

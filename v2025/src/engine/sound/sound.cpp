@@ -493,7 +493,7 @@ LPDIRECTSOUND8 initAudio(HWND hwnd) {
         }
     }
 
-    //buf->Play(0, 0, 0);
+    buf->Play(0, 0, 0);
 
     return dsound8;
 
