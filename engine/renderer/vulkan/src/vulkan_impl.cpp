@@ -208,7 +208,7 @@ void VulkanRenderer::createDescriptorPool() {
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = poolSizes.size();
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)  * 5;   // max. 10 sets for now from this pool..
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)  * 10;   // max. 10 sets for now from this pool..
     if (vkCreateDescriptorPool(_device, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
     }
