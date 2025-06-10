@@ -6,5 +6,5 @@ add_library(audio STATIC
 )
 
 target_include_directories(audio
-        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../../v2025/src/engine/sound
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../v2025/src/engine/sound
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
