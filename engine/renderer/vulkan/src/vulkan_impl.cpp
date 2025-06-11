@@ -2121,6 +2121,27 @@ VkCommandBufferInheritanceInfo VulkanRenderer::createInheritanceInfo(VkRenderPas
     return inheritanceInfo;
 }
 
+void VulkanRenderer::recordMultiMeshData(VkCommandBuffer commandBuffer, std::vector<VkBuffer> vertexBuffersParam, std::vector<VkBuffer> indexBuffers, std::vector<VkIndexType> indexTypes, VkPipelineLayout pipeline_layout, VkPipeline pipeline,
+    std::vector<VkDescriptorSet> descriptorSets, std::vector<int> instance_counts, std::vector<int> instance_offsets, std::vector<uint32_t> num_indices) {
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    for (int i = 0; i < vertexBuffersParam.size(); i++) {
+
+        VkBuffer vertexBuffers[] = {vertexBuffersParam[i]};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffers[i], 0, indexTypes[i]);
+        //vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _queryPool, 0);
+
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSets[0], 0, nullptr);
+        vkCmdDrawIndexed(commandBuffer, num_indices[i], instance_counts[i], 0, 0, instance_offsets[i]);
+    }
+    //vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _queryPool, 1);
+}
+
+
 void VulkanRenderer::recordMeshData(VkCommandBuffer commandBuffer, VkBuffer vertexBuffer, VkBuffer indexBuffer, VkIndexType indexType, VkPipelineLayout pipeline_layout, VkPipeline pipeline,
     std::vector<VkDescriptorSet> descriptorSets, int instance_count, int instance_offset, uint32_t num_indices) {
 

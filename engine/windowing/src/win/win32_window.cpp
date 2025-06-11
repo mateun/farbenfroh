@@ -7,6 +7,8 @@
 #include <windowsx.h>
 
 
+bool lbuttonUp = false;
+bool lbuttonDown = false;
 static int mouse_x = 0;
 static int mouse_y = 0;
 static int mouse_rel_x = 0;
@@ -22,6 +24,14 @@ int win_mouse_x() {
 
 int win_mouse_y() {
     return mouse_y;
+}
+
+bool mouse_left_up() {
+    return lbuttonUp;
+}
+
+bool mouse_left_down() {
+    return lbuttonDown;
 }
 
 WPARAM last_key_press() {
@@ -63,6 +73,15 @@ static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
             delete[] lpb;
             return 0;
         }
+
+        case WM_LBUTTONDOWN:
+            lbuttonDown = true;
+            break;
+
+        case WM_LBUTTONUP:
+            lbuttonUp = true;
+            lbuttonDown = false;
+            break;
 
         case WM_MOUSEMOVE:
             if (useMouse) {

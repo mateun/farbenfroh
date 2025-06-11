@@ -8,6 +8,8 @@
 #include <Windows.h>
 #include <string>
 
+bool mouse_left_up();
+bool mouse_left_down();
 int win_mouse_x();
 int win_mouse_y();
 WPARAM last_key_press();

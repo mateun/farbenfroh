@@ -5,6 +5,9 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+bool mouseLeftUp();
+bool mouseLeftDown();
+
 // The current mouse coordinates
 int mouseX();
 int mouseY();

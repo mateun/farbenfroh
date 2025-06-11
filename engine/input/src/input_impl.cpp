@@ -4,6 +4,13 @@
 #include "../include/input.h"
 #include <engine.h>
 
+bool mouseLeftUp() {
+    return mouse_left_up();
+}
+
+bool mouseLeftDown() {
+    return mouse_left_down();
+}
 
 int mouseX() {
     return win_mouse_x();

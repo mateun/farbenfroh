@@ -283,6 +283,12 @@ class VulkanRenderer {
 
     VkCommandBufferInheritanceInfo createInheritanceInfo(VkRenderPass renderPass, VkFramebuffer frameBuffer);
 
+    void recordMultiMeshData(VkCommandBuffer commandBuffer, std::vector<VkBuffer> vertexBuffersParam,
+                             std::vector<VkBuffer> indexBuffers, std::vector<VkIndexType> indexTypes,
+                             VkPipelineLayout pipeline_layout, VkPipeline pipeline,
+                             std::vector<VkDescriptorSet> descriptorSets, std::vector<int> instance_counts,
+                             std::vector<int> instance_offsets, std::vector<uint32_t> num_indices);
+
     void recordMeshData(VkCommandBuffer commandBuffer, VkBuffer vertexBuffer, VkBuffer indexBuffer,
                         VkIndexType indexType, VkPipelineLayout pipeline_layout,
                         VkPipeline pipeline, std::vector<VkDescriptorSet> descriptorSets, int instance_count, int instance_offset, uint32_t
