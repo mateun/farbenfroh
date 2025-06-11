@@ -199,16 +199,16 @@ void VulkanRenderer::createDescriptorSetLayout() {
 
 void VulkanRenderer::createDescriptorPool() {
     std::vector<VkDescriptorPoolSize> poolSizes = {
-    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT * 10},
-    {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_FRAMES_IN_FLIGHT * 10},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 10}
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT * 40},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_FRAMES_IN_FLIGHT * 40},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 40}
     };
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = poolSizes.size();
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)  * 10;   // max. 10 sets for now from this pool..
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)  * 40;   // max. 10 sets for now from this pool..
     if (vkCreateDescriptorPool(_device, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
     }
@@ -2122,7 +2122,7 @@ VkCommandBufferInheritanceInfo VulkanRenderer::createInheritanceInfo(VkRenderPas
 }
 
 void VulkanRenderer::recordMultiMeshData(VkCommandBuffer commandBuffer, std::vector<VkBuffer> vertexBuffersParam, std::vector<VkBuffer> indexBuffers, std::vector<VkIndexType> indexTypes, VkPipelineLayout pipeline_layout, VkPipeline pipeline,
-    std::vector<VkDescriptorSet> descriptorSets, std::vector<int> instance_counts, std::vector<int> instance_offsets, std::vector<uint32_t> num_indices) {
+    std::vector<std::vector<VkDescriptorSet>> descriptorSets, std::vector<int> instance_counts, std::vector<int> instance_offsets, std::vector<uint32_t> num_indices) {
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -2135,7 +2135,7 @@ void VulkanRenderer::recordMultiMeshData(VkCommandBuffer commandBuffer, std::vec
         vkCmdBindIndexBuffer(commandBuffer, indexBuffers[i], 0, indexTypes[i]);
         //vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, _queryPool, 0);
 
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSets[0], 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSets[i][0], 0, nullptr);
         vkCmdDrawIndexed(commandBuffer, num_indices[i], instance_counts[i], 0, 0, instance_offsets[i]);
     }
     //vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _queryPool, 1);
