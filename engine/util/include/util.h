@@ -20,5 +20,8 @@ float timer_microseconds(Timer& timer);
 std::vector<uint8_t> read_file_binary_to_vector(const std::string& filename);
 uint8_t* read_file_binary(const std::string& fileName);
 
+bool strContains1(const std::string& str, char test);
+bool strContains(const std::string &str, const std::string &test);
+
 
 #endif //UTIL_H

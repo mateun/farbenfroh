@@ -1565,23 +1565,13 @@ void VulkanRenderer::updateUniformBuffer(int current_image) {
     memcpy(_uniformBuffersMapped[current_image], &ubo, sizeof(ubo));
 }
 
-template<>
-VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo<Pos3Vertex> vertex_buffer_create_info) {
+
+VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo vertex_buffer_create_info) {
     auto vb = createVertexBufferRaw(vertex_buffer_create_info.data.size() * sizeof(vertex_buffer_create_info.data[0]), vertex_buffer_create_info.data.data());
     return vb;
 }
 
-template<>
-VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo<Pos3VertexUV> vertex_buffer_create_info) {
-    auto vb = createVertexBufferRaw(vertex_buffer_create_info.data.size() * sizeof(vertex_buffer_create_info.data[0]), vertex_buffer_create_info.data.data());
-    return vb;
-}
 
-template<>
-VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo<Pos2Vertex> vertex_buffer_create_info) {
-    auto vb = createVertexBufferRaw(vertex_buffer_create_info.data.size() * sizeof(vertex_buffer_create_info.data[0]), vertex_buffer_create_info.data.data());
-    return vb;
-}
 
 VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data) {
     VkDeviceSize bufferSize = size;
@@ -1592,7 +1582,7 @@ VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data) {
 
     void* targetData;
     vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, 0, &targetData);
-    memcpy(targetData, data, (size_t) bufferSize);
+    memcpy(targetData, data, bufferSize);
     vkUnmapMemory(_device, stagingBufferMemory);
 
     VkBuffer vb;
@@ -1610,33 +1600,7 @@ VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data) {
     return vb;
 }
 
-template<typename T>
-VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo<T> vertex_buffer_create_info) {
-    VkDeviceSize bufferSize = vertex_buffer_create_info.data.size() * sizeof(vertex_buffer_create_info.data[0]);
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-    void *data;
-    vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertex_buffer_create_info.data.data(), (size_t) bufferSize);
-    vkUnmapMemory(_device, stagingBufferMemory);
-
-    VkBuffer vb;
-    VkDeviceMemory vertexBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vb, vertexBufferMemory);
-
-
-    // Now the actual copy
-    copyBuffer(bufferSize, stagingBuffer, vb);
-
-    // Cleanup our staging buffer, we no longer need it:
-    vkDestroyBuffer(_device, stagingBuffer, nullptr);
-    vkFreeMemory(_device, stagingBufferMemory, nullptr);
-
-    return vb;
-}
 
 void VulkanRenderer::createVertexBuffer() {
     // Use a staging buffer, accessed by host and the "real" vertex buffer, GPU only.
@@ -2283,11 +2247,39 @@ namespace renderer {
         vulkan_renderer->drawFrameExp();
     }
 
+    VkIndexType getIndexType(const IndexBufferDesc& ibd) {
+        switch (ibd.format) {
+            case 5123: return VK_INDEX_TYPE_UINT16;
+            case 5125: return VK_INDEX_TYPE_UINT32;
+            default: return VK_INDEX_TYPE_UINT32;
+        }
+
+    }
+
     IndexBufferHandle createIndexBufferVulkan(const IndexBufferDesc& ibd) {
         auto ib = get_vulkan_renderer()->createIndexBuffer(ibd);
         IndexBufferHandle ibh = { nextIBHandleId++};
-        indexBufferMap[ibh.id] = VulkanIndexBuffer{ib};
+        indexBufferMap[ibh.id] = VulkanIndexBuffer{ib, getIndexType(ibd)};
         return ibh;
+    }
+
+    VertexBufferHandle createVertexBufferVulkan(VertexBufferCreateInfo create_info) {
+        auto vb = get_vulkan_renderer()->createVertexBuffer(create_info);
+        VertexBufferHandle vbh = { nextVBHandleId++};
+        vertexBufferMap[vbh.id] = VulkanVertexBuffer{vb};
+        return vbh;
+    }
+
+    Mesh createMeshVulkan(VertexBufferHandle vbo, IndexBufferHandle ibo, const std::vector<VertexAttribute> & attributes, size_t index_count) {
+        Mesh mesh;
+        mesh.index_count = index_count;
+        mesh.index_buffer = ibo;
+        mesh.vertex_buffer = vbo;
+        return mesh;
+    }
+
+    Mesh importMeshVulkan(const std::string& filename) {
+        return parseGLTF(filename);
     }
 
     TextureHandle createTextureVulkan(const Image &srcImage, TextureFormat textureFormat) {
@@ -2303,13 +2295,7 @@ namespace renderer {
     }
 
 
-    template<>
-    VertexBufferHandle createVertexBuffer(renderer::VertexBufferCreateInfo<Pos2Vertex> create_info) {
-        auto vb = get_vulkan_renderer()->createVertexBuffer(create_info);
-        VertexBufferHandle vb_handle = {nextVBHandleId++};
-        vertexBufferMap[vb_handle.id] = VulkanVertexBuffer {vb};
-        return vb_handle;
-    }
+
 
     ShaderHandle renderer::compileVertexShader(const std::string& source) {
         shaderc::Compiler compiler;
@@ -2421,6 +2407,10 @@ namespace renderer {
         return indexBufferMap[ibh.id].buffer;
     }
 
+    void* getNativeIndexBufferStructForHandleVulkan(IndexBufferHandle ibh) {
+        return &indexBufferMap[ibh.id];
+    }
+
     void* getTextureForHandleVulkan(TextureHandle th) {
         return textureMap[th.id].textureImageView;
     }
@@ -2432,13 +2422,22 @@ namespace renderer {
 
         drawTextIntoQuadGeometry(fontHandle, text, positions, uvs, indices);
 
+
         std::vector<Pos3VertexUV> vertices;
         for (int i = 0; i < positions.size(); i++) {
             vertices.push_back({positions[i], uvs[i]});
+
         }
 
-        VertexBufferCreateInfo<Pos3VertexUV> vbci;
-        vbci.data = vertices;
+        VertexBufferCreateInfo vbci;
+        for (auto v : vertices) {
+            vbci.data.push_back(v.pos.x);
+            vbci.data.push_back(v.pos.y);
+            vbci.data.push_back(v.pos.z);
+            vbci.data.push_back(v.uv.x);
+            vbci.data.push_back(v.uv.y);
+        }
+
         auto vbo = get_vulkan_renderer()->createVertexBuffer(vbci);
         VertexBufferHandle vbh = {nextVBHandleId++};
         vertexBufferMap[vbh.id] = VulkanVertexBuffer{vbo};
@@ -2500,5 +2499,9 @@ void init_vulkan(HWND hwnd, HINSTANCE hinst, bool useSRGB, int msaaSampleCount) 
     renderer::registerGetIndexBufferForHandle(&renderer::getIndexBufferForHandleVulkan);
     renderer::registerGetTextureForHandle(&renderer::getTextureForHandleVulkan);
     renderer::registerCreateTexture(&renderer::createTextureVulkan);
+    renderer::registerImportMesh(&renderer::importMeshVulkan);
+    renderer::registerCreateVertexBuffer(&renderer::createVertexBufferVulkan);
+    renderer::registerCreateMesh(&renderer::createMeshVulkan);
+    renderer::registerGetNativeIndexBufferStructForHandle(&renderer::getNativeIndexBufferStructForHandleVulkan);
 
 }

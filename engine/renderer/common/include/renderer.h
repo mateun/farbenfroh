@@ -5,10 +5,12 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <any>
 #include <Windows.h>
 #include <vector>
 #include <string>
 #include <memory>
+#include <variant>
 #include <glm/glm.hpp>
 
 
@@ -276,9 +278,8 @@ namespace renderer {
         virtual void update(VertexBufferHandle existingVBO) const = 0;
     };
 
-    template<typename T>
     struct VertexBufferCreateInfo {
-        std::vector<T> data;
+        std::vector<float> data;
         size_t element_size = 0;
         size_t stride = 0;
     };
@@ -404,15 +405,15 @@ namespace renderer {
 
     std::unique_ptr<VertexBufferBuilder> vertexBufferBuilder();
 
-    template<typename T>
-    VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo<T> create_info);
 
-    void updateVertexBuffer(renderer::VertexBufferUpdateInfo updateInfo);
+    typedef VertexBufferHandle (*CreateVertexBufferFn)(VertexBufferCreateInfo create_info);
+    void registerCreateVertexBuffer(CreateVertexBufferFn fn);
+    VertexBufferHandle createVertexBuffer(VertexBufferCreateInfo create_info);
+
+    void updateVertexBuffer(VertexBufferUpdateInfo updateInfo);
 
     typedef IndexBufferHandle (*CreateIndexBufferFn)(const IndexBufferDesc &);
-
     void registerCreateIndexBuffer(CreateIndexBufferFn fn);
-
     IndexBufferHandle createIndexBuffer(const IndexBufferDesc &);
 
     typedef void (*UpdateIndexBufferFn)(IndexBufferHandle iboHandle, std::vector<uint32_t> data);
@@ -434,6 +435,8 @@ namespace renderer {
     void registerImportMesh(ImportMeshFn fn);
 
     Mesh importMesh(const std::string &filename);
+
+    Mesh parseGLTF(const std::string &filename);
 
     // Shader
     std::unique_ptr<VertexShaderBuilder> vertexShaderBuilder();
@@ -494,6 +497,10 @@ namespace renderer {
     typedef void* (*GetVertexBufferForHandleFn)(VertexBufferHandle vbh);
     void registerGetVertexBufferForHandle(GetVertexBufferForHandleFn fn);
     void* getVertexBufferForHandle(VertexBufferHandle vbh);
+
+    typedef void* (*GetNativeIndexBufferStructForHandleFn)(IndexBufferHandle ibh);
+    void registerGetNativeIndexBufferStructForHandle(GetNativeIndexBufferStructForHandleFn fn);
+    void* getNativeIndexBufferStructForHandle(IndexBufferHandle ibh);
 
     typedef void* (*GetIndexBufferForHandleFn)(IndexBufferHandle ibh);
     void registerGetIndexBufferForHandle(GetIndexBufferForHandleFn fn);

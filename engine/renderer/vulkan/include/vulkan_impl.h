@@ -148,6 +148,7 @@ struct VulkanVertexBuffer {
 
 struct VulkanIndexBuffer {
   VkBuffer buffer;
+  VkIndexType indexType;
 };
 
 struct VulkanTexture {
@@ -296,8 +297,7 @@ class VulkanRenderer {
 
     VkBuffer createVertexBufferRaw(size_t size, void *data);
 
-    template<typename T>
-    VkBuffer createVertexBuffer(renderer::VertexBufferCreateInfo<T>);
+    VkBuffer createVertexBuffer(renderer::VertexBufferCreateInfo);
 
     void recordCustomCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkBuffer vertexBuffer, VkBuffer indexBuffer, int instance_count, VkPipeline, VkPipelineLayout,  std::vector<VkDescriptorSet>);
 

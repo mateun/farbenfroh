@@ -189,6 +189,9 @@ HWND create_window(int w, int h, bool fullscreen, HINSTANCE hInstance, const std
 
 bool poll_window(HWND window) {
 
+    lbuttonUp = false;
+
+
     MSG msg;
     while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) > 0) {
         if (msg.message == WM_QUIT) {

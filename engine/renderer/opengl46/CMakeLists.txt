@@ -14,6 +14,5 @@ target_link_libraries(opengl46 common_renderer engine_common glew32 opengl32  an
 add_custom_command(TARGET opengl46 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/../../../v2025/extlibs/glew-2.2.0/bin/glew32.dll
-
         ${CMAKE_BINARY_DIR}/bin
 )
