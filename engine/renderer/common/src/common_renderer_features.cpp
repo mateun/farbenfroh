@@ -894,7 +894,7 @@ namespace renderer {
 
         for (int i = 0; i < positions.size(); i++) {
             ci.data.push_back(positions[i].x);
-            ci.data.push_back(positions[i].y *-1 );     // TODO: We should only do this *-1 in vulkan, which we are not aware of here
+            ci.data.push_back(positions[i].y * 1 );     // TODO: We should only do this *-1 in vulkan, which we are not aware of here
             ci.data.push_back(positions[i].z);
             ci.data.push_back(uvs[i].x);
             ci.data.push_back(uvs[i].y);                 // TODO: only in vulkan, but we are not aware here.
