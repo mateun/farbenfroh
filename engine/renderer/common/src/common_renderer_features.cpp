@@ -577,6 +577,59 @@ namespace renderer {
 
     }
 
+
+    /*
+void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVector, const JsonArray* nodes, Joint* parent) {
+    for (auto c : armatureChildren->elements) {
+        auto childIndex = c->value->floatValue;
+        auto childNode = nodes->elements[childIndex]->value->objectValue;
+
+        // Check if this node is the mesh.
+        // If yes, skip it, we only collect joints.
+        auto mesh = findByMemberName(childNode, "mesh");
+        if (mesh) {
+            continue;
+        }
+        auto name = findByMemberName(childNode, "name")->stringValue;
+        Joint* joint = new Joint();
+        joint->name = name;
+        targetVector.push_back(joint);
+        if (parent) {
+            parent->children.push_back(joint);
+        }
+        auto translationArray = findByMemberName(childNode, "translation");
+        if (translationArray && !translationArray->arrayValue->elements.empty()) {
+            auto translationVertices = translationArray->arrayValue->elements;
+            joint->translation = glm::vec3{translationVertices[0]->value->floatValue,
+                                           translationVertices[1]->value->floatValue,
+                                           translationVertices[2]->value->floatValue};
+            joint->modelTranslation = glm::translate(glm::mat4(1), joint->translation);
+        }
+
+        auto rotationArray = findByMemberName(childNode, "rotation");
+        if (rotationArray && !rotationArray->arrayValue->elements.empty()) {
+            auto rotationValues = rotationArray->arrayValue->elements;
+            joint->rotation = glm::quat(rotationValues[3]->value->floatValue,
+                                        rotationValues[0]->value->floatValue,
+                                        rotationValues[1]->value->floatValue,
+                                        rotationValues[2]->value->floatValue);
+
+
+            joint->modelRotation = glm::toMat4(joint->rotation);
+
+        }
+
+        joint->currentPoseLocalTransform = joint->modelTranslation * joint->modelRotation;
+        joint->currentPoseGlobalTransform = parent ? (parent->currentPoseGlobalTransform * joint->currentPoseLocalTransform) : joint->currentPoseLocalTransform;
+
+        auto children = findByMemberName(childNode, "children");
+        if (children) {
+            collectJoints(children->arrayValue, targetVector, nodes, joint);
+        }
+    }
+}
+*/
+
         /**
      * We only accept scenes with 1 mesh for now.
      * @param gltfJson the parsed json of the gltf
@@ -644,9 +697,15 @@ namespace renderer {
         }
 
         if (skinIndex > -1) {
+            std::map<std::string, Joint*> jointMap;
             skeleton = new Skeleton();
             auto skinNode = gltf[json::json_pointer("/skins/" + std::to_string(skinIndex))];
             int inverseBindMatricesIndex = skinNode.value("inverseBindMatrices", -1);
+            auto skin_joints_index_array = skinNode["joints"];
+            std::vector<int> joint_indices;
+            for (auto ind : skin_joints_index_array) {
+                joint_indices.push_back(ind);
+            }
             auto inverseBindAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(inverseBindMatricesIndex))];
             auto inverseBindViewIndex = inverseBindAccessor.value("bufferView", -1);
             auto inverseBindBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(inverseBindViewIndex))];
@@ -657,9 +716,12 @@ namespace renderer {
             auto invBindMatricesOffset = dataBinary.data() + inverseBindBufferByteOffset;
             int count = 1;
             // One matrix is 16 values, each 4 values form a column.
-            std::vector<glm::mat4> invBindMatrices;
+            // We must also store the index of the joint for this bind matrix to find them back together later.
+            std::map<int, glm::mat4> invBindMatrices;
             std::vector<float> vals;
             std::vector<glm::vec4> vecs;
+
+            int joint_inv_index = 0;
             for ( int i = 0; i < inverseBindBufferLen; i+=4) {
                 auto val= (float*)(invBindMatricesOffset + i);
                 printf("val: %f\n", *val);
@@ -671,30 +733,71 @@ namespace renderer {
                 }
                 if (count % 16 == 0) {
                     //printf("matrix ----------\n");
-                    invBindMatrices.push_back(glm::mat4(vecs[0], vecs[1], vecs[2], vecs[3]));
+                    invBindMatrices[joint_indices[joint_inv_index]] = glm::mat4(vecs[0], vecs[1], vecs[2], vecs[3]);
                     vecs.clear();
+                    joint_inv_index ++;
                 }
                 count++;
             }
-            // We search for a node called "Armature"
+            // To find and create the correct joints, we
+            // first, go through all nodes. Every object in the gltf is a node, and they are all flat.
+            // Parent-child relation must be established separately.
             for (const auto& obj : nodesNode) {
-                std::string name = obj.value("name", "");
+                //std::string node_name = obj.value("name", "");
 
-                if (strContains(name, "Armature")) {
-                    if (obj.contains("children") && obj["children"].is_array()) {
-                        const auto& children = obj["children"];
-                        // Legacy code:
-                        // collectJoints(children, skeleton->joints, nodesNode->value->arrayValue, nullptr);
+                // Skip meshes, we only want joints here.
+                if (obj.contains("mesh")) {
+                    continue;
+                }
 
-                        // Partial new code
-                        // loop over `children` or access it as needed
-                        for (const auto& childIndex : children) {
-                            // childIndex is typically an integer (node index)
-                            int index = childIndex;
-                            // use index...
-                        }
+                // In the way we export our objects,
+                // if we are not a mesh and we are not called "Armature",
+                // we must be a joint :) !
+                auto node_name = obj.value("name", "");
+                Joint* current_parent_joint = nullptr;
+                if (node_name != "Armature") {
+                    if (jointMap.find(node_name) == jointMap.end()) {
+                        auto joint = new Joint();
+                        joint->name = node_name;
+                        jointMap[node_name] = joint;
+                        skeleton->joints.push_back(joint);
+                        current_parent_joint = joint;
+
+                    } else {
+                        current_parent_joint = jointMap[node_name];
                     }
                 }
+
+                if (current_parent_joint && obj.contains("children")) {
+                    const auto& children = obj["children"];
+                    for (auto c : children) {
+                        auto childIndex = c.get<int>();
+                        auto childNode = nodesNode[childIndex];
+
+                        if (childNode.contains("mesh")) {
+                            continue;
+                        }
+
+                        auto child_name = childNode["name"].get<std::string>();
+                        if (jointMap.find(child_name) == jointMap.end()) {
+                            auto joint = new Joint();
+                            joint->name = child_name;
+                            jointMap[child_name] = joint;
+                            skeleton->joints.push_back(joint);
+                            joint->parent = current_parent_joint;
+                            if (joint->parent) {
+                                joint->parent->children.push_back(joint);
+                            }
+                        } else {
+                            auto existing_child = jointMap[child_name];
+                            existing_child->parent = current_parent_joint;
+                            existing_child->parent->children.push_back(existing_child);
+                        }
+
+                    }
+
+                }
+
             }
 
             // Now we can associate the joints with the respective inverse bind matrix
