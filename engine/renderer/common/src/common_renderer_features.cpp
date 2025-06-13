@@ -877,6 +877,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                             }
 
                         } else if (outputType == "VEC4") {
+                            // This is a quaternion for rotations:
                             std::vector<glm::vec4> outputValues;
                             std::vector<float> fvals;
                             count = 1;
@@ -888,26 +889,26 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 
                                     glm::quat quat = {fvals[3], fvals[0], fvals[1], fvals[2]};
                                     glm::mat4 rotMat = glm::toMat4(quat);
-                                    printf("rotmat: %f/%f/%f/%f\n",
-                                           glm::column(rotMat, 0).x,
-                                           glm::column(rotMat, 1).x,
-                                           glm::column(rotMat, 2).x,
-                                           glm::column(rotMat, 3).x);
-                                    printf("rotmat: %f/%f/%f/%f\n",
-                                           glm::column(rotMat, 0).y,
-                                           glm::column(rotMat, 1).y,
-                                           glm::column(rotMat, 2).y,
-                                           glm::column(rotMat, 3).y);
-                                    printf("rotmat: %f/%f/%f/%f\n",
-                                           glm::column(rotMat, 0).z,
-                                           glm::column(rotMat, 1).z,
-                                           glm::column(rotMat, 2).z,
-                                           glm::column(rotMat, 3).z);
-                                    printf("rotmat: %f/%f/%f/%f\n",
-                                           glm::column(rotMat, 0).w,
-                                           glm::column(rotMat, 1).w,
-                                           glm::column(rotMat, 2).w,
-                                           glm::column(rotMat, 3).w);
+                                    // printf("rotmat: %f/%f/%f/%f\n",
+                                    //        glm::column(rotMat, 0).x,
+                                    //        glm::column(rotMat, 1).x,
+                                    //        glm::column(rotMat, 2).x,
+                                    //        glm::column(rotMat, 3).x);
+                                    // printf("rotmat: %f/%f/%f/%f\n",
+                                    //        glm::column(rotMat, 0).y,
+                                    //        glm::column(rotMat, 1).y,
+                                    //        glm::column(rotMat, 2).y,
+                                    //        glm::column(rotMat, 3).y);
+                                    // printf("rotmat: %f/%f/%f/%f\n",
+                                    //        glm::column(rotMat, 0).z,
+                                    //        glm::column(rotMat, 1).z,
+                                    //        glm::column(rotMat, 2).z,
+                                    //        glm::column(rotMat, 3).z);
+                                    // printf("rotmat: %f/%f/%f/%f\n",
+                                    //        glm::column(rotMat, 0).w,
+                                    //        glm::column(rotMat, 1).w,
+                                    //        glm::column(rotMat, 2).w,
+                                    //        glm::column(rotMat, 3).w);
                                     fvals.clear();
                                 }
                                 count++;
