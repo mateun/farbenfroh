@@ -723,9 +723,10 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 
             int joint_inv_index = 0;
             for ( int i = 0; i < inverseBindBufferLen; i+=4) {
-                auto val= (float*)(invBindMatricesOffset + i);
-                printf("val: %f\n", *val);
-                vals.push_back(*val);
+                float val = 0;
+                std::memcpy(&val, invBindMatricesOffset + i, 4);
+                printf("val: %f\n", val);
+                vals.push_back(val);
                 if (count % 4 == 0) {
                     //printf("col------------\n");
                     vecs.push_back({vals[0], vals[1], vals[2], vals[3]});
@@ -853,9 +854,11 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                         auto outputBufferLength = outputBufferView.value("byteLength", 0);
                         auto inputDataPtr = dataBinary.data() + inputBufferOffset;
                         std::vector<float> timeValues;
-                        for ( int i = 0; i < inputBufferLength; i+=4) {
-                            auto val= (float*)(inputDataPtr + i);
-                            timeValues.push_back(*val);
+                        for (int keyFrame  = 0; keyFrame < inputCount; keyFrame++) {
+
+                                float inputTimeValue;
+                                std::memcpy(&inputTimeValue, inputDataPtr + (keyFrame * 4), 4);
+                                timeValues.push_back(inputTimeValue);
                         }
                         auto outputDataPtr = dataBinary.data() + outputBufferOffset;
                         if (outputType == "VEC3") {
@@ -863,7 +866,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                             std::vector<float> fvals;
                             count = 1;
                             for ( int i = 0; i < outputBufferLength; i+=4) {
-                                auto val= (float*)(outputDataPtr + i);
+                                float val;
+                                std::memcpy(&val, outputDataPtr + i, 4);
                                 fvals.push_back(*val);
                                 if (count % 3 == 0) {
                                     outputValues.push_back(glm::vec3{fvals[0], fvals[1], fvals[2]});
