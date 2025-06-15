@@ -14,6 +14,7 @@
 #include <skeleton.h>
 #include <Joint.h>
 
+#include "skeletal_animation.h"
 #include "util.h"
 // #include "../../../../v2025/extlibs/glew-2.2.0/include/GL/glew.h"
 // #include <GL/glew.h>
@@ -25,6 +26,35 @@ struct Font {
     float lineHeight = std::numeric_limits<float>::min();
     float baseLine = 0.0f;
     std::vector<stbtt_bakedchar> bakedChars;
+
+};
+
+struct ChannelData {
+    int samplerIndex;
+    nlohmann::json targetNode;
+    std::string targetPath;
+    int targetJointIndex;
+    nlohmann::json jointNode;
+    std::string jointName;
+    nlohmann::json samplerNode;
+    int samplerInput;
+    int samplerOutput;
+    std::string samplerInterpolation;
+    nlohmann::json inputAccessor;
+    nlohmann::json outputAccessor;
+    int inputCount;
+    std::string inputType;
+    std::string outputType;
+    int outputCount;
+    int inputBufferViewIndex;
+    int outputBufferViewIndex;
+    nlohmann::json inputBufferView;
+    nlohmann::json outputBufferView;
+    int inputBufferOffset;
+    int inputBufferLength;
+    int outputBufferOffset;
+    int outputBufferLength;
+    uint8_t* inputDataPtr;
 
 };
 
@@ -630,6 +660,41 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 }
 */
 
+
+    ChannelData extractChannelData(nlohmann::basic_json<> ch, nlohmann::basic_json<> nodesNode, nlohmann::json samplersNode,
+        nlohmann::json accessors, nlohmann::json bufferViews, std::vector<uint8_t>& dataBinary) {
+        using namespace  nlohmann;
+        ChannelData cd;
+
+        cd.samplerIndex = ch.value("sampler", -1);
+        cd.targetNode = ch["/target"_json_pointer];
+        cd.targetPath = cd.targetNode.value("path", "");
+        cd.targetJointIndex = cd.targetNode.value("node", json::object());
+        cd.jointNode = nodesNode[cd.targetJointIndex];
+        cd.jointName = cd.jointNode.value("name", "");
+        cd.samplerNode = samplersNode[cd.samplerIndex];
+        cd.samplerInput = cd.samplerNode.value("input", 0);
+        cd.samplerOutput = cd.samplerNode.value("output", 0);
+        cd.samplerInterpolation = cd.samplerNode.value("interpolation", "");
+        cd.inputAccessor = accessors[cd.samplerInput];
+        cd.outputAccessor = accessors[cd.samplerOutput];
+        cd.inputCount = cd.inputAccessor.value("count", -1);
+        cd.inputType = cd.inputAccessor.value("type", "");
+        cd.outputType = cd.outputAccessor.value("type", "");
+        cd.outputCount = cd.outputAccessor.value("count", 0.0);
+        cd.inputBufferViewIndex = cd.inputAccessor.value("bufferView", -1);
+        cd.outputBufferViewIndex = cd.outputAccessor.value("bufferView", -1);
+        cd.inputBufferView = bufferViews[cd.inputBufferViewIndex];
+        cd.outputBufferView = bufferViews[cd.outputBufferViewIndex];
+        cd.inputBufferOffset = cd.inputBufferView.value("byteOffset", -1);
+        cd.inputBufferLength = cd.inputBufferView.value("byteLength", -1);
+        cd.outputBufferOffset = cd.outputBufferView.value("byteOffset", 0);
+        cd.outputBufferLength = cd.outputBufferView.value("byteLength", 0);
+        cd.inputDataPtr = dataBinary.data() + cd.inputBufferOffset;
+
+        return cd;
+    }
+
         /**
      * We only accept scenes with 1 mesh for now.
      * @param gltfJson the parsed json of the gltf
@@ -815,79 +880,67 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             // Each sampler maps a time point to an animation. (input -> output).
             // The indices within the sampler are accessor indices.
             // Reading out the animations:
-            // For now just 1 animation.
+            // We collect information about the animation
+            std::vector<SkeletalAnimation> animations;
             auto animationsNode = gltf["/animations"_json_pointer];
 
                 for (auto animNode : animationsNode) {
 
+                    SkeletalAnimation animation {};
                     auto samplersNode = animNode["/samplers"_json_pointer];
                     auto animName = animNode.value("name", "");
+                    animation.name = animName;
                     auto channelsNode = animNode.value("channels", json::object());
                     auto accessors = gltf["/accessors"_json_pointer];
                     auto bufferViews =gltf["/bufferViews"_json_pointer];
                     for (auto ch : channelsNode) {
-                        int samplerIndex = ch.value("sampler", -1);
-                        auto targetNode = ch["/target"_json_pointer];
-                        auto targetPath = targetNode.value("path", "");
-                        int targetJointIndex = targetNode.value("node", json::object());
-                        auto jointNode = nodesNode[targetJointIndex];
-                        auto jointName = jointNode.value("name", "");
-                        printf("joint channel:%s %s\n", jointName.c_str(), targetPath.c_str());
-                        auto samplerNode = samplersNode[samplerIndex];
-                        auto samplerInput = samplerNode.value("input", 0);
-                        auto samplerOutput = samplerNode.value("output", 0);
-                        auto samplerInterpolation = samplerNode.value("interpolation", "");
-                        // Now lookup the accessors for input and output
-                        auto inputAccessor = accessors[samplerInput];
-                        auto outputAccessor = accessors[samplerOutput];
-                        auto inputCount = inputAccessor.value("count", -1);
-                        auto inputType = inputAccessor.value("type", "");
-                        auto outputType = outputAccessor.value("type", "");
-                        auto outputCount = outputAccessor.value("count", 0.0);
-                        auto inputBufferViewIndex = inputAccessor.value("bufferView", -1);
-                        auto outputBufferViewIndex = outputAccessor.value("bufferView", -1);
-                        auto inputBufferView = bufferViews[inputBufferViewIndex];
-                        auto outputBufferView = bufferViews[outputBufferViewIndex];
-                        auto inputBufferOffset = inputBufferView.value("byteOffset", -1);
-                        auto inputBufferLength = inputBufferView.value("byteLength", -1);
-                        auto outputBufferOffset = outputBufferView.value("byteOffset", 0);
-                        auto outputBufferLength = outputBufferView.value("byteLength", 0);
-                        auto inputDataPtr = dataBinary.data() + inputBufferOffset;
-                        std::vector<float> timeValues;
-                        for (int keyFrame  = 0; keyFrame < inputCount; keyFrame++) {
+                        auto channelData = extractChannelData(ch, nodesNode, samplersNode, accessors, bufferViews, dataBinary);
 
+
+
+                        std::vector<float> timeValues;
+                        for (int keyFrame  = 0; keyFrame < channelData.inputCount; keyFrame++) {
+                                // We start a new KeyFrameChannel here when handling the time values:
+                                KeyFrameChannel kfc {};
                                 float inputTimeValue;
-                                std::memcpy(&inputTimeValue, inputDataPtr + (keyFrame * 4), 4);
+                                std::memcpy(&inputTimeValue, channelData.inputDataPtr + (keyFrame * 4), 4);
                                 timeValues.push_back(inputTimeValue);
+                                kfc.time = inputTimeValue;
+                                animation.keyFrameChannels.push_back(kfc);
+
+
                         }
-                        auto outputDataPtr = dataBinary.data() + outputBufferOffset;
-                        if (outputType == "VEC3") {
+                        auto outputDataPtr = dataBinary.data() + channelData.outputBufferOffset;
+                        if (channelData.outputType == "VEC3") {
                             std::vector<glm::vec3> outputValues;
                             std::vector<float> fvals;
                             count = 1;
-                            for ( int i = 0; i < outputBufferLength; i+=4) {
+                            int output_index = 0;
+                            for ( int i = 0; i < channelData.outputCount * 3; i++) {
+
                                 float val;
-                                std::memcpy(&val, outputDataPtr + i, 4);
-                                fvals.push_back(*val);
+                                std::memcpy(&val, outputDataPtr + (i * 4), 4);
+                                fvals.push_back(val);
                                 if (count % 3 == 0) {
                                     outputValues.push_back(glm::vec3{fvals[0], fvals[1], fvals[2]});
                                     fvals.clear();
+                                    auto kfc = animation.keyFrameChannels[output_index];
+                                    kfc.value_v3 = outputValues[output_index];
+                                    output_index++;
+
                                 }
                                 count++;
                             }
-                            for (int i=0; i<timeValues.size(); i++) {
-                                printf("time val: %f -> %f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
-                                       outputValues[i].z);
-                            }
 
-                        } else if (outputType == "VEC4") {
+                        } else if (channelData.outputType == "VEC4") {
                             // This is a quaternion for rotations:
                             std::vector<glm::vec4> outputValues;
                             std::vector<float> fvals;
                             count = 1;
-                            for ( int i = 0; i < outputBufferLength; i+=4) {
-                                auto val= (float*)(outputDataPtr + i);
-                                fvals.push_back(*val);
+                            for ( int i = 0; i < channelData.outputCount * 4; i++) {
+                                float val=0;
+                                std::memcpy(&val, (outputDataPtr + i *4), 4);;
+                                fvals.push_back(val);
                                 if (count % 4 == 0) {
                                     outputValues.push_back(glm::vec4{fvals[0], fvals[1], fvals[2], fvals[3]});
 
@@ -921,8 +974,13 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                                 printf("time val: %f -> %f/%f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
                                        outputValues[i].z, outputValues[i].w);
                             }
-                        } else if (outputType == "SCALAR") {
-                            // TODO scalar
+                        } else if (channelData.outputType == "SCALAR") {
+
+                            for ( int i = 0; i < channelData.outputCount * 4; i++) {
+                                float val;
+                                std::memcpy(&val, outputDataPtr + (i * 4), 4);
+
+                            }
                         }
                     }
                 }
