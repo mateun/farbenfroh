@@ -921,10 +921,10 @@ std::tuple<VkPipeline, VkPipelineLayout> VulkanRenderer::createGraphicsPipeline(
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.depthBiasEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    //rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     //rasterizer.cullMode = VK_CULL_MODE_NONE;
     //rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    //rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.lineWidth = 1.0f;
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -1572,9 +1572,18 @@ VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo ver
     return vb;
 }
 
+VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo vertex_buffer_create_info, VkDeviceMemory vb_memory) {
+    auto vb = createVertexBufferRaw(vertex_buffer_create_info.data.size() * sizeof(vertex_buffer_create_info.data[0]), vertex_buffer_create_info.data.data(), vb_memory);
+    return vb;
+}
+
+void VulkanRenderer::updateVertexBuffer(size_t size, void *data, VkBuffer buffer, void* mapped_buffer_memory) {
+    memcpy(mapped_buffer_memory, data, size);
+}
 
 
-VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data) {
+
+VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data, VkDeviceMemory memory) {
     VkDeviceSize bufferSize = size;
 
     VkBuffer stagingBuffer;
@@ -1586,9 +1595,12 @@ VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data) {
     memcpy(targetData, data, bufferSize);
     vkUnmapMemory(_device, stagingBufferMemory);
 
-    VkBuffer vb;
     VkDeviceMemory vertexBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vb, vertexBufferMemory);
+    VkBuffer vb;
+    if (memory == nullptr) {
+        memory = stagingBufferMemory;
+    }
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vb, memory);
 
 
     // Now the actual copy
@@ -2265,9 +2277,10 @@ namespace renderer {
     }
 
     VertexBufferHandle createVertexBufferVulkan(VertexBufferCreateInfo create_info) {
-        auto vb = get_vulkan_renderer()->createVertexBuffer(create_info);
+        VkDeviceMemory vb_memory{};
+        auto vb = get_vulkan_renderer()->createVertexBuffer(create_info, nullptr);
         VertexBufferHandle vbh = { nextVBHandleId++};
-        vertexBufferMap[vbh.id] = VulkanVertexBuffer{vb};
+        vertexBufferMap[vbh.id] = VulkanVertexBuffer{vb, vb_memory};
         return vbh;
     }
 
@@ -2400,6 +2413,10 @@ namespace renderer {
         return {};
     }
 
+    void* getVertexBufferMemoryForHandleVulkan(VertexBufferHandle vbh) {
+        return vertexBufferMap[vbh.id].memory;
+    }
+
     void*  getVertexBufferForHandleVulkan(VertexBufferHandle vbh) {
         return vertexBufferMap[vbh.id].buffer;
     }
@@ -2439,7 +2456,7 @@ namespace renderer {
             vbci.data.push_back(v.uv.y);
         }
 
-        auto vbo = get_vulkan_renderer()->createVertexBuffer(vbci);
+        auto vbo = get_vulkan_renderer()->createVertexBuffer(vbci, nullptr);
         VertexBufferHandle vbh = {nextVBHandleId++};
         vertexBufferMap[vbh.id] = VulkanVertexBuffer{vbo};
 
@@ -2497,6 +2514,7 @@ void init_vulkan(HWND hwnd, HINSTANCE hinst, bool useSRGB, int msaaSampleCount) 
     renderer::registerCreateIndexBuffer(&renderer::createIndexBufferVulkan);
     renderer::registerDrawTextIntoQuad(&renderer::drawTextIntoQuadVulkan);
     renderer::registerGetVertexBufferForHandle(&renderer::getVertexBufferForHandleVulkan);
+    renderer::registerGetVertexBufferMemoryForHandle(&renderer::getVertexBufferMemoryForHandleVulkan);
     renderer::registerGetIndexBufferForHandle(&renderer::getIndexBufferForHandleVulkan);
     renderer::registerGetTextureForHandle(&renderer::getTextureForHandleVulkan);
     renderer::registerCreateTexture(&renderer::createTextureVulkan);

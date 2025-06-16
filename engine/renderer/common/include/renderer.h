@@ -133,6 +133,8 @@ namespace renderer {
         size_t index_count;
         PrimitiveTopology primitive_topology;
         uint32_t id;
+        std::vector<glm::vec4> joint_indices;
+        std::vector<glm::vec4> joint_weights;
     };
 
 
@@ -493,6 +495,11 @@ namespace renderer {
     BoundingBox measureText(FontHandle fontHandle, const std::string &text);
 
     void updateText(Mesh &mesh, FontHandle font, const std::string &newText);
+
+
+    typedef void* (*GetVertexBufferMemoryForHandleFn)(VertexBufferHandle vbh);
+    void registerGetVertexBufferMemoryForHandle(GetVertexBufferMemoryForHandleFn fn);
+    void* getVertexBufferMemoryForHandle(VertexBufferHandle vbh);
 
     typedef void* (*GetVertexBufferForHandleFn)(VertexBufferHandle vbh);
     void registerGetVertexBufferForHandle(GetVertexBufferForHandleFn fn);

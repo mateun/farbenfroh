@@ -74,6 +74,7 @@ namespace renderer {
     static UpdateIndexBufferFn g_updateIndexBuffer = nullptr;
     static VertexBufferBuilderFn g_vertexBufferBuilder = nullptr;
     static DrawTextIntoQuadFn g_drawTextIntoQuad = nullptr;
+    static GetVertexBufferMemoryForHandleFn g_getVertexBufferMemoryForHandleFn = nullptr;
     static GetVertexBufferForHandleFn g_getVertexBufferForHandleFn = nullptr;
     static GetIndexBufferForHandleFn g_getIndexBufferForHandleFn = nullptr;
     static GetNativeIndexBufferStructForHandleFn g_getNativeIndexBufferStructForHandle = nullptr;
@@ -98,6 +99,10 @@ namespace renderer {
 
     void registerDrawTextIntoQuad(DrawTextIntoQuadFn fn) {
         g_drawTextIntoQuad = fn;
+    }
+
+    void registerGetVertexBufferMemoryForHandle(GetVertexBufferMemoryForHandleFn fn) {
+        g_getVertexBufferMemoryForHandleFn = fn;
     }
 
     void registerGetVertexBufferForHandle(GetVertexBufferForHandleFn fn) {
@@ -146,6 +151,14 @@ namespace renderer {
         }
         return g_createIndexBuffer(ibd);
     }
+
+    void* getVertexBufferMemoryForHandle(VertexBufferHandle vbh) {
+        if (!g_getVertexBufferMemoryForHandleFn) {
+            return nullptr;
+        }
+        return g_getVertexBufferMemoryForHandleFn(vbh);
+    }
+
 
     void* getVertexBufferForHandle(VertexBufferHandle vbh) {
         return g_getVertexBufferForHandleFn(vbh);
@@ -753,6 +766,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         int skinIndex = -1;
         for (auto n : nodesNode) {
 
+            // Looking for the first skin we find.
+            // So, currently, only one skin supported.
             if (n.is_object()) {
                 if (n.contains("skin") && n["skin"].is_number_integer()) {
                     skinIndex = n["skin"];
@@ -1016,14 +1031,37 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         auto attrObj = primitivesNode["attributes"];
 
         int posIndex = attrObj["POSITION"].get<int>();
+        // Currently only one texture set supported.
         auto uvIndex = attrObj["TEXCOORD_0"].get<int>();
         auto normalIndex =attrObj["NORMAL"].get<int>();
+        // Currently we only support one skin.
+        auto jointIndicesIndex = -1;
+        if (attrObj.contains("JOINTS_0")) {
+            jointIndicesIndex = attrObj["JOINTS_0"].get<int>();
+        }
+
+        auto jointWeightsIndex = -1;
+        if (attrObj.contains("WEIGHTS_0")) {
+            jointWeightsIndex = attrObj["WEIGHTS_0"].get<int>();
+        }
+
         auto indicesIndex = primitivesNode["indices"].get<int>();
+
+
 
         auto posAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(posIndex))];
         auto uvAccessor =gltf[json::json_pointer("/accessors/" + std::to_string(uvIndex))];
         auto normalAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(normalIndex))];
         auto indicesAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(indicesIndex))];
+        std::optional<json> jointIndicesAccessorOpt = std::nullopt;
+        if (jointIndicesIndex > -1) {
+            jointIndicesAccessorOpt = gltf[json::json_pointer("/accessors/" + std::to_string(jointIndicesIndex))];
+        }
+        std::optional<json> jointWeightsAccessorOpt = std::nullopt;
+        if (jointWeightsIndex > -1) {
+            jointWeightsAccessorOpt = gltf[json::json_pointer("/accessors/" + std::to_string(jointWeightsIndex))];
+        }
+
 
         auto posBufferViewIndex = posAccessor["bufferView"].get<int>();
         auto posBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(posBufferViewIndex))];
@@ -1046,6 +1084,23 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         auto normalBufferByteOffset = normalBufferView["byteOffset"].get<int>();
         auto normalGlTargetType = normalBufferView["target"].get<int>();
 
+        auto jointIndicesByteOffset = -1;
+        if (jointIndicesAccessorOpt.has_value()) {
+            auto jointIndicesViewIndex = jointIndicesAccessorOpt->get<json>()["bufferView"].get<int>();
+            auto jointIndicesView = gltf[json::json_pointer("/bufferViews/" + std::to_string(jointIndicesViewIndex))];
+            jointIndicesByteOffset = jointIndicesView["byteOffset"].get<int>();
+        }
+
+
+        auto jointWeightsByteOffset = -1;
+        if (jointWeightsAccessorOpt.has_value()) {
+            auto jointWeightsViewIndex = jointWeightsAccessorOpt->get<json>()["bufferView"].get<int>();
+            auto jointWeightsView = gltf[json::json_pointer("/bufferViews/" + std::to_string(jointWeightsViewIndex))];
+            jointWeightsByteOffset = jointWeightsView["byteOffset"].get<int>();
+        }
+
+
+
         auto indicesBufferViewIndex = indicesAccessor["bufferView"].get<int>();
         auto indicesBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(indicesBufferViewIndex))];
         auto indicesBufferIndex = indicesBufferView["buffer"].get<int>();
@@ -1065,6 +1120,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             positions.push_back({posData[i], posData[i+1], posData[i+2]});
         }
 
+
+
         const uint8_t* uvBase = dataBinary.data() + uvBufferByteOffset;
         const float* uvData = reinterpret_cast<const float*>(uvBase);
         size_t totalUvs = uvAccessor["count"].get<int>() * 2;
@@ -1073,6 +1130,44 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             uvs.push_back({uvData[i], uvData[i+1]});
         }
 
+        const uint8_t* normalBase = dataBinary.data() + normalBufferByteOffset;
+        const float* normalData = reinterpret_cast<const float*>(normalBase);
+        size_t totalNormals = normalAccessor["count"].get<int>() * 3;
+        std::vector<glm::vec3> normals;
+        for (int i = 0; i < totalNormals; i+= 3) {
+            normals.push_back({normalData[i], normalData[i+1], normalData[i+2]});
+        }
+
+        std::vector<glm::vec4> jointIndices;
+        if (jointIndicesByteOffset > -1) {
+            const uint8_t* jointIndexBase = dataBinary.data() + jointIndicesByteOffset;
+            const uint8_t* jointIndexData = jointIndexBase;
+            size_t totalJointIndicesValues = normalAccessor["count"].get<int>() * 4;
+
+            for (int i = 0; i < totalJointIndicesValues; i+=4) {
+                jointIndices.push_back({jointIndexData[i], jointIndexData[i+1], jointIndexData[i+2], jointIndexData[i+3]});
+            }
+        }
+
+        std::vector<glm::vec4> jointWeights;
+        if (jointWeightsByteOffset > -1) {
+            const uint8_t* jointWeightsBase = dataBinary.data() + jointWeightsByteOffset;
+            const float* jointWeightData = reinterpret_cast<const float*>(jointWeightsBase);
+            size_t totalJointWeightValues = normalAccessor["count"].get<int>() * 4;
+
+            for (int i = 0; i < totalJointWeightValues; i+=4) {
+                jointWeights.push_back({jointWeightData[i], jointWeightData[i+1], jointWeightData[i+2], jointWeightData[i+3]});
+
+                // Do the weights sum up to 1?
+                auto sum = jointWeightData[i] + jointWeightData[i+1] + jointWeightData[i+2] + jointWeightData[i+3];
+                // This assertions is a bit strict, GLTF only guarantees to be very close to 1, but we leave it for now.
+                assert( sum == 1.0f);
+            }
+        }
+
+        // Now push all the data into one single vector:
+        // Positions | UVs
+        // Later potentially adding normals etc.
         for (int i = 0; i < positions.size(); i++) {
             ci.data.push_back(positions[i].x);
             ci.data.push_back(positions[i].y * 1 );     // TODO: We should only do this *-1 in vulkan, which we are not aware of here
@@ -1081,7 +1176,6 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             ci.data.push_back(uvs[i].y);                 // TODO: only in vulkan, but we are not aware here.
 
         }
-
         ci.stride = 0;
         auto vbo = createVertexBuffer(ci);
 
@@ -1101,6 +1195,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         posAttribute.offset = 0;
         posAttribute.semantic = VertexAttributeSemantic::Position;
         auto mesh = createMesh(vbo, ibo, {posAttribute}, indexCount);
+        mesh.joint_weights = jointWeights;
+        mesh.joint_indices = jointIndices;
         return mesh;
 
     }
