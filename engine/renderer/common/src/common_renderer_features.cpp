@@ -881,33 +881,41 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             // The indices within the sampler are accessor indices.
             // Reading out the animations:
             // We collect information about the animation
-            std::vector<SkeletalAnimation> animations;
+            std::vector<SkeletalAnimation*> animations;
             auto animationsNode = gltf["/animations"_json_pointer];
 
                 for (auto animNode : animationsNode) {
 
-                    SkeletalAnimation animation {};
+                    auto animation = new SkeletalAnimation();
+                    animations.push_back(animation);
                     auto samplersNode = animNode["/samplers"_json_pointer];
                     auto animName = animNode.value("name", "");
-                    animation.name = animName;
+                    animation->name = animName;
                     auto channelsNode = animNode.value("channels", json::object());
                     auto accessors = gltf["/accessors"_json_pointer];
                     auto bufferViews =gltf["/bufferViews"_json_pointer];
                     for (auto ch : channelsNode) {
                         auto channelData = extractChannelData(ch, nodesNode, samplersNode, accessors, bufferViews, dataBinary);
 
-
-
                         std::vector<float> timeValues;
                         for (int keyFrame  = 0; keyFrame < channelData.inputCount; keyFrame++) {
                                 // We start a new KeyFrameChannel here when handling the time values:
-                                KeyFrameChannel kfc {};
+                                auto kfc = new KeyFrameChannel();
                                 float inputTimeValue;
                                 std::memcpy(&inputTimeValue, channelData.inputDataPtr + (keyFrame * 4), 4);
                                 timeValues.push_back(inputTimeValue);
-                                kfc.time = inputTimeValue;
-                                animation.keyFrameChannels.push_back(kfc);
-
+                                kfc->time = inputTimeValue;
+                                animation->keyFrameChannels.push_back(kfc);
+                                kfc->joint_name = channelData.jointName;
+                                kfc->type = [](std::string type) {
+                                   if (type == "rotation") {
+                                       return ChannelType::rotation;
+                                   }
+                                    if (type == "translation") {
+                                        return ChannelType::translation;
+                                    }
+                                    return ChannelType::scale;
+                                }(channelData.targetPath);
 
                         }
                         auto outputDataPtr = dataBinary.data() + channelData.outputBufferOffset;
@@ -924,8 +932,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                                 if (count % 3 == 0) {
                                     outputValues.push_back(glm::vec3{fvals[0], fvals[1], fvals[2]});
                                     fvals.clear();
-                                    auto kfc = animation.keyFrameChannels[output_index];
-                                    kfc.value_v3 = outputValues[output_index];
+                                    auto kfc = animation->keyFrameChannels[output_index];
+                                    kfc->value_v3 = outputValues[output_index];
                                     output_index++;
 
                                 }
@@ -937,6 +945,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                             std::vector<glm::vec4> outputValues;
                             std::vector<float> fvals;
                             count = 1;
+                            int output_index = 0;
                             for ( int i = 0; i < channelData.outputCount * 4; i++) {
                                 float val=0;
                                 std::memcpy(&val, (outputDataPtr + i *4), 4);;
@@ -946,44 +955,50 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 
                                     glm::quat quat = {fvals[3], fvals[0], fvals[1], fvals[2]};
                                     glm::mat4 rotMat = glm::toMat4(quat);
-                                    // printf("rotmat: %f/%f/%f/%f\n",
-                                    //        glm::column(rotMat, 0).x,
-                                    //        glm::column(rotMat, 1).x,
-                                    //        glm::column(rotMat, 2).x,
-                                    //        glm::column(rotMat, 3).x);
-                                    // printf("rotmat: %f/%f/%f/%f\n",
-                                    //        glm::column(rotMat, 0).y,
-                                    //        glm::column(rotMat, 1).y,
-                                    //        glm::column(rotMat, 2).y,
-                                    //        glm::column(rotMat, 3).y);
-                                    // printf("rotmat: %f/%f/%f/%f\n",
-                                    //        glm::column(rotMat, 0).z,
-                                    //        glm::column(rotMat, 1).z,
-                                    //        glm::column(rotMat, 2).z,
-                                    //        glm::column(rotMat, 3).z);
-                                    // printf("rotmat: %f/%f/%f/%f\n",
-                                    //        glm::column(rotMat, 0).w,
-                                    //        glm::column(rotMat, 1).w,
-                                    //        glm::column(rotMat, 2).w,
-                                    //        glm::column(rotMat, 3).w);
+
+                                    auto kfc = animation->keyFrameChannels[output_index];
+                                    kfc->value_quat = quat;
+                                    kfc->value_v4 = outputValues[output_index];
+                                    output_index++;
                                     fvals.clear();
                                 }
                                 count++;
                             }
-                            for (int i=0; i<timeValues.size(); i++) {
-                                printf("time val: %f -> %f/%f/%f/%f\n", timeValues[i], outputValues[i].x, outputValues[i].y,
-                                       outputValues[i].z, outputValues[i].w);
-                            }
                         } else if (channelData.outputType == "SCALAR") {
+
 
                             for ( int i = 0; i < channelData.outputCount * 4; i++) {
                                 float val;
                                 std::memcpy(&val, outputDataPtr + (i * 4), 4);
+                                auto kfc = animation->keyFrameChannels[i];
+                                kfc->value_f = val;;
+
 
                             }
                         }
                     }
                 }
+
+            auto type_to_string_func = [] (ChannelType type) {
+                switch (type) {
+                    case ChannelType::rotation: return "rotation";
+                    case ChannelType::translation: return "translation";
+                    case ChannelType::scale: return "scale";
+                }
+            };
+
+            std::cout << "animations log:" << std::endl;
+            for (auto a : animations) {
+                std::cout << "animation name: " << a->name << std::endl;
+                for (auto kfc : a->keyFrameChannels) {
+                    std::cout << "time: " << kfc->time << std::endl;
+                    std::cout << "joint: " << kfc->joint_name << std::endl;
+                    std::cout << "type: " <<  type_to_string_func(kfc->type) << std::endl;
+                    std::cout << "value_f: " << std::to_string(kfc->value_f) << std::endl;
+                    std::cout << "value_v3: " << std::to_string(kfc->value_v3.x) << "/" << std::to_string(kfc->value_v3.y) << std::to_string(kfc->value_v3.z) << std::endl;
+                    std::cout << "value_quat: " << kfc->value_quat.w  << "/" << kfc->value_quat.x << "/" << kfc->value_quat.y << "/" << kfc->value_quat.y << std::endl;
+                }
+            }
 
         }
 

@@ -26,7 +26,7 @@ struct KeyFrameChannel {
 
 struct SkeletalAnimation {
     std::string name;
-    std::vector<KeyFrameChannel> keyFrameChannels;
+    std::vector<KeyFrameChannel*> keyFrameChannels;
 };
 
 #endif //SKELETAL_ANIMATION_H
