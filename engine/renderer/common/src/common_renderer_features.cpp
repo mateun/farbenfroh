@@ -318,12 +318,12 @@ namespace renderer {
 
 
             int offset = charCounter * 4;
-            outIndices.push_back(2 + offset);outIndices.push_back(1 + offset);outIndices.push_back(0 + offset);
-            outIndices.push_back(2 + offset);outIndices.push_back(0 + offset);outIndices.push_back(3 + offset);
+            // outIndices.push_back(2 + offset);outIndices.push_back(1 + offset);outIndices.push_back(0 + offset);
+            // outIndices.push_back(2 + offset);outIndices.push_back(0 + offset);outIndices.push_back(3 + offset);
 
             // Flipped
-            // indices.push_back(0 + offset);indices.push_back(1 + offset);indices.push_back(2 + offset);
-            // indices.push_back(3 + offset);indices.push_back(0 + offset);indices.push_back(2 + offset);
+             outIndices.push_back(0 + offset);outIndices.push_back(1 + offset);outIndices.push_back(2 + offset);
+             outIndices.push_back(3 + offset);outIndices.push_back(0 + offset);outIndices.push_back(2 + offset);
             charCounter++;
 
            // Track min/max for bounding box
@@ -1161,7 +1161,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                 // Do the weights sum up to 1?
                 auto sum = jointWeightData[i] + jointWeightData[i+1] + jointWeightData[i+2] + jointWeightData[i+3];
                 // This assertions is a bit strict, GLTF only guarantees to be very close to 1, but we leave it for now.
-                assert( sum == 1.0f);
+                assert( sum >= 0.99f && sum <= 1.02f);
             }
         }
 
