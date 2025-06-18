@@ -135,6 +135,12 @@ namespace renderer {
         uint32_t id;
         std::vector<glm::vec4> joint_indices;
         std::vector<glm::vec4> joint_weights;
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec2> uvs;
+        std::vector<glm::vec3> normals;
+
+        // This is the overall vertex data, e.g. position and uvs packed tightly, array of structs.
+        std::vector<float> vertex_data;
     };
 
 

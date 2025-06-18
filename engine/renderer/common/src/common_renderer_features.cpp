@@ -1112,7 +1112,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 
         VertexBufferCreateInfo ci;
         const uint8_t* posBase = dataBinary.data() + posBufferByteOffset;
-        const float* posData = reinterpret_cast<const float*>(posBase);
+        auto posData = reinterpret_cast<const float*>(posBase);
         size_t totalFloats = posAccessor["count"].get<int>() * 3;
 
         std::vector<glm::vec3> positions;
@@ -1120,10 +1120,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             positions.push_back({posData[i], posData[i+1], posData[i+2]});
         }
 
-
-
         const uint8_t* uvBase = dataBinary.data() + uvBufferByteOffset;
-        const float* uvData = reinterpret_cast<const float*>(uvBase);
+        auto uvData = reinterpret_cast<const float*>(uvBase);
         size_t totalUvs = uvAccessor["count"].get<int>() * 2;
         std::vector<glm::vec2> uvs;
         for (int i = 0; i< totalUvs; i += 2) {
@@ -1131,7 +1129,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         }
 
         const uint8_t* normalBase = dataBinary.data() + normalBufferByteOffset;
-        const float* normalData = reinterpret_cast<const float*>(normalBase);
+        auto normalData = reinterpret_cast<const float*>(normalBase);
         size_t totalNormals = normalAccessor["count"].get<int>() * 3;
         std::vector<glm::vec3> normals;
         for (int i = 0; i < totalNormals; i+= 3) {
@@ -1194,9 +1192,14 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         posAttribute.format = VertexAttributeFormat::Float3;
         posAttribute.offset = 0;
         posAttribute.semantic = VertexAttributeSemantic::Position;
+
         auto mesh = createMesh(vbo, ibo, {posAttribute}, indexCount);
         mesh.joint_weights = jointWeights;
         mesh.joint_indices = jointIndices;
+        mesh.positions = positions;
+        mesh.uvs = uvs;
+        mesh.normals = normals;
+        mesh.vertex_data = ci.data;
         return mesh;
 
     }

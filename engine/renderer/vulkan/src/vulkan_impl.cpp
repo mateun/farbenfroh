@@ -1146,7 +1146,10 @@ void VulkanRenderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 
 void * VulkanRenderer::mapMemory(VkDeviceMemory memory, int offset, uint64_t size) {
     void* mappedData;
-    vkMapMemory(_device, memory, offset, size, 0, &mappedData);
+    auto result = vkMapMemory(_device, memory, offset, size, 0, &mappedData);
+    if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to map memory!");
+    }
     return mappedData;
 }
 
@@ -1571,7 +1574,7 @@ VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo ver
     return vb;
 }
 
-VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo vertex_buffer_create_info, VkDeviceMemory vb_memory) {
+VkBuffer VulkanRenderer::createVertexBuffer(renderer::VertexBufferCreateInfo vertex_buffer_create_info, VkDeviceMemory* vb_memory) {
     auto vb = createVertexBufferRaw(vertex_buffer_create_info.data.size() * sizeof(vertex_buffer_create_info.data[0]), vertex_buffer_create_info.data.data(), vb_memory);
     return vb;
 }
@@ -1582,7 +1585,7 @@ void VulkanRenderer::updateVertexBuffer(size_t size, void *data, VkBuffer buffer
 
 
 
-VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data, VkDeviceMemory memory) {
+VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data, VkDeviceMemory* vb_memory) {
     VkDeviceSize bufferSize = size;
 
     VkBuffer stagingBuffer;
@@ -1592,14 +1595,19 @@ VkBuffer VulkanRenderer::createVertexBufferRaw(size_t size, void *data, VkDevice
     void* targetData;
     vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, 0, &targetData);
     memcpy(targetData, data, bufferSize);
+
+
     vkUnmapMemory(_device, stagingBufferMemory);
 
-    VkDeviceMemory vertexBufferMemory;
     VkBuffer vb;
-    if (memory == nullptr) {
-        memory = stagingBufferMemory;
+    if (vb_memory) {
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vb, *vb_memory);
+    } else {
+        VkDeviceMemory vertexBufferMemory;
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vb, vertexBufferMemory);
     }
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vb, memory);
+
+
 
 
     // Now the actual copy
@@ -2276,8 +2284,9 @@ namespace renderer {
     }
 
     VertexBufferHandle createVertexBufferVulkan(VertexBufferCreateInfo create_info) {
-        VkDeviceMemory vb_memory{};
-        auto vb = get_vulkan_renderer()->createVertexBuffer(create_info, nullptr);
+
+        VkDeviceMemory vb_memory;
+        auto vb = get_vulkan_renderer()->createVertexBuffer(create_info, &vb_memory);
         VertexBufferHandle vbh = { nextVBHandleId++};
         vertexBufferMap[vbh.id] = VulkanVertexBuffer{vb, vb_memory};
         return vbh;
@@ -2413,7 +2422,7 @@ namespace renderer {
     }
 
     void* getVertexBufferMemoryForHandleVulkan(VertexBufferHandle vbh) {
-        return vertexBufferMap[vbh.id].memory;
+        return vertexBufferMap[vbh.id].memory_map;
     }
 
     void*  getVertexBufferForHandleVulkan(VertexBufferHandle vbh) {

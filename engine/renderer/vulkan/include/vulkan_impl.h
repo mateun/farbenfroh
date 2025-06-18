@@ -143,7 +143,7 @@ struct VulkanShader {
 
 struct VulkanVertexBuffer {
   VkBuffer buffer;
-  VkDeviceMemory memory;
+  VkDeviceMemory memory_map;
 
 };
 
@@ -296,11 +296,11 @@ class VulkanRenderer {
                         VkPipeline pipeline, std::vector<VkDescriptorSet> descriptorSets, int instance_count, int instance_offset, uint32_t
                         num_indices);
 
-    VkBuffer createVertexBufferRaw(size_t size, void *data, VkDeviceMemory memory = nullptr);
+    VkBuffer createVertexBufferRaw(size_t size, void *data, VkDeviceMemory* mapped_memory = nullptr);
 
     VkBuffer createVertexBuffer(renderer::VertexBufferCreateInfo);
 
-    VkBuffer createVertexBuffer(renderer::VertexBufferCreateInfo vertex_buffer_create_info, VkDeviceMemory vb_memory = nullptr);
+    VkBuffer createVertexBuffer(renderer::VertexBufferCreateInfo vertex_buffer_create_info, VkDeviceMemory* vb_memory = nullptr);
 
     void updateVertexBuffer(size_t size, void *data, VkBuffer buffer, void *mapped_buffer_memory);
 
