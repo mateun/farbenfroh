@@ -797,70 +797,57 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             auto inverseBindBufferByteOffset = inverseBindBufferView.value("byteOffset", -1);
 
             auto invBindMatricesOffset = dataBinary.data() + inverseBindBufferByteOffset;
-            int count = 1;
+
             // One matrix is 16 values, each 4 values form a column.
             // We must also store the index of the joint for this bind matrix to find them back together later.
             std::map<int, glm::mat4> invBindMatrices;
             std::vector<float> vals;
             std::vector<glm::vec4> vecs;
 
-            int joint_inv_index = 0;
-            for ( int i = 0; i < inverseBindBufferLen; i+=4) {
-                float val = 0;
-                std::memcpy(&val, invBindMatricesOffset + i, 4);
-                printf("val: %f\n", val);
-                vals.push_back(val);
-                if (count % 4 == 0) {
-                    //printf("col------------\n");
-                    vecs.push_back({vals[0], vals[1], vals[2], vals[3]});
-                    vals.clear();
-                }
-                if (count % 16 == 0) {
-                    //printf("matrix ----------\n");
-                    invBindMatrices[joint_indices[joint_inv_index]] = glm::mat4(vecs[0], vecs[1], vecs[2], vecs[3]);
-                    vecs.clear();
-                    joint_inv_index ++;
-                }
-                count++;
-            }
-            // To find and create the correct joints, we
-            // first, go through all nodes. Every object in the gltf is a node, and they are all flat.
-            // Parent-child relation must be established separately.
-            for (const auto& obj : nodesNode) {
-                //std::string node_name = obj.value("name", "");
 
-                // Skip meshes, we only want joints here.
-                if (obj.contains("mesh")) {
-                    continue;
-                }
 
-                // In the way we export our objects,
-                // if we are not a mesh and we are not called "Armature",
-                // we must be a joint :) !
-                auto node_name = obj.value("name", "");
-                Joint* current_parent_joint = nullptr;
-                if (node_name != "Armature") {
-                    if (jointMap.find(node_name) == jointMap.end()) {
-                        auto joint = new Joint();
-                        joint->name = node_name;
-                        jointMap[node_name] = joint;
-                        skeleton->joints.push_back(joint);
-                        current_parent_joint = joint;
 
-                    } else {
-                        current_parent_joint = jointMap[node_name];
+
+            std::map<int, Joint*> node_index_joint_map;
+            // First pass: create joint objects and set inverse bind matrix for each joint:
+            for (int  j_count =0 ; j_count < joint_indices.size(); j_count++) {
+                auto joint_json = nodesNode[joint_indices[j_count]];
+                Joint* joint = new Joint();
+                skeleton->joints.push_back(joint);
+                node_index_joint_map[joint_indices[j_count]] = joint;
+                joint->name = joint_json["name"];
+
+
+                // We need 4 floats per column,
+                // and 4 columsn for a matrix:
+                std::vector<glm::vec4> col_vecs;
+                for (int col = 0; col < 4; col++) {
+                    glm::vec4 col_val;
+                    for (int val_index = 0;  val_index < 4; val_index ++ ) {
+                        float inv_bind_val = 0;
+                        int offset = val_index *4  + col * 16 + (j_count * 16 * 4);
+                        std::memcpy(&inv_bind_val, invBindMatricesOffset + offset, 4);
+                        col_val[val_index] = inv_bind_val;
+
                     }
+                    col_vecs.push_back(col_val);
                 }
+                joint->inverseBindMatrix = glm::mat4(col_vecs[0], col_vecs[1], col_vecs[2], col_vecs[3]);
+            }
 
-                if (current_parent_joint && obj.contains("children")) {
-                    const auto& children = obj["children"];
+            // Second pass: parent-child relationship
+            for (int  j_count =0 ; j_count < joint_indices.size(); j_count++) {
+                auto joint_index = joint_indices[j_count];
+                auto joint_json = nodesNode[joint_index];
+                Joint* current_parent_joint = nullptr;
+                if (joint_json.contains("children")) {
+                    const auto& children = joint_json["children"];
                     for (auto c : children) {
                         auto childIndex = c.get<int>();
                         auto childNode = nodesNode[childIndex];
-
-                        if (childNode.contains("mesh")) {
-                            continue;
-                        }
+                        // if (childNode.contains("mesh")) {
+                        //     continue;
+                        // }
 
                         auto child_name = childNode["name"].get<std::string>();
                         if (jointMap.find(child_name) == jointMap.end()) {
@@ -881,8 +868,18 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                     }
 
                 }
-
             }
+
+
+
+
+
+
+
+
+
+
+
 
             // Now we can associate the joints with the respective inverse bind matrix
             for (int i =0; i < skeleton->joints.size(); i++) {
@@ -891,7 +888,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                 j->inverseBindMatrix = invBindMat;
             }
 
-            std::reverse(skeleton->joints.begin(), skeleton->joints.end());
+            //std::reverse(skeleton->joints.begin(), skeleton->joints.end());
 
             // Now for the animations
             // Every animation has a number of references to so-called channel samplers.
@@ -946,6 +943,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                         }
                         animation->duration = duration;
                         auto outputDataPtr = dataBinary.data() + channelData.outputBufferOffset;
+                        int count = 0;
                         if (channelData.outputType == "VEC3") {
                             std::vector<glm::vec3> outputValues;
                             std::vector<float> fvals;

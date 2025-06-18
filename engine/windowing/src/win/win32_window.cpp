@@ -98,7 +98,7 @@ static LRESULT WinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
         case WM_KEYDOWN:
             lastKeyPress = wParam;
             break;
-        break;
+
 
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -190,6 +190,7 @@ HWND create_window(int w, int h, bool fullscreen, HINSTANCE hInstance, const std
 bool poll_window(HWND window) {
 
     lbuttonUp = false;
+    lastKeyPress = 0;
 
 
     MSG msg;
