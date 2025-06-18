@@ -708,6 +708,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         return cd;
     }
 
+
+
         /**
      * We only accept scenes with 1 mesh for now.
      * @param gltfJson the parsed json of the gltf
@@ -776,6 +778,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             }
         }
 
+        std::vector<SkeletalAnimation*> animations;
         if (skinIndex > -1) {
             std::map<std::string, Joint*> jointMap;
             skeleton = new Skeleton();
@@ -888,6 +891,8 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                 j->inverseBindMatrix = invBindMat;
             }
 
+            std::reverse(skeleton->joints.begin(), skeleton->joints.end());
+
             // Now for the animations
             // Every animation has a number of references to so-called channel samplers.
             // Each sampler describes a specific joint and its translation, scale or rotation.
@@ -896,7 +901,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             // The indices within the sampler are accessor indices.
             // Reading out the animations:
             // We collect information about the animation
-            std::vector<SkeletalAnimation*> animations;
+
             auto animationsNode = gltf["/animations"_json_pointer];
 
                 for (auto animNode : animationsNode) {
@@ -912,6 +917,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                     for (auto ch : channelsNode) {
                         auto channelData = extractChannelData(ch, nodesNode, samplersNode, accessors, bufferViews, dataBinary);
 
+                        float duration = std::numeric_limits<float>::min();
                         std::vector<float> timeValues;
                         for (int keyFrame  = 0; keyFrame < channelData.inputCount; keyFrame++) {
                                 // We start a new KeyFrameChannel here when handling the time values:
@@ -919,20 +925,26 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                                 float inputTimeValue;
                                 std::memcpy(&inputTimeValue, channelData.inputDataPtr + (keyFrame * 4), 4);
                                 timeValues.push_back(inputTimeValue);
+                                if (inputTimeValue > duration) {
+                                    duration = inputTimeValue;
+                                }
                                 kfc->time = inputTimeValue;
                                 animation->keyFrameChannels.push_back(kfc);
                                 kfc->joint_name = channelData.jointName;
-                                kfc->type = [](std::string type) {
+                                kfc->type = [kfc, animation](std::string type) {
                                    if (type == "rotation") {
+                                       animation->keyFrameChannels_rotation.push_back(kfc);
                                        return ChannelType::rotation;
                                    }
                                     if (type == "translation") {
+                                        animation->keyFrameChannels_translation.push_back(kfc);
                                         return ChannelType::translation;
                                     }
                                     return ChannelType::scale;
                                 }(channelData.targetPath);
 
                         }
+                        animation->duration = duration;
                         auto outputDataPtr = dataBinary.data() + channelData.outputBufferOffset;
                         if (channelData.outputType == "VEC3") {
                             std::vector<glm::vec3> outputValues;
@@ -994,13 +1006,7 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                     }
                 }
 
-            auto type_to_string_func = [] (ChannelType type) {
-                switch (type) {
-                    case ChannelType::rotation: return "rotation";
-                    case ChannelType::translation: return "translation";
-                    case ChannelType::scale: return "scale";
-                }
-            };
+            auto type_to_string_func = getStringForChannelType;
 
             std::cout << "animations log:" << std::endl;
             for (auto a : animations) {
@@ -1200,11 +1206,32 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         mesh.uvs = uvs;
         mesh.normals = normals;
         mesh.vertex_data = ci.data;
+        mesh.animations = animations;
+        mesh.skeleton = skeleton;
         return mesh;
 
     }
+}
 
+std::vector<KeyFrameChannel*> getKeyFramesForJoint(SkeletalAnimation* animation, const std::string& jointName, ChannelType type) {
+    std::vector<KeyFrameChannel*> filteredKeyFrames;
+    if (type == ChannelType::rotation) {
 
+        for (auto kfc : animation->keyFrameChannels_rotation ) {
+            if (kfc->joint_name == jointName) {
+                filteredKeyFrames.push_back(kfc);
+            }
+        }
+    }
 
+    return filteredKeyFrames;
+}
 
+std::string getStringForChannelType(ChannelType type) {
+    switch (type) {
+        case ChannelType::translation: return "translation";
+        case ChannelType::scale: return "scale";
+        case ChannelType::rotation: return "rotation";
+    }
+    return "";
 }

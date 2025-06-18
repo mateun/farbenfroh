@@ -4,15 +4,15 @@
 
 #ifndef RENDERER_H
 #define RENDERER_H
-
-#include <any>
 #include <Windows.h>
 #include <vector>
 #include <string>
 #include <memory>
-#include <variant>
 #include <glm/glm.hpp>
 
+struct Skeleton;
+struct SkeletalAnimation;
+struct Joint;
 
 namespace renderer {
     struct ShaderHandle {
@@ -126,6 +126,7 @@ namespace renderer {
         Lines,
     };
 
+
     struct Mesh {
         VertexBufferHandle vertex_buffer;
         IndexBufferHandle index_buffer;
@@ -138,9 +139,11 @@ namespace renderer {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec2> uvs;
         std::vector<glm::vec3> normals;
+        Skeleton* skeleton = nullptr;
 
         // This is the overall vertex data, e.g. position and uvs packed tightly, array of structs.
         std::vector<float> vertex_data;
+        std::vector<SkeletalAnimation *> animations;
     };
 
 
@@ -392,7 +395,6 @@ namespace renderer {
 
         Unknown, // fallback
     };
-
 
     void beginFrame();
 

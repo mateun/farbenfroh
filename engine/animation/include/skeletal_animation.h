@@ -4,14 +4,19 @@
 
 #ifndef SKELETAL_ANIMATION_H
 #define SKELETAL_ANIMATION_H
+#include <string>
+#include <vector>
 #include "glm/fwd.hpp"
-#include "glm/vec3.hpp"
+#include "glm/detail/type_quat.hpp"
 
 enum class ChannelType {
     translation,
     rotation,
     scale,
 };
+
+std::string getStringForChannelType(ChannelType type);
+
 
 struct KeyFrameChannel {
     ChannelType type;
@@ -25,8 +30,13 @@ struct KeyFrameChannel {
 };
 
 struct SkeletalAnimation {
-    std::string name;
+    std::string name = "unknown name";
     std::vector<KeyFrameChannel*> keyFrameChannels;
+    std::vector<KeyFrameChannel*> keyFrameChannels_rotation;
+    std::vector<KeyFrameChannel*> keyFrameChannels_translation;
+    float duration = 0.0f;
 };
+
+std::vector<KeyFrameChannel*> getKeyFramesForJoint(SkeletalAnimation* animation, const std::string& jointName, ChannelType type);
 
 #endif //SKELETAL_ANIMATION_H
