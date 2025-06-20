@@ -709,6 +709,35 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
     }
 
 
+    glm::mat4 extract_inverse_bind_matrices(nlohmann::json gltf, std::vector<uint8_t>& dataBinary, nlohmann::json::value_type skinNode, uint8_t *&invBindMatricesOffset, int jointCount) {
+        using namespace  nlohmann;
+        int inverseBindMatricesIndex = skinNode.value("inverseBindMatrices", -1);
+        auto inverseBindAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(inverseBindMatricesIndex))];
+        auto inverseBindViewIndex = inverseBindAccessor.value("bufferView", -1);
+        auto inverseBindBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(inverseBindViewIndex))];
+        auto inverseBindBufferIndex = inverseBindBufferView.value("buffer", -1);
+        auto inverseBindBufferLen = inverseBindBufferView.value("byteLength", -1);
+        auto inverseBindBufferByteOffset = inverseBindBufferView.value("byteOffset", -1);
+        invBindMatricesOffset = dataBinary.data() + inverseBindBufferByteOffset;
+
+
+        // Extract the actual data.
+        // A matrix has 4 colums with 4 floats each, so 16 floats in total.
+        // Each float has 4 bytes, so we read 64 bytes at once per joint
+        // (given by joint_count) and then
+        // distribute the values to the columns.
+
+        int offset = 64 * jointCount;
+        float values[16];
+        std::memcpy(values, invBindMatricesOffset + offset, 64);
+        auto inverse_bind_matrix =  glm::mat4(values[0], values[1], values[2], values[3],
+            values[4], values[5], values[6], values[7],
+            values[8], values[9], values[10], values[11],
+            values[12], values[13], values[14], values[15]);
+
+        return inverse_bind_matrix;
+
+    }
 
         /**
      * We only accept scenes with 1 mesh for now.
@@ -783,112 +812,80 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
             std::map<std::string, Joint*> jointMap;
             skeleton = new Skeleton();
             auto skinNode = gltf[json::json_pointer("/skins/" + std::to_string(skinIndex))];
-            int inverseBindMatricesIndex = skinNode.value("inverseBindMatrices", -1);
+
             auto skin_joints_index_array = skinNode["joints"];
-            std::vector<int> joint_indices;
+            std::vector<int> skin_joint_indices;
             for (auto ind : skin_joints_index_array) {
-                joint_indices.push_back(ind);
+                skin_joint_indices.push_back(ind);
             }
-            auto inverseBindAccessor = gltf[json::json_pointer("/accessors/" + std::to_string(inverseBindMatricesIndex))];
-            auto inverseBindViewIndex = inverseBindAccessor.value("bufferView", -1);
-            auto inverseBindBufferView = gltf[json::json_pointer("/bufferViews/" + std::to_string(inverseBindViewIndex))];
-            auto inverseBindBufferIndex = inverseBindBufferView.value("buffer", -1);
-            auto inverseBindBufferLen = inverseBindBufferView.value("byteLength", -1);
-            auto inverseBindBufferByteOffset = inverseBindBufferView.value("byteOffset", -1);
 
-            auto invBindMatricesOffset = dataBinary.data() + inverseBindBufferByteOffset;
-
-            // One matrix is 16 values, each 4 values form a column.
-            // We must also store the index of the joint for this bind matrix to find them back together later.
-            std::map<int, glm::mat4> invBindMatrices;
-            std::vector<float> vals;
-            std::vector<glm::vec4> vecs;
-
-
-
+            uint8_t* invBindMatricesMemory;
 
 
             std::map<int, Joint*> node_index_joint_map;
             // First pass: create joint objects and set inverse bind matrix for each joint:
-            for (int  j_count =0 ; j_count < joint_indices.size(); j_count++) {
-                auto joint_json = nodesNode[joint_indices[j_count]];
+            for (int  j_count =0 ; j_count < skin_joint_indices.size(); j_count++) {
+                auto joint_json = nodesNode[skin_joint_indices[j_count]];
                 Joint* joint = new Joint();
                 skeleton->joints.push_back(joint);
-                node_index_joint_map[joint_indices[j_count]] = joint;
+                node_index_joint_map[skin_joint_indices[j_count]] = joint;
                 joint->name = joint_json["name"];
+                jointMap[joint->name] = joint;
 
+                // Bind pose translations
+                auto translation_node = joint_json["translation"];
+                joint->modelTranslation = glm::mat4(1);
+                if (!translation_node.is_null()) {
+                    joint->translation = glm::vec3{translation_node[0].get<float>(),
+                                        translation_node[1].get<float>(),
+                                        translation_node[2].get<float>()};
+                    joint->modelTranslation = glm::translate(glm::mat4(1), joint->translation);
 
-                // We need 4 floats per column,
-                // and 4 columsn for a matrix:
-                std::vector<glm::vec4> col_vecs;
-                for (int col = 0; col < 4; col++) {
-                    glm::vec4 col_val;
-                    for (int val_index = 0;  val_index < 4; val_index ++ ) {
-                        float inv_bind_val = 0;
-                        int offset = val_index *4  + col * 16 + (j_count * 16 * 4);
-                        std::memcpy(&inv_bind_val, invBindMatricesOffset + offset, 4);
-                        col_val[val_index] = inv_bind_val;
-
-                    }
-                    col_vecs.push_back(col_val);
                 }
-                joint->inverseBindMatrix = glm::mat4(col_vecs[0], col_vecs[1], col_vecs[2], col_vecs[3]);
+                auto rotation_node = joint_json["rotation"];
+                joint->modelRotation = glm::mat4(1);
+                if (!rotation_node.is_null()) {
+                    // GLM's constructor expects (wxyz)
+                    // GLTF has xyzw
+                    joint->rotation = glm::quat(rotation_node[3].get<float>(),
+                                                rotation_node[0].get<float>(),
+                                                rotation_node[1].get<float>(),
+                                                rotation_node[2].get<float>());
+                    joint->modelRotation = glm::toMat4(joint->rotation);
+                }
+
+                // TODO eventually scale
+
+                joint->bindPoseLocalTransform = joint->modelTranslation * joint->modelRotation;
+
+                joint->inverseBindMatrix = extract_inverse_bind_matrices(gltf, dataBinary, skinNode, invBindMatricesMemory, j_count);
+
             }
 
             // Second pass: parent-child relationship
-            for (int  j_count =0 ; j_count < joint_indices.size(); j_count++) {
-                auto joint_index = joint_indices[j_count];
-                auto joint_json = nodesNode[joint_index];
-                Joint* current_parent_joint = nullptr;
-                if (joint_json.contains("children")) {
-                    const auto& children = joint_json["children"];
-                    for (auto c : children) {
-                        auto childIndex = c.get<int>();
-                        auto childNode = nodesNode[childIndex];
-                        // if (childNode.contains("mesh")) {
-                        //     continue;
-                        // }
+            for (int  j_count =0 ; j_count < skin_joint_indices.size(); j_count++) {
+                auto node_index = skin_joint_indices[j_count];
+                auto joint_json = nodesNode[node_index];
+                Joint* current_parent_joint = skeleton->joints[j_count];
 
-                        auto child_name = childNode["name"].get<std::string>();
-                        if (jointMap.find(child_name) == jointMap.end()) {
-                            auto joint = new Joint();
-                            joint->name = child_name;
-                            jointMap[child_name] = joint;
-                            skeleton->joints.push_back(joint);
-                            joint->parent = current_parent_joint;
-                            if (joint->parent) {
-                                joint->parent->children.push_back(joint);
-                            }
-                        } else {
-                            auto existing_child = jointMap[child_name];
-                            existing_child->parent = current_parent_joint;
-                            existing_child->parent->children.push_back(existing_child);
-                        }
-
-                    }
-
+                for (auto c : joint_json["children"]) {
+                    auto childNode = nodesNode[c.get<int>()];
+                    auto child_name = childNode["name"].get<std::string>();
+                    auto existing_child = jointMap[child_name];
+                    existing_child->parent = current_parent_joint;
+                    existing_child->parent->children.push_back(existing_child);
                 }
             }
 
+            // Set bindPoseGlobalForEvery joint
+            for (auto j  : skeleton->joints) {
+                if (j->parent) {
+                    j->bindPoseGlobalTransform = j->parent->bindPoseGlobalTransform * j->bindPoseLocalTransform;
+                } else {
+                    j->bindPoseGlobalTransform = j->bindPoseLocalTransform; // only the root bone has no parent.
+                }
 
-
-
-
-
-
-
-
-
-
-
-            // Now we can associate the joints with the respective inverse bind matrix
-            for (int i =0; i < skeleton->joints.size(); i++) {
-                auto j = skeleton->joints[i];
-                auto invBindMat = invBindMatrices[i];
-                j->inverseBindMatrix = invBindMat;
             }
-
-            //std::reverse(skeleton->joints.begin(), skeleton->joints.end());
 
             // Now for the animations
             // Every animation has a number of references to so-called channel samplers.
@@ -908,100 +905,55 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                     auto samplersNode = animNode["/samplers"_json_pointer];
                     auto animName = animNode.value("name", "");
                     animation->name = animName;
+                    float duration = std::numeric_limits<float>::min();
                     auto channelsNode = animNode.value("channels", json::object());
                     auto accessors = gltf["/accessors"_json_pointer];
                     auto bufferViews =gltf["/bufferViews"_json_pointer];
                     for (auto ch : channelsNode) {
                         auto channelData = extractChannelData(ch, nodesNode, samplersNode, accessors, bufferViews, dataBinary);
-
-                        float duration = std::numeric_limits<float>::min();
-                        std::vector<float> timeValues;
-                        for (int keyFrame  = 0; keyFrame < channelData.inputCount; keyFrame++) {
-                                // We start a new KeyFrameChannel here when handling the time values:
-                                auto kfc = new KeyFrameChannel();
-                                float inputTimeValue;
-                                std::memcpy(&inputTimeValue, channelData.inputDataPtr + (keyFrame * 4), 4);
-                                timeValues.push_back(inputTimeValue);
-                                if (inputTimeValue > duration) {
-                                    duration = inputTimeValue;
-                                }
-                                kfc->time = inputTimeValue;
-                                animation->keyFrameChannels.push_back(kfc);
-                                kfc->joint_name = channelData.jointName;
-                                kfc->type = [kfc, animation](std::string type) {
-                                   if (type == "rotation") {
-                                       animation->keyFrameChannels_rotation.push_back(kfc);
-                                       return ChannelType::rotation;
-                                   }
-                                    if (type == "translation") {
-                                        animation->keyFrameChannels_translation.push_back(kfc);
-                                        return ChannelType::translation;
-                                    }
-                                    return ChannelType::scale;
-                                }(channelData.targetPath);
-
-                        }
-                        animation->duration = duration;
                         auto outputDataPtr = dataBinary.data() + channelData.outputBufferOffset;
-                        int count = 0;
-                        if (channelData.outputType == "VEC3") {
-                            std::vector<glm::vec3> outputValues;
-                            std::vector<float> fvals;
-                            count = 1;
-                            int output_index = 0;
-                            for ( int i = 0; i < channelData.outputCount * 3; i++) {
+                        for (int keyFrame  = 0; keyFrame < channelData.inputCount; keyFrame++) {
+                            auto kfc = new KeyFrameChannel();
+                            animation->keyFrameChannels.push_back(kfc);
+                            kfc->joint_name = channelData.jointName;
 
-                                float val;
-                                std::memcpy(&val, outputDataPtr + (i * 4), 4);
-                                fvals.push_back(val);
-                                if (count % 3 == 0) {
-                                    outputValues.push_back(glm::vec3{fvals[0], fvals[1], fvals[2]});
-                                    fvals.clear();
-                                    auto kfc = animation->keyFrameChannels[output_index];
-                                    kfc->value_v3 = outputValues[output_index];
-                                    output_index++;
-
-                                }
-                                count++;
+                            float inputTimeValue;
+                            std::memcpy(&inputTimeValue, channelData.inputDataPtr + (keyFrame * 4), 4);
+                            if (inputTimeValue > duration) {
+                                animation->duration = inputTimeValue;
                             }
+                            kfc->time = inputTimeValue;
 
-                        } else if (channelData.outputType == "VEC4") {
-                            // This is a quaternion for rotations:
-                            std::vector<glm::vec4> outputValues;
-                            std::vector<float> fvals;
-                            count = 1;
-                            int output_index = 0;
-                            for ( int i = 0; i < channelData.outputCount * 4; i++) {
-                                float val=0;
-                                std::memcpy(&val, (outputDataPtr + i *4), 4);;
-                                fvals.push_back(val);
-                                if (count % 4 == 0) {
-                                    outputValues.push_back(glm::vec4{fvals[0], fvals[1], fvals[2], fvals[3]});
+                            kfc->type = [kfc, animation](std::string type) {
+                                if (type == "rotation") {
+                                    animation->keyFrameChannels_rotation.push_back(kfc);
+                                    return ChannelType::rotation;
+                                }
+                                if (type == "translation") {
+                                    animation->keyFrameChannels_translation.push_back(kfc);
+                                    return ChannelType::translation;
+                                }
+                                return ChannelType::scale;} (channelData.targetPath);
 
-                                    glm::quat quat = {fvals[3], fvals[0], fvals[1], fvals[2]};
-                                    glm::mat4 rotMat = glm::toMat4(quat);
+                            if (channelData.outputType == "VEC3") {
+                                float values[3];
+                                std::memcpy(values, outputDataPtr + (keyFrame * 12), 12);
+                                kfc->value_v3 = glm::vec3(values[0], values[1], values[2]);
 
-                                    auto kfc = animation->keyFrameChannels[output_index];
+                            } else if (channelData.outputType == "VEC4") {
+                                    float values[4];
+                                    std::memcpy(values, outputDataPtr + (keyFrame * 16), 16);
+                                    glm::quat quat = {values[3], values[0], values[1], values[2]};
                                     kfc->value_quat = quat;
-                                    kfc->value_v4 = outputValues[output_index];
-                                    output_index++;
-                                    fvals.clear();
-                                }
-                                count++;
-                            }
-                        } else if (channelData.outputType == "SCALAR") {
 
-
-                            for ( int i = 0; i < channelData.outputCount * 4; i++) {
-                                float val;
-                                std::memcpy(&val, outputDataPtr + (i * 4), 4);
-                                auto kfc = animation->keyFrameChannels[i];
-                                kfc->value_f = val;;
-
-
+                            } else if (channelData.outputType == "SCALAR") {
+                                    float val;
+                                    std::memcpy(&val, outputDataPtr + (keyFrame * 4), 4);
+                                    kfc->value_f = val;;
                             }
                         }
                     }
+
                 }
 
             auto type_to_string_func = getStringForChannelType;
@@ -1214,8 +1166,15 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 std::vector<KeyFrameChannel*> getKeyFramesForJoint(SkeletalAnimation* animation, const std::string& jointName, ChannelType type) {
     std::vector<KeyFrameChannel*> filteredKeyFrames;
     if (type == ChannelType::rotation) {
-
         for (auto kfc : animation->keyFrameChannels_rotation ) {
+            if (kfc->joint_name == jointName) {
+                filteredKeyFrames.push_back(kfc);
+            }
+        }
+    }
+
+    if (type == ChannelType::translation) {
+        for (auto kfc : animation->keyFrameChannels_translation) {
             if (kfc->joint_name == jointName) {
                 filteredKeyFrames.push_back(kfc);
             }
