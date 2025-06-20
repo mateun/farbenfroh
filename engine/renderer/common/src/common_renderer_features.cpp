@@ -926,14 +926,17 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 
                             kfc->type = [kfc, animation](std::string type) {
                                 if (type == "rotation") {
-                                    animation->keyFrameChannels_rotation.push_back(kfc);
                                     return ChannelType::rotation;
                                 }
                                 if (type == "translation") {
-                                    animation->keyFrameChannels_translation.push_back(kfc);
                                     return ChannelType::translation;
                                 }
-                                return ChannelType::scale;} (channelData.targetPath);
+                                if (type == "scale") {
+                                    return ChannelType::scale;
+                                }
+                                throw std::runtime_error("Unknown channel type");
+
+                                } (channelData.targetPath);
 
                             if (channelData.outputType == "VEC3") {
                                 float values[3];
@@ -955,22 +958,6 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
                     }
 
                 }
-
-            auto type_to_string_func = getStringForChannelType;
-
-            std::cout << "animations log:" << std::endl;
-            for (auto a : animations) {
-                std::cout << "animation name: " << a->name << std::endl;
-                for (auto kfc : a->keyFrameChannels) {
-                    std::cout << "time: " << kfc->time << std::endl;
-                    std::cout << "joint: " << kfc->joint_name << std::endl;
-                    std::cout << "type: " <<  type_to_string_func(kfc->type) << std::endl;
-                    std::cout << "value_f: " << std::to_string(kfc->value_f) << std::endl;
-                    std::cout << "value_v3: " << std::to_string(kfc->value_v3.x) << "/" << std::to_string(kfc->value_v3.y) << std::to_string(kfc->value_v3.z) << std::endl;
-                    std::cout << "value_quat: " << kfc->value_quat.w  << "/" << kfc->value_quat.x << "/" << kfc->value_quat.y << "/" << kfc->value_quat.y << std::endl;
-                }
-            }
-
         }
 
         // Mesh data
@@ -1070,7 +1057,6 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
         const uint8_t* posBase = dataBinary.data() + posBufferByteOffset;
         auto posData = reinterpret_cast<const float*>(posBase);
         size_t totalFloats = posAccessor["count"].get<int>() * 3;
-
         std::vector<glm::vec3> positions;
         for (int i = 0; i< totalFloats; i +=3) {
             positions.push_back({posData[i], posData[i+1], posData[i+2]});
@@ -1165,22 +1151,11 @@ void collectJoints(JsonArray* armatureChildren, std::vector<Joint*>& targetVecto
 
 std::vector<KeyFrameChannel*> getKeyFramesForJoint(SkeletalAnimation* animation, const std::string& jointName, ChannelType type) {
     std::vector<KeyFrameChannel*> filteredKeyFrames;
-    if (type == ChannelType::rotation) {
-        for (auto kfc : animation->keyFrameChannels_rotation ) {
-            if (kfc->joint_name == jointName) {
-                filteredKeyFrames.push_back(kfc);
-            }
+    for (auto kfc : animation->keyFrameChannels ) {
+        if (kfc->joint_name == jointName && kfc->type == type) {
+            filteredKeyFrames.push_back(kfc);
         }
     }
-
-    if (type == ChannelType::translation) {
-        for (auto kfc : animation->keyFrameChannels_translation) {
-            if (kfc->joint_name == jointName) {
-                filteredKeyFrames.push_back(kfc);
-            }
-        }
-    }
-
     return filteredKeyFrames;
 }
 
